@@ -57,6 +57,8 @@ Extract text per chapter ──► tokenize + lemmatize ──► filter (stopwo
 ### 5.1 File upload & word extraction
 - Accept **EPUB** (best: real chapter structure via spine/TOC), **PDF** (chapters from outline/bookmarks, fallback to
   heading heuristics or fixed page ranges), **TXT**, later **DOCX**.
+- **Text PDFs only** in the MVP. A PDF with no extractable text (scanned) is rejected with a clear "scanned PDFs
+  aren't supported yet" message. OCR (Tesseract) is a Phase 2 item.
 - Store original file locally (`data/uploads/`), metadata in DB.
 - Pipeline:
   1. Extract text per chapter.
@@ -70,16 +72,24 @@ Extract text per chapter ──► tokenize + lemmatize ──► filter (stopwo
   `document_words`. Otherwise a word already learned from Book A would never be linked to Book B's chapter 3, and the
   per-chapter ordering for Book B would be incomplete.
 - Save one **context sentence** per word per book — used later for "see it in use" and fill-in-the-blank questions.
+- **Optional triage after upload:** a fast screen listing the book's new words (chapter order) where each can be
+  marked **Known** (status `known`, never quizzed), **Unsure** (starts at score **50**) or left as **New** (score 0).
+  Skippable; untriaged words count as New.
 
 ### 5.2 Current reading chooser
-- Dropdown (multi-select) of uploaded books → `current_readings`.
+- **Several current reads at once, with priority.** Multi-select of uploaded books → `current_readings`, ordered by
+  a user-set priority (drag to reorder). New-word slots in a quiz are shared across current reads, weighted by
+  priority (e.g. 1st book gets most of the slots), so the main book moves fastest while others keep progressing.
 - Each current read tracks **current chapter** (user updates it, or "I finished chapter N" button).
 - `learning_list` is derived (not hand-maintained): words from current reads, ordered by
   `book priority → chapter (starting at current chapter) → first position in chapter`, excluding learned/known words.
 - **Chapter primer** view: "Before you read Chapter 4, these 23 words are new to you" + readiness %.
 
 ### 5.3 Daily quiz
-- "Play" → 10 MCQ questions. Question: the word; 4 options: definitions; exactly one correct.
+- "Play" → a **round of 10** MCQ questions. Question: the word; 4 options: definitions; exactly one correct.
+- The first completed round of the day is the **daily goal** (counts for the streak). After it, "Play another round"
+  is offered; extra rounds are optional.
+- Every question has an **"I know this"** button: marks the word `known` and replaces it with another question.
 - **Close-but-wrong distractors** (the hard part):
   - Prefer definitions of words with the **same part of speech** and **similar difficulty**.
   - Optionally semantically *near* words (WordNet siblings / embedding neighbours) — **but never synonyms**, otherwise
@@ -109,7 +119,8 @@ Extract text per chapter ──► tokenize + lemmatize ──► filter (stopwo
 - Weekly −5 decay drops a fresh 100 to 95 after one week → it re-enters the list and needs one more correct answer.
   This acts as a lightweight weekly review. Fine, but it means "learned" words keep returning forever; consider
   slowing decay as a word survives more reviews (spaced-repetition style, later phase: SM-2 / FSRS).
-- Floor the score (e.g. at 0) so a few bad days don't bury a word.
+- **Decided:** score is floored at **0**, so a few bad days don't bury a word.
+- **Decided:** "Unsure" words from triage start at **50**; "Known" words skip the quiz entirely.
 - **Implement decay lazily** — compute `effective_score = score − 5 × weeks_since(learned_at or last_review)` at
   read time instead of a weekly cron job. A local app isn't always running; lazy decay is always correct.
 - Every answer is stored in an append-only `quiz_answers` log. If the scoring rules change later, scores can be
@@ -224,7 +235,8 @@ because git and the workflow files carry over.
 - [ ] Learning list ordering
 - [ ] Quiz: 10 MCQs, safe distractors, re-randomized options
 - [ ] Scoring rules + lazy decay + answer log
-- [ ] "I already know this" button
+- [ ] Optional post-upload triage (Known / Unsure / New) + "I know this" button
+- [ ] Daily goal (first round of 10) + streak, optional extra rounds
 - [ ] Basic progress page
 - [ ] Export / backup (JSON) and import
 
@@ -234,7 +246,8 @@ because git and the workflow files carry over.
 - [ ] Reverse questions (definition → word)
 - [ ] Adjustable difficulty threshold per user
 - [ ] Spaced-repetition option (FSRS) alongside the point system
-- [ ] PWA / mobile-friendly UI, daily reminder
+- [ ] Mobile-friendly layout, PWA, daily reminder
+- [ ] OCR for scanned PDFs (Tesseract)
 
 ### Phase 3 — Multi-user (future plan items 1–2)
 - [ ] Accounts & auth
@@ -255,9 +268,14 @@ because git and the workflow files carry over.
 - Ready-made lists built only from public-domain or openly licensed sources.
 - Project licence: MIT (suggested).
 
-## 11. Open questions
-1. Multiple current reads at once, or one main book at a time?
-2. Should the quiz be strictly 10 questions, or "10 by default, keep going if you want"?
-3. Starting score for a newly seen word: 0? Or allow a quick "known / unsure / new" triage on upload?
-4. Is a phone-friendly UI needed early (reading on Kindle/phone, quiz on phone)?
-5. Should scanned (image-only) PDFs be supported via OCR (Tesseract), or text PDFs only?
+## 11. Decisions (24 Oct 2026)
+
+| # | Question | Decision |
+|---|----------|----------|
+| 1 | One book or several current reads? | **Several, with priority**; quiz slots weighted by priority (§5.2) |
+| 2 | Quiz length | **Rounds of 10**; first round = daily goal/streak, more rounds optional (§5.3) |
+| 3 | Words already known | **Optional triage after upload** (Known / Unsure / New) **+ "I know this" button** in quizzes (§5.1, §5.3) |
+| 4 | Devices | **Desktop first**; mobile-friendly layout and PWA in Phase 2 |
+| 5 | Scanned PDFs | **Text PDFs only** in MVP; OCR (Tesseract) in Phase 2 (§5.1) |
+| 6 | "Unsure" starting score | **50** |
+| 7 | Score floor | **0** |
