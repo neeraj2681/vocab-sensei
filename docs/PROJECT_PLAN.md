@@ -183,8 +183,10 @@ Every user-specific table has `user_id`, even though only one local user exists 
 important decision for "expand without affecting current progress".
 
 ```
-users            (id, name, email, created_at)
-documents        (id, owner_user_id, title, author, file_path, format, uploaded_at, status)
+users            (id, email UNIQUE, password_hash, display_name, is_active, email_verified_at, created_at, updated_at)
+auth_sessions    (id, user_id, token_hash UNIQUE, user_agent, created_at, last_used_at, expires_at)
+email_tokens     (id, user_id, purpose[verify_email|reset_password], token_hash UNIQUE, created_at, expires_at, used_at)
+documents        (id, owner_user_id, title, author, original_filename, file_path, format, status, error, uploaded_at)
 chapters         (id, document_id, index, title)
 words            (id, lemma UNIQUE, pos, zipf_frequency)
 definitions      (id, word_id, pos, text, source, sense_rank)
