@@ -126,6 +126,11 @@ Extract text per chapter ──► tokenize + lemmatize ──► filter (stopwo
 - Every answer is stored in an append-only `quiz_answers` log. If the scoring rules change later, scores can be
   **recomputed from history** — progress is never lost (condition #2).
 
+### 5.5 Progress dashboard
+- Words learned / learning / known, per book and overall.
+- Book & chapter readiness % (share of hard words in the chapter already learned).
+- Daily streak, accuracy trend.
+
 ### 5.6 Ready for LLM-generated questions (Phase 5)
 
 Long-term goal: an LLM writes questions personalized to the user's reading history. The MVP doesn't use an LLM, but
@@ -152,11 +157,6 @@ How it will work in Phase 5:
 - **Fast quizzes:** questions are pre-generated in the background for the next rounds and cached.
 - **Privacy:** with a local model, book text never leaves the machine. A hosted model would only receive short
   snippets, and only if the user opts in.
-
-### 5.5 Progress dashboard
-- Words learned / learning / known, per book and overall.
-- Book & chapter readiness % (share of hard words in the chapter already learned).
-- Daily streak, accuracy trend.
 
 ---
 
