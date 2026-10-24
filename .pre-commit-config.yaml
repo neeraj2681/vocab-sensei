@@ -1,5 +1,4 @@
 # Runs on every `git commit` (after `pre-commit install`) and in CI.
-# Frontend (eslint, prettier) hooks are added with the frontend skeleton.
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
@@ -9,6 +8,7 @@ repos:
       - id: check-yaml
       - id: check-toml
       - id: check-json
+        exclude: ^frontend/tsconfig.*\.json$  # JSON with comments
       - id: check-merge-conflict
       - id: check-added-large-files
         args: ["--maxkb=1024"]
@@ -36,4 +36,20 @@ repos:
         entry: uv run --directory backend mypy
         language: system
         files: ^backend/.*\.py$
+        pass_filenames: false
+
+  # Frontend hooks use the project's own tool versions (frontend/package-lock.json).
+  - repo: local
+    hooks:
+      - id: prettier
+        name: prettier (frontend)
+        entry: npm --prefix frontend run format
+        language: system
+        files: ^frontend/
+        pass_filenames: false
+      - id: eslint
+        name: eslint (frontend)
+        entry: npm --prefix frontend run lint
+        language: system
+        files: ^frontend/
         pass_filenames: false

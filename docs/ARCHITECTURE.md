@@ -26,6 +26,18 @@ core/         config (pydantic-settings), logging, shared types
 the core logic testable without a server or database, and lets the storage (SQLite → Postgres) or UI change
 without touching it.
 
+## Frontend layout
+
+```
+src/
+  app/          App shell, layout, routing
+  api/          the only place that calls the backend (typed functions over one fetch wrapper)
+  features/     one folder per feature (library, reading, quiz, progress, ...): components, hooks, tests together
+  test/         test setup
+```
+
+Features may import from `api/` and shared code, but not from each other's internals.
+
 ## Principles
 1. **Pure core, thin edges.** Scoring and distractor logic are pure functions: same input → same output, easy to test.
 2. **Interfaces at module boundaries.** e.g. `DocumentParser` protocol with `EpubParser`, `PdfParser`, `TxtParser`
@@ -46,7 +58,7 @@ without touching it.
 | Lint + format | ruff |
 | Type check | mypy |
 | Tests | pytest, pytest-cov |
-| Frontend lint/format | ESLint, Prettier |
+| Frontend lint/format | ESLint (typescript-eslint strict, type-aware), Prettier |
 | Frontend tests | Vitest |
 | Git hooks | pre-commit |
 | CI/CD | GitHub Actions (free tier) |

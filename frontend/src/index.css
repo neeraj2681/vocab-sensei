@@ -1,0 +1,47 @@
+:root {
+  --bg: #fafaf7;
+  --fg: #1f2328;
+  --muted: #59636e;
+  --ok: #1a7f37;
+  --bad: #cf222e;
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+  line-height: 1.5;
+  color: var(--fg);
+  background: var(--bg);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #15171a;
+    --fg: #e6e8eb;
+    --muted: #9aa4af;
+    --ok: #3fb950;
+    --bad: #f85149;
+  }
+}
+
+body {
+  margin: 0;
+}
+
+.app {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+.app__tagline {
+  color: var(--muted);
+}
+
+.health--online {
+  color: var(--ok);
+}
+
+.health--offline {
+  color: var(--bad);
+}
