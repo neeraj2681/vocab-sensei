@@ -8,3 +8,29 @@ class WordStatus(StrEnum):
     LEARNING = "learning"
     LEARNED = "learned"  # score reached the threshold; decays weekly
     KNOWN = "known"  # user said they already know it; never quizzed
+
+
+class DocumentFormat(StrEnum):
+    EPUB = "epub"
+    PDF = "pdf"
+    TXT = "txt"
+
+
+class DocumentStatus(StrEnum):
+    UPLOADED = "uploaded"
+    PROCESSING = "processing"
+    READY = "ready"
+    FAILED = "failed"
+
+
+class EmailTokenPurpose(StrEnum):
+    VERIFY_EMAIL = "verify_email"
+    RESET_PASSWORD = "reset_password"
+
+
+class QuestionType(StrEnum):
+    DEFINITION_MCQ = "definition_mcq"  # MVP
+    FILL_IN_BLANK = "fill_in_blank"
+    CORRECT_USAGE = "correct_usage"
+    NUANCE = "nuance"
+    REVERSE = "reverse"
