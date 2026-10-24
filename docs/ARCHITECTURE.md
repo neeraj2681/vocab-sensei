@@ -42,6 +42,7 @@ Features may import from `api/` and shared code, but not from each other's inter
 1. **Pure core, thin edges.** Scoring and distractor logic are pure functions: same input → same output, easy to test.
 2. **Interfaces at module boundaries.** e.g. `DocumentParser` protocol with `EpubParser`, `PdfParser`, `TxtParser`
    implementations, picked by a registry. Adding DOCX later means adding one class, not editing others.
+   Same for `QuestionGenerator` (rule-based now, LLM in Phase 5) and `LLMClient` (Ollama, optional hosted models).
 3. **Configuration over constants.** Scoring numbers (+5 / −10 / 100 / −5 per week), difficulty threshold and quiz size
    live in `core/config.py`, overridable via environment variables.
 4. **Type everything.** Full type hints, checked by `mypy --strict` in CI. Pydantic models at the API boundary.
