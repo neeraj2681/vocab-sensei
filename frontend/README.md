@@ -14,7 +14,7 @@ npm run dev       # http://localhost:5173 (proxies /api to the backend on :8000)
 ## Checks (same as CI)
 
 ```bash
-npm run lint          # oxlint
+npm run lint          # eslint
 npm run format:check  # prettier
 npm run typecheck     # tsc
 npm test              # vitest

@@ -202,7 +202,7 @@ merged into a protected `main` through a PR with green CI (squash merge). Conven
 **CI (GitHub Actions, on every PR and push to main):**
 1. pre-commit hygiene checks *(done)*
 2. backend: `ruff check`, `ruff format --check`, `mypy`, `pytest --cov`
-3. frontend: `oxlint`, `prettier --check`, `tsc`, `vitest`, `vite build`
+3. frontend: `eslint`, `prettier --check`, `tsc`, `vitest`, `vite build`
 4. (later) dependency audit: `pip-audit`, `npm audit`; Dependabot for updates
 
 **CD:**
@@ -224,7 +224,7 @@ because git and the workflow files carry over.
 - [x] Public GitHub repo, squash-merge only, auto-delete merged branches, `main` protected (CI must pass,
       linear history, no force-push, applies to admins too)
 - [ ] Backend skeleton: FastAPI, SQLAlchemy, Alembic, ruff, mypy, pytest + CI job (`feat/backend-skeleton`)
-- [x] Frontend skeleton: Vite + React + TS, oxlint, Prettier, Vitest + CI job (`feat/frontend-skeleton`)
+- [x] Frontend skeleton: Vite + React + TS, ESLint, Prettier, Vitest + CI job (`feat/frontend-skeleton`)
 - [ ] Docker Compose for local run; release workflow (tag → GHCR image)
 
 ### Phase 1 — MVP (personal, local)

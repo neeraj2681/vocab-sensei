@@ -58,7 +58,7 @@ Features may import from `api/` and shared code, but not from each other's inter
 | Lint + format | ruff |
 | Type check | mypy |
 | Tests | pytest, pytest-cov |
-| Frontend lint/format | oxlint, Prettier |
+| Frontend lint/format | ESLint (typescript-eslint strict, type-aware), Prettier |
 | Frontend tests | Vitest |
 | Git hooks | pre-commit |
 | CI/CD | GitHub Actions (free tier) |

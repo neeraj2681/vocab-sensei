@@ -47,8 +47,8 @@ repos:
         language: system
         files: ^frontend/
         pass_filenames: false
-      - id: oxlint
-        name: oxlint (frontend)
+      - id: eslint
+        name: eslint (frontend)
         entry: npm --prefix frontend run lint
         language: system
         files: ^frontend/

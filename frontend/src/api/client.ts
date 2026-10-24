@@ -13,7 +13,7 @@ export class ApiError extends Error {
 export async function apiGet<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`/api${path}`, init)
   if (!response.ok) {
-    throw new ApiError(response.status, `GET ${path} failed with ${response.status}`)
+    throw new ApiError(response.status, `GET ${path} failed with ${String(response.status)}`)
   }
   return (await response.json()) as T
 }

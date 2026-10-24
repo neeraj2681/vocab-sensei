@@ -15,11 +15,15 @@ export function HealthStatus() {
   useEffect(() => {
     const controller = new AbortController()
     fetchHealth(controller.signal)
-      .then(() => setState('online'))
+      .then(() => {
+        setState('online')
+      })
       .catch(() => {
         if (!controller.signal.aborted) setState('offline')
       })
-    return () => controller.abort()
+    return () => {
+      controller.abort()
+    }
   }, [])
 
   return (

@@ -21,7 +21,7 @@ jobs:
       - uses: pre-commit/action@v3.0.1
         env:
           # no-commit-to-branch only makes sense locally; backend/frontend hooks run in their own jobs
-          SKIP: no-commit-to-branch,ruff-format,ruff-check,mypy,prettier,oxlint
+          SKIP: no-commit-to-branch,ruff-format,ruff-check,mypy,prettier,eslint
 
   backend:
     name: Backend checks
