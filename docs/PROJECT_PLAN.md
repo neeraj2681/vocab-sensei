@@ -166,7 +166,7 @@ How it will work in Phase 5:
 |-------|--------|-----|
 | Backend | **Python 3.12 + FastAPI** | Best ecosystem for text/NLP; simple REST API; async; auto OpenAPI docs. |
 | NLP | **spaCy** (en_core_web_sm), **wordfreq** | Lemmatization, POS, NER; word-difficulty scores. |
-| File parsing | **ebooklib + BeautifulSoup** (EPUB), **pypdf / pdfminer.six** (PDF) | Mature, MIT/BSD-licensed. |
+| File parsing | **zipfile + BeautifulSoup/lxml** (EPUB), **pypdf / pdfminer.six** (PDF) | MIT/BSD. `ebooklib` avoided: AGPL-3.0 would force copyleft on the project. |
 | Dictionary | **Open English WordNet** (via `wn`), optionally **Wiktionary** (kaikki.org dumps) | Open licences; offline; definitions, POS, synonyms (needed for distractor safety). |
 | DB | **SQLite** now → **PostgreSQL** later | Zero-setup locally; SQLAlchemy keeps the switch cheap. |
 | ORM / migrations | **SQLAlchemy 2 + Alembic** | Schema evolves without losing data. |
@@ -262,7 +262,8 @@ because git and the workflow files carry over.
 - [x] Scoring rules with lazy decay (`feat/scoring`)
 - [x] Accounts: email + password, email verification, password reset, cookie sessions (`feat/auth`)
 - [ ] Login / sign-up pages in the frontend (`feat/auth-ui`)
-- [ ] EPUB + PDF + TXT upload and per-chapter extraction
+- [x] EPUB parsing into chapters (`feat/epub-parser`)
+- [ ] PDF + TXT parsing; upload endpoint
 - [ ] NLP pipeline: lemmatize, filter, difficulty threshold, context sentences
 - [ ] WordNet dictionary import
 - [ ] Current-reading chooser + current chapter
