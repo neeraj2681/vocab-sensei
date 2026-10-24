@@ -258,6 +258,10 @@ because git and the workflow files carry over.
 - [ ] Docker Compose for local run; release workflow (tag → GHCR image)
 
 ### Phase 1 — MVP (personal, local)
+- [x] DB models + initial migration, incl. account tables (`feat/db-models`)
+- [x] Scoring rules with lazy decay (`feat/scoring`)
+- [x] Accounts: email + password, email verification, password reset, cookie sessions (`feat/auth`)
+- [ ] Login / sign-up pages in the frontend (`feat/auth-ui`)
 - [ ] EPUB + PDF + TXT upload and per-chapter extraction
 - [ ] NLP pipeline: lemmatize, filter, difficulty threshold, context sentences
 - [ ] WordNet dictionary import
@@ -280,7 +284,8 @@ because git and the workflow files carry over.
 - [ ] OCR for scanned PDFs (Tesseract)
 
 ### Phase 3 — Multi-user (future plan items 1–2)
-- [ ] Accounts & auth
+- [x] Accounts & auth (pulled forward into Phase 1)
+- [ ] Login rate limiting, account deletion / data export per user
 - [ ] Personal profiles & settings
 - [ ] Move to PostgreSQL; Docker deployment
 - [ ] Per-user privacy of uploaded files

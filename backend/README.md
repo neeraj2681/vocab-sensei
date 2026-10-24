@@ -29,3 +29,18 @@ VOCAB_DATABASE_URL=sqlite:///path/to/db.sqlite
 VOCAB_SCORING__CORRECT_DELTA=5
 VOCAB_QUIZ__ROUND_SIZE=10
 ```
+
+## Accounts and email
+
+Email + password login with cookie sessions (`/api/auth/*`: register, verify-email, resend-verification, login,
+logout, me, forgot-password, reset-password). Passwords are Argon2 hashes; session and email tokens are stored as
+SHA-256 hashes only.
+
+Emails are sent over SMTP. Locally, run [Mailpit](https://mailpit.axllent.org) (FOSS) to catch them:
+
+```bash
+brew install mailpit
+mailpit                     # SMTP on :1025, inbox UI at http://localhost:8025
+```
+
+To send real email later, copy `.env.example` to `.env` and fill in an SMTP account (e.g. a Gmail app password).
