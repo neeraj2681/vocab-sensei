@@ -20,8 +20,8 @@ jobs:
           python-version: "3.12"
       - uses: pre-commit/action@v3.0.1
         env:
-          # no-commit-to-branch only makes sense locally; backend hooks run in the backend job
-          SKIP: no-commit-to-branch,ruff-format,ruff-check,mypy
+          # no-commit-to-branch only makes sense locally; backend/frontend hooks run in their own jobs
+          SKIP: no-commit-to-branch,ruff-format,ruff-check,mypy,prettier,oxlint
 
   backend:
     name: Backend checks
@@ -50,4 +50,27 @@ jobs:
         env:
           VOCAB_DATABASE_URL: sqlite:///./ci.db
 
-  # frontend: eslint, vitest, build   -> added in feat/frontend-skeleton
+  frontend:
+    name: Frontend checks
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Format
+        run: npm run format:check
+      - name: Type check
+        run: npm run typecheck
+      - name: Tests
+        run: npm test
+      - name: Build
+        run: npm run build
