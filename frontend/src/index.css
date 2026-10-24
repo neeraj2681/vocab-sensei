@@ -4,6 +4,8 @@
   --muted: #59636e;
   --ok: #1a7f37;
   --bad: #cf222e;
+  --accent: #0969da;
+  --border: #d0d7de;
   font-family:
     system-ui,
     -apple-system,
@@ -21,6 +23,8 @@
     --muted: #9aa4af;
     --ok: #3fb950;
     --bad: #f85149;
+    --accent: #4493f8;
+    --border: #3d444d;
   }
 }
 
@@ -44,4 +48,70 @@ body {
 
 .health--offline {
   color: var(--bad);
+}
+
+a {
+  color: var(--accent);
+}
+
+.app__header h1 a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.app__user {
+  color: var(--muted);
+}
+
+.auth-card {
+  max-width: 24rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 1rem;
+}
+
+.field input {
+  font: inherit;
+  padding: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+button[type='submit'] {
+  font: inherit;
+  padding: 0.5rem 1rem;
+  border: 0;
+  border-radius: 6px;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+}
+
+button[type='submit']:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.link-button {
+  font: inherit;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.form-error {
+  color: var(--bad);
+}
+
+.auth-links {
+  color: var(--muted);
 }

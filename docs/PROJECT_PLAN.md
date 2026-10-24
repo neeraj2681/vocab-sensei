@@ -261,7 +261,7 @@ because git and the workflow files carry over.
 - [x] DB models + initial migration, incl. account tables (`feat/db-models`)
 - [x] Scoring rules with lazy decay (`feat/scoring`)
 - [x] Accounts: email + password, email verification, password reset, cookie sessions (`feat/auth`)
-- [ ] Login / sign-up pages in the frontend (`feat/auth-ui`)
+- [x] Login / sign-up / verify / reset pages in the frontend (`feat/auth-ui`)
 - [x] EPUB parsing into chapters (`feat/epub-parser`)
 - [ ] PDF + TXT parsing; upload endpoint
 - [ ] NLP pipeline: lemmatize, filter, difficulty threshold, context sentences
