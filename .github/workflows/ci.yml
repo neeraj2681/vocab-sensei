@@ -20,8 +20,34 @@ jobs:
           python-version: "3.12"
       - uses: pre-commit/action@v3.0.1
         env:
-          # no-commit-to-branch only makes sense locally
-          SKIP: no-commit-to-branch
+          # no-commit-to-branch only makes sense locally; backend hooks run in the backend job
+          SKIP: no-commit-to-branch,ruff-format,ruff-check,mypy
 
-  # backend: ruff, mypy, pytest       -> added in feat/backend-skeleton
+  backend:
+    name: Backend checks
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv sync --locked
+      - name: Format
+        run: uv run ruff format --check .
+      - name: Lint
+        run: uv run ruff check .
+      - name: Type check
+        run: uv run mypy
+      - name: Architecture layers
+        run: uv run lint-imports
+      - name: Tests
+        run: uv run pytest
+      - name: Migrations apply cleanly
+        run: uv run alembic upgrade head
+        env:
+          VOCAB_DATABASE_URL: sqlite:///./ci.db
+
   # frontend: eslint, vitest, build   -> added in feat/frontend-skeleton

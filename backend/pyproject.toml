@@ -1,0 +1,72 @@
+[project]
+name = "vocab-sensei-backend"
+version = "0.1.0"
+description = "Vocab Sensei API: book word extraction, quizzes and progress"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "alembic>=1.20.1",
+    "fastapi>=0.162.0",
+    "pydantic-settings>=2.16.1",
+    "sqlalchemy>=2",
+    "uvicorn[standard]>=0.54.0",
+]
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+    "import-linter>=2.15",
+    "mypy>=2.4.0",
+    "pytest>=9.1.1",
+    "pytest-cov>=7.1.0",
+    "ruff>=0.17.2",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["app/db/migrations/versions"]
+
+[tool.ruff.lint]
+# E/W pycodestyle, F pyflakes, I isort, B bugbear, UP pyupgrade, SIM simplify, N naming, RUF ruff-specific
+select = ["E", "W", "F", "I", "B", "UP", "SIM", "N", "RUF"]
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = ["fastapi.Depends"]
+
+[tool.mypy]
+strict = true
+plugins = ["pydantic.mypy"]
+files = ["app", "tests"]
+exclude = ["app/db/migrations/"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--cov=app --cov-report=term-missing"
+
+[tool.coverage.run]
+omit = ["app/db/migrations/*"]
+
+# Enforces the layering in docs/ARCHITECTURE.md: higher layers may import lower ones, never the reverse.
+[tool.importlinter]
+root_package = "app"
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+name = "Layered architecture"
+type = "layers"
+layers = [
+    "app.main",
+    "app.api",
+    "app.services",
+    "app.extraction | app.dictionary | app.quiz | app.scoring",
+    "app.repositories",
+    "app.db",
+    "app.core",
+]
+
+[[tool.importlinter.contracts]]
+name = "Domain modules stay pure (no web or DB)"
+type = "forbidden"
+source_modules = ["app.extraction", "app.dictionary", "app.quiz", "app.scoring"]
+forbidden_modules = ["fastapi", "sqlalchemy", "app.api", "app.services", "app.repositories", "app.db"]
