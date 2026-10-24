@@ -131,6 +131,33 @@ Extract text per chapter ──► tokenize + lemmatize ──► filter (stopwo
 - Book & chapter readiness % (share of hard words in the chapter already learned).
 - Daily streak, accuracy trend.
 
+### 5.6 Ready for LLM-generated questions (Phase 5)
+
+Long-term goal: an LLM writes questions personalized to the user's reading history. The MVP doesn't use an LLM, but
+it is built so one can be added without reworking anything:
+
+- **One interface for question generation.** `quiz/` defines a `QuestionGenerator` protocol
+  (`generate(word, context) -> Question`). The MVP ships a rule-based WordNet generator; an `LLMQuestionGenerator`
+  is added later as another implementation, chosen per question type in config.
+- **Questions are stored as data**, not built on the fly and thrown away: a `questions` table records type, prompt,
+  options, correct answer and **which generator/model made it**. Answers reference the question, so the answer log
+  shows which generator teaches better.
+- **Reading history is already collected** for this: current books and chapters, context sentences, per-word
+  scores and every answer. That's what the prompt will be built from ("words this user keeps missing, in the style of
+  the book they're reading now").
+- **Extensible question types** (an enum): `definition_mcq` now; `fill_in_blank`, `correct_usage`, `nuance`,
+  `reverse` later.
+
+How it will work in Phase 5:
+- **Model:** FOSS by default. [Ollama](https://ollama.com) (MIT) runs an open-weight model locally, e.g. Qwen or
+  Mistral (Apache 2.0). A provider-agnostic `LLMClient` interface allows an optional hosted model (opt-in, paid).
+- **Never trust raw output:** responses must match a JSON schema; the correct option must agree with the dictionary
+  sense; distractors that are WordNet synonyms are rejected. Anything that fails falls back to the rule-based
+  generator.
+- **Fast quizzes:** questions are pre-generated in the background for the next rounds and cached.
+- **Privacy:** with a local model, book text never leaves the machine. A hosted model would only receive short
+  snippets, and only if the user opts in.
+
 ---
 
 ## 6. Tech stack (all free & open source)
@@ -165,7 +192,8 @@ document_words   (document_id, chapter_id, word_id, first_position, occurrences,
 current_readings (user_id, document_id, current_chapter_index, priority, started_at)
 user_words       (user_id, word_id, score, status[new|learning|learned|known], learned_at, last_reviewed_at)
 quiz_sessions    (id, user_id, started_at, finished_at)
-quiz_answers     (id, session_id, user_id, word_id, options_json, chosen, correct, score_delta, answered_at)
+questions        (id, word_id, type, prompt, options_json, correct_index, generator, model, source_sentence, created_at)
+quiz_answers     (id, session_id, user_id, word_id, question_id, chosen, correct, score_delta, answered_at)
 ```
 
 ## 8. Project structure
@@ -260,6 +288,17 @@ because git and the workflow files carry over.
 - [ ] Usage suggestions: example sentences similar to the user's reading style
 - [ ] Ready-to-use lists (e.g. from public-domain classics on Project Gutenberg, themed lists)
 
+### Phase 5 — LLM-generated questions (see §5.6)
+- [ ] `LLMClient` interface + Ollama adapter (local, open-weight model)
+- [ ] `LLMQuestionGenerator` behind the existing `QuestionGenerator` interface
+- [ ] Personalized question types: book-style fill-in-the-blank, "which sentence uses the word correctly",
+      near-synonym nuance, explanation of why a wrong option is wrong
+- [ ] Prompt built from reading history: current books/chapters, weak words, recent mistakes
+- [ ] Validation layer (schema, single correct answer, no synonym distractors) + rule-based fallback
+- [ ] Background pre-generation and caching so quizzes stay instant
+- [ ] "Report a bad question" button; compare generators using the answer log
+- [ ] Optional hosted-model adapter (opt-in, not FOSS)
+
 ## 10. Policy & licensing checklist
 - Dictionaries: Open English WordNet (CC BY 4.0), Wiktionary (CC BY-SA) — keep attribution in the app's About page.
 - No scraping of Vocabulary.com, Merriam-Webster, etc.
@@ -279,3 +318,5 @@ because git and the workflow files carry over.
 | 5 | Scanned PDFs | **Text PDFs only** in MVP; OCR (Tesseract) in Phase 2 (§5.1) |
 | 6 | "Unsure" starting score | **50** |
 | 7 | Score floor | **0** |
+| 8 | Linter / database | **ESLint** (most popular); **SQLite** now, PostgreSQL in Phase 3 |
+| 9 | LLM question generation | **Phase 5**; MVP keeps the `QuestionGenerator` interface and stores questions as data (§5.6) |
