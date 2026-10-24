@@ -4,7 +4,7 @@ This project doubles as a git learning project. The workflow is **GitHub Flow**:
 happens on its own branch, and lands in `main` through a Pull Request (PR) after CI passes.
 
 ```
-main ──●──────────────●───────────────●──────►   (always green, protected)
+main ──●──────────────●───────────────●──────►   (always green)
         \            / \             /
          ●──●──●────●   ●──●──●─────●             feat/epub-parser   → PR → merge
           \
@@ -88,7 +88,9 @@ Small, focused commits are easier to review and to revert.
 ## 5. Pull Requests
 - One feature per PR, ideally < 400 changed lines.
 - Fill in the PR template (what, why, how tested).
-- CI must be green. `main` is protected: no direct pushes.
+- CI must be green before merging.
+- Never commit directly to `main`. GitHub Free can't enforce this on private repos, so the `no-commit-to-branch`
+  pre-commit hook blocks it locally.
 - **Squash merge**: the whole branch becomes one clean commit on `main`.
 
 ## 6. Local quality checks

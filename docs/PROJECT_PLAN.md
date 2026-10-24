@@ -185,7 +185,7 @@ Layering rules and coding guidelines: [ARCHITECTURE.md](ARCHITECTURE.md). Git wo
 ## 8a. Engineering workflow & CI/CD
 
 **Git:** GitHub Flow. One branch per feature (`feat/…`, `fix/…`, `chore/…`), several in parallel via `git worktree`,
-merged into a protected `main` through a PR with green CI (squash merge). Conventional Commits. Releases are tagged
+merged into `main` through a PR with green CI (squash merge). Conventional Commits. Releases are tagged
 `vX.Y.Z` (SemVer).
 
 **CI (GitHub Actions, on every PR and push to main):**
@@ -210,7 +210,9 @@ because git and the workflow files carry over.
 ### Phase 0 — Setup
 - [x] Repo, README, licence, `.gitignore`
 - [x] Git workflow guide, PR template, pre-commit, CI hygiene job (`chore/dev-workflow`)
-- [ ] Private GitHub repo + branch protection on `main`
+- [x] Private GitHub repo (squash-merge only, auto-delete merged branches)
+- [ ] ~~Server-side branch protection~~: needs GitHub Pro for private repos. `main` is guarded locally by the
+      `no-commit-to-branch` pre-commit hook plus the PR habit.
 - [ ] Backend skeleton: FastAPI, SQLAlchemy, Alembic, ruff, mypy, pytest + CI job (`feat/backend-skeleton`)
 - [ ] Frontend skeleton: Vite + React + TS, ESLint, Prettier, Vitest + CI job (`feat/frontend-skeleton`)
 - [ ] Docker Compose for local run; release workflow (tag → GHCR image)
