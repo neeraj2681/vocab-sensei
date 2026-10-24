@@ -6,7 +6,7 @@ Upload a book (EPUB / PDF / TXT). Vocab Sensei pulls out the harder words chapte
 every day, starting with the chapter you're about to read. When you get there, you already know the words.
 
 - Full plan: [docs/PROJECT_PLAN.md](docs/PROJECT_PLAN.md)
-- Status: Phase 1 in progress
+- Status: Phase 1 in progress, see [docs/PROGRESS.md](docs/PROGRESS.md)
 
 ## Run it locally
 
