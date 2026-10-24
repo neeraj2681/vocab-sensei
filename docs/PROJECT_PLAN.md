@@ -163,26 +163,58 @@ quiz_answers     (id, session_id, user_id, word_id, options_json, chosen, correc
 vocab_sensei/
 ├── backend/
 │   ├── app/
-│   │   ├── api/            # FastAPI routers (books, readings, quiz, progress)
-│   │   ├── core/           # config (scoring constants, thresholds)
+│   │   ├── api/            # FastAPI routers (books, readings, quiz, progress), HTTP only
+│   │   ├── services/       # use cases orchestrating domain modules + repositories
+│   │   ├── extraction/     # pdf/epub/txt parsers, chapter splitting, NLP pipeline (pure)
+│   │   ├── dictionary/     # WordNet loader, definition lookup (pure)
+│   │   ├── quiz/           # question selection, distractor generation (pure)
+│   │   ├── scoring/        # score rules, decay, status transitions (pure)
+│   │   ├── repositories/   # DB access per aggregate
 │   │   ├── db/             # models, session, alembic migrations
-│   │   ├── extraction/     # pdf/epub/txt parsers, chapter splitting, NLP pipeline
-│   │   ├── dictionary/     # WordNet loader, definition lookup
-│   │   ├── quiz/           # question selection, distractor generation, scoring
+│   │   ├── core/           # config (scoring constants, thresholds), logging
 │   │   └── main.py
 │   └── tests/
 ├── frontend/               # React + Vite app
 ├── data/                   # local uploads + sqlite db (git-ignored)
+├── .github/workflows/      # CI/CD
 └── docs/
 ```
+
+Layering rules and coding guidelines: [ARCHITECTURE.md](ARCHITECTURE.md). Git workflow: [CONTRIBUTING.md](../CONTRIBUTING.md).
+
+## 8a. Engineering workflow & CI/CD
+
+**Git:** GitHub Flow. One branch per feature (`feat/…`, `fix/…`, `chore/…`), several in parallel via `git worktree`,
+merged into a protected `main` through a PR with green CI (squash merge). Conventional Commits. Releases are tagged
+`vX.Y.Z` (SemVer).
+
+**CI (GitHub Actions, on every PR and push to main):**
+1. pre-commit hygiene checks *(done)*
+2. backend: `ruff check`, `ruff format --check`, `mypy`, `pytest --cov`
+3. frontend: `eslint`, `prettier --check`, `vitest`, `vite build`
+4. (later) dependency audit: `pip-audit`, `npm audit`; Dependabot for updates
+
+**CD:**
+- Phase 1 (local): `docker compose up` runs everything; no deployment needed.
+- On a `v*` tag: build Docker images → publish to GitHub Container Registry (GHCR) → create a GitHub Release with
+  changelog.
+- Phase 3 (friends): auto-deploy the tagged image to a self-hosted box (home server / Raspberry Pi / free-tier VM)
+  pulled via Docker Compose; HTTPS via Caddy (FOSS). Access for friends over the internet or Tailscale/Headscale.
+
+**Note on "FOSS only":** every library and tool in the code is open source. GitHub and GitHub Actions are free, but
+they are proprietary services. A fully FOSS alternative is Codeberg + Forgejo Actions, and moving there later is easy
+because git and the workflow files carry over.
 
 ## 9. Roadmap
 
 ### Phase 0 — Setup
-- [ ] Repo, README, licence, `.gitignore`
-- [ ] Backend skeleton (FastAPI, SQLAlchemy, Alembic, pytest)
-- [ ] Frontend skeleton (Vite + React + TS)
-- [ ] CI: lint + tests on GitHub Actions
+- [x] Repo, README, licence, `.gitignore`
+- [x] Git workflow guide, PR template, pre-commit, CI hygiene job (`chore/dev-workflow`)
+- [x] Public GitHub repo, squash-merge only, auto-delete merged branches, `main` protected (CI must pass,
+      linear history, no force-push, applies to admins too)
+- [ ] Backend skeleton: FastAPI, SQLAlchemy, Alembic, ruff, mypy, pytest + CI job (`feat/backend-skeleton`)
+- [ ] Frontend skeleton: Vite + React + TS, ESLint, Prettier, Vitest + CI job (`feat/frontend-skeleton`)
+- [ ] Docker Compose for local run; release workflow (tag → GHCR image)
 
 ### Phase 1 — MVP (personal, local)
 - [ ] EPUB + PDF + TXT upload and per-chapter extraction
