@@ -17,3 +17,5 @@ data/
 # Env / OS
 .env
 .DS_Store
+.mypy_cache/
+.coverage
