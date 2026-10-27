@@ -50,6 +50,15 @@ class UploadSettings(BaseModel):
     max_bytes: int = Field(default=50 * 1024 * 1024, gt=0)
 
 
+class ExtractionSettings(BaseModel):
+    """Which words count as worth learning (wordfreq Zipf scale: 7 = "the", 1 = very rare)."""
+
+    max_zipf: float = 4.0  # more common than this is "already known" (e.g. "house" is 5.7)
+    min_zipf: float = 1.0  # rarer than this is usually a typo, OCR noise or a made-up name
+    min_length: int = 3
+    context_chars: int = 300
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="VOCAB_", env_nested_delimiter="__", env_file=".env", extra="ignore"
@@ -62,6 +71,9 @@ class Settings(BaseSettings):
     auth: AuthSettings = AuthSettings()
     email: EmailSettings = EmailSettings()
     upload: UploadSettings = UploadSettings()
+
+
+    extraction: ExtractionSettings = ExtractionSettings()
 
 
 @lru_cache
