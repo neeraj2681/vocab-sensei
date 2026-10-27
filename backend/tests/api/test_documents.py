@@ -2,6 +2,7 @@ from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings
@@ -14,10 +15,17 @@ TEXT = (
 )
 
 
+RARE = ["A lugubrious tune played.", "The perfunctory nod was obsequious and lugubrious."]
+
+
 def epub_bytes(tmp_path: Path, chapters: int = 2) -> bytes:
     spec = EpubSpec(
         [
-            Chapter(f"c{i}.xhtml", f"<p>Chapter {i}.{TEXT}</p>", toc_title=f"Chapter {i}")
+            Chapter(
+                f"c{i}.xhtml",
+                f"<p>Chapter {i}.{TEXT}</p><p>{RARE[(i - 1) % 2]}</p>",
+                toc_title=f"Chapter {i}",
+            )
             for i in range(1, chapters + 1)
         ]
     )
@@ -52,12 +60,13 @@ def test_upload_parses_the_book_into_chapters(user_client: TestClient, tmp_path:
 def test_file_is_stored_under_the_users_folder(
     user_client: TestClient, tmp_path: Path, settings: Settings
 ) -> None:
-    upload(user_client, epub_bytes(tmp_path))
+    content = epub_bytes(tmp_path)  # built once: zip files embed timestamps
+    upload(user_client, content)
 
     stored = list((settings.data_dir / "uploads").glob("*/*.epub"))
 
     assert len(stored) == 1
-    assert stored[0].read_bytes() == epub_bytes(tmp_path)
+    assert stored[0].read_bytes() == content
 
 
 def test_list_shows_newest_first(user_client: TestClient, tmp_path: Path) -> None:
@@ -160,3 +169,68 @@ def test_delete_removes_the_document_and_file(
 def test_requires_login(client: TestClient) -> None:
     assert client.get("/api/documents").status_code == 401
     assert client.post("/api/documents", files={"file": ("a.epub", b"x")}).status_code == 401
+
+
+def test_processing_builds_the_word_list(user_client: TestClient, tmp_path: Path) -> None:
+    created = upload(user_client, epub_bytes(tmp_path))
+
+    words = user_client.get(f"/api/documents/{created['id']}/words").json()
+
+    by_lemma = {w["lemma"]: w for w in words}
+    assert [
+        w["lemma"] for w in words if w["lemma"] in {"lugubrious", "perfunctory", "obsequious"}
+    ] == ["lugubrious", "perfunctory", "obsequious"]
+    assert by_lemma["lugubrious"]["chapter_index"] == 0
+    assert by_lemma["lugubrious"]["occurrences"] == 2
+    assert by_lemma["lugubrious"]["context_sentence"] == "A lugubrious tune played."
+    assert by_lemma["perfunctory"]["chapter_index"] == 1
+
+
+def test_words_can_be_filtered_by_chapter(user_client: TestClient, tmp_path: Path) -> None:
+    created = upload(user_client, epub_bytes(tmp_path))
+
+    chapter_two = user_client.get(f"/api/documents/{created['id']}/words?chapter=1").json()
+
+    assert {w["chapter_index"] for w in chapter_two} == {1}
+    assert "perfunctory" in [w["lemma"] for w in chapter_two]
+    assert "lugubrious" not in [w["lemma"] for w in chapter_two]  # first seen in chapter 0
+
+
+def test_books_share_word_rows(user_client: TestClient, tmp_path: Path, session: Session) -> None:
+    upload(user_client, epub_bytes(tmp_path), "one.epub")
+    upload(user_client, epub_bytes(tmp_path), "two.epub")
+
+    count = session.execute(text("SELECT COUNT(*) FROM words WHERE lemma = 'lugubrious'"))
+    occurrences = session.execute(
+        text(
+            "SELECT COUNT(*) FROM document_words dw JOIN words w ON w.id = dw.word_id "
+            "WHERE w.lemma = 'lugubrious'"
+        )
+    )
+    assert count.scalar_one() == 1
+    assert occurrences.scalar_one() == 2
+
+
+def test_word_saving_errors_leave_a_clean_failed_document(
+    user_client: TestClient, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def explode(*_args: object) -> None:
+        raise RuntimeError("disk full")
+
+    monkeypatch.setattr("app.services.documents.WordService.save_for_document", explode)
+    created = upload(user_client, epub_bytes(tmp_path))
+
+    detail = user_client.get(f"/api/documents/{created['id']}").json()
+
+    assert detail["status"] == "failed"
+    assert detail["chapters"] == []
+    assert user_client.get(f"/api/documents/{created['id']}/words").json() == []
+
+
+def test_words_of_other_users_books_are_hidden(
+    user_client: TestClient, session: Session, tmp_path: Path
+) -> None:
+    created = upload(user_client, epub_bytes(tmp_path))
+    log_in(user_client, make_user(session, "other@example.com").email)
+
+    assert user_client.get(f"/api/documents/{created['id']}/words").status_code == 404

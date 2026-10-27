@@ -72,7 +72,6 @@ class Settings(BaseSettings):
     email: EmailSettings = EmailSettings()
     upload: UploadSettings = UploadSettings()
 
-
     extraction: ExtractionSettings = ExtractionSettings()
 
 
