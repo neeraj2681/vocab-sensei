@@ -9,6 +9,7 @@ first heading.
 """
 
 import posixpath
+import re
 import warnings
 import zipfile
 from dataclasses import dataclass, field
@@ -23,6 +24,13 @@ from app.extraction.types import ParsedChapter, ParsedDocument, ParseError
 MAX_UNCOMPRESSED_BYTES = 300 * 1024 * 1024  # guards against zip bombs
 MIN_CHAPTER_CHARS = 100  # shorter sections (a lone "PART ONE" heading) merge into the next one
 _HTML_TYPES = {"application/xhtml+xml", "text/html"}
+# A new paragraph (line) starts at these elements; inline ones (<i>, <span>, ...) stay in the line.
+_BLOCK_TAGS = {
+    *("p", "div", "br", "hr", "pre", "blockquote", "section", "article", "aside", "header"),
+    *("h1", "h2", "h3", "h4", "h5", "h6", "li", "ul", "ol", "dl", "dt", "dd", "table", "tr"),
+    *("figure", "figcaption", "footer"),
+}
+_WHITESPACE = re.compile(r"\s+")
 
 
 class EpubParser:
@@ -184,8 +192,12 @@ def _split_at_anchors(
             if anchor and (title := remaining.pop(str(anchor), None)) is not None:
                 current = []
                 sections.append((title, current))
+            if node.name in _BLOCK_TAGS:
+                current.append("\n")
         elif isinstance(node, NavigableString) and not isinstance(node, PreformattedString):
-            current.append(str(node))  # PreformattedString = comments, doctype, CDATA, ...
+            # Line breaks inside the HTML source are just spaces. (PreformattedString covers
+            # comments, doctype, CDATA, ...)
+            current.append(_WHITESPACE.sub(" ", str(node)))
     return preamble, sections
 
 
@@ -208,7 +220,7 @@ def _merge_short(chapters: list[ParsedChapter]) -> list[ParsedChapter]:
 
 def _clean(parts: list[str]) -> str:
     """One paragraph per line, whitespace collapsed, blank lines dropped."""
-    lines = (" ".join(line.split()) for line in "\n".join(parts).splitlines())
+    lines = (" ".join(line.split()) for line in "".join(parts).split("\n"))
     return "\n".join(line for line in lines if line)
 
 

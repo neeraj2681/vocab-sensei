@@ -42,6 +42,26 @@ def test_text_is_plain_with_one_paragraph_per_line(tmp_path: Path) -> None:
     assert first.text == f"Chapter 1. Loomings.\nCall me Ishmael.\nSome years ago…\n{LONG.strip()}"
 
 
+def test_paragraphs_break_only_at_block_elements(tmp_path: Path) -> None:
+    body = (
+        "<p>The <i>Pequod</i> sailed\n   on a hard-wrapped\nline.</p>"
+        "<div>Next<br/>line after a break.</div>"
+        "<ul><li>First item</li><li>Second <b>bold</b> item</li></ul>"
+    )
+    chapter = Chapter("c.xhtml", body + f"<p>{LONG}</p>")
+
+    lines = parse(tmp_path, EpubSpec([chapter]))[0].text.split("\n")
+
+    assert lines == [
+        "The Pequod sailed on a hard-wrapped line.",
+        "Next",
+        "line after a break.",
+        "First item",
+        "Second bold item",
+        LONG.strip(),
+    ]
+
+
 def test_styles_and_scripts_are_not_text(tmp_path: Path) -> None:
     chapter = Chapter("c.xhtml", f"<script>alert(1)</script><p>Real words.{LONG}</p>")
 
