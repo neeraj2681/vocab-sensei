@@ -15,6 +15,10 @@ class DocumentFormat(StrEnum):
     PDF = "pdf"
     TXT = "txt"
 
+    @property
+    def ext(self) -> str:
+        return f".{self.value}"
+
 
 class DocumentStatus(StrEnum):
     UPLOADED = "uploaded"

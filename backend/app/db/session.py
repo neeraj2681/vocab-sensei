@@ -33,6 +33,11 @@ engine = make_engine(get_settings().database_url)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
 
 
+def get_session_factory() -> sessionmaker[Session]:
+    """FastAPI dependency for work that outlives the request (background tasks)."""
+    return SessionLocal
+
+
 def get_session() -> Iterator[Session]:
     """FastAPI dependency: one session per request, always closed."""
     with SessionLocal() as session:
