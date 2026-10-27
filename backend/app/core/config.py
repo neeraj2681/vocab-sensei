@@ -46,6 +46,10 @@ class EmailSettings(BaseModel):
     app_base_url: str = "http://localhost:5173"  # links in emails point to the frontend
 
 
+class UploadSettings(BaseModel):
+    max_bytes: int = Field(default=50 * 1024 * 1024, gt=0)
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="VOCAB_", env_nested_delimiter="__", env_file=".env", extra="ignore"
@@ -57,6 +61,7 @@ class Settings(BaseSettings):
     quiz: QuizSettings = QuizSettings()
     auth: AuthSettings = AuthSettings()
     email: EmailSettings = EmailSettings()
+    upload: UploadSettings = UploadSettings()
 
 
 @lru_cache

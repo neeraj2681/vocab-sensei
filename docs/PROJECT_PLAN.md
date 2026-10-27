@@ -263,7 +263,8 @@ because git and the workflow files carry over.
 - [x] Accounts: email + password, email verification, password reset, cookie sessions (`feat/auth`)
 - [x] Login / sign-up / verify / reset pages in the frontend (`feat/auth-ui`)
 - [x] EPUB parsing into chapters (`feat/epub-parser`)
-- [ ] PDF + TXT parsing; upload endpoint
+- [x] Upload endpoint: store file, parse in the background, strip Gutenberg boilerplate (`feat/upload`)
+- [ ] PDF + TXT parsing
 - [ ] NLP pipeline: lemmatize, filter, difficulty threshold, context sentences
 - [ ] WordNet dictionary import
 - [ ] Current-reading chooser + current chapter
