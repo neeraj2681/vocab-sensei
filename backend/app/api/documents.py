@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Annotated, Self
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, UploadFile, status
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -11,6 +11,7 @@ from app.core.enums import DocumentFormat, DocumentStatus
 from app.db.models import Document
 from app.db.session import get_session, get_session_factory
 from app.services.documents import DocumentService, FileTooLargeError, UploadError
+from app.services.words import WordService
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
@@ -56,6 +57,14 @@ class DocumentDetailResponse(DocumentResponse):
         summary = DocumentResponse.of(document).model_dump()
         chapters = [ChapterResponse.model_validate(c) for c in document.chapters]
         return cls(**summary, chapters=chapters)
+
+
+class WordResponse(BaseModel):
+    lemma: str
+    zipf: float | None
+    chapter_index: int
+    occurrences: int
+    context_sentence: str | None
 
 
 def get_document_service(
@@ -111,6 +120,27 @@ def list_documents(user: CurrentUser, documents: DocumentServiceDep) -> list[Doc
 @router.get("/{document_id}")
 def get_document(document: OwnedDocument) -> DocumentDetailResponse:
     return DocumentDetailResponse.of(document)
+
+
+@router.get("/{document_id}/words")
+def list_words(
+    document: OwnedDocument,
+    session: Annotated[Session, Depends(get_session)],
+    chapter: Annotated[int | None, Query(ge=0)] = None,
+) -> list[WordResponse]:
+    """Learnable words in reading order (where each first appears), optionally for one chapter."""
+    return [
+        WordResponse(
+            lemma=word.lemma,
+            zipf=word.zipf_frequency,
+            chapter_index=chapter_index,
+            occurrences=occurrence.occurrences,
+            context_sentence=occurrence.context_sentence,
+        )
+        for occurrence, word, chapter_index in WordService(session).words_for_document(
+            document, chapter
+        )
+    ]
 
 
 @router.delete("/{document_id}", status_code=status.HTTP_204_NO_CONTENT)

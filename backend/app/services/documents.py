@@ -1,7 +1,8 @@
-"""Uploading books and turning them into chapters.
+"""Uploading books and turning them into chapters and word lists.
 
-Upload only stores the file; parsing runs afterwards (`process`, called from a background task) so
-large books don't hold up the request. A document ends as READY or FAILED, never stuck processing.
+Upload only stores the file; parsing and word extraction run afterwards (`process`, called from a
+background task) so large books don't hold up the request. A document ends as READY or FAILED,
+never stuck processing.
 """
 
 import logging
@@ -17,7 +18,9 @@ from app.db.models import Chapter, Document
 from app.extraction.cleanup import strip_gutenberg_boilerplate
 from app.extraction.registry import UnsupportedFormatError, get_parser
 from app.extraction.types import ParseError
+from app.extraction.words import WordExtractor
 from app.repositories.documents import DocumentRepository
+from app.services.words import WordService
 
 logger = logging.getLogger(__name__)
 
@@ -80,23 +83,24 @@ class DocumentService:
             parsed = strip_gutenberg_boilerplate(parsed)
             if not parsed.chapters:
                 raise ParseError("no readable text left after removing boilerplate")
+            words = WordExtractor(self._settings.extraction).extract(parsed.chapters)
+
+            document.title = (parsed.title or document.title)[:500]
+            document.author = parsed.author[:300] if parsed.author else None
+            document.chapters = [
+                Chapter(index=i, title=c.title[:500] if c.title else None)
+                for i, c in enumerate(parsed.chapters)
+            ]
+            self._session.flush()  # chapter ids are needed for the word list
+            WordService(self._session).save_for_document(document, words)
+            document.status = DocumentStatus.READY
+            document.error = None
+            self._session.commit()
         except (ParseError, UnsupportedFormatError) as exc:
             self._fail(document, f"Couldn't read this file: {exc}")
-            return
         except Exception:
             logger.exception("processing document %s failed", document_id)
             self._fail(document, "Something went wrong while reading this file")
-            return
-
-        document.title = (parsed.title or document.title)[:500]
-        document.author = parsed.author[:300] if parsed.author else None
-        document.chapters = [
-            Chapter(index=i, title=c.title[:500] if c.title else None)
-            for i, c in enumerate(parsed.chapters)
-        ]
-        document.status = DocumentStatus.READY
-        document.error = None
-        self._session.commit()
 
     def list_for(self, owner_user_id: int) -> list[Document]:
         return self._documents.list_owned(owner_user_id)
@@ -133,6 +137,7 @@ class DocumentService:
         return self._settings.data_dir / document.file_path
 
     def _fail(self, document: Document, message: str) -> None:
+        self._session.rollback()  # drop anything half-written
         document.status = DocumentStatus.FAILED
         document.error = message
         document.chapters = []

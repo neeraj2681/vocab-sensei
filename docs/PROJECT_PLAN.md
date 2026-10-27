@@ -265,7 +265,7 @@ because git and the workflow files carry over.
 - [x] EPUB parsing into chapters (`feat/epub-parser`)
 - [x] Upload endpoint: store file, parse in the background, strip Gutenberg boilerplate (`feat/upload`)
 - [ ] PDF + TXT parsing
-- [ ] NLP pipeline: lemmatize, filter, difficulty threshold, context sentences
+- [x] NLP pipeline: lemmatize, filter, difficulty threshold, context sentences; runs on upload (`feat/word-extraction`)
 - [ ] WordNet dictionary import
 - [ ] Current-reading chooser + current chapter
 - [ ] Learning list ordering
@@ -310,6 +310,7 @@ because git and the workflow files carry over.
 
 ## 10. Policy & licensing checklist
 - Dictionaries: Open English WordNet (CC BY 4.0), Wiktionary (CC BY-SA) — keep attribution in the app's About page.
+- Word frequencies: `wordfreq` (code MIT, data CC BY-SA 4.0) and spaCy `en_core_web_sm` (MIT) — attribution on the About page too.
 - No scraping of Vocabulary.com, Merriam-Webster, etc.
 - Uploaded books: stored only for the uploader; in multi-user mode never shared across users. Only short context
   snippets shown back.
