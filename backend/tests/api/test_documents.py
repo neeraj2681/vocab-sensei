@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_dictionary
 from app.core.config import Settings
-from app.dictionary.types import DictionaryUnavailableError
+from app.dictionary.types import DictionaryUnavailableError, Sense
 from tests.conftest import FakeDictionary, log_in, make_user
 from tests.extraction.epub_builder import Chapter, EpubSpec, build_epub
 
@@ -248,6 +248,26 @@ def test_words_come_with_their_definitions(user_client: TestClient, tmp_path: Pa
 
     lugubrious = next(w for w in words if w["lemma"] == "lugubrious")
     assert lugubrious["definitions"] == [{"pos": "noun", "text": "meaning of lugubrious"}]
+    assert lugubrious["pos"] == "adjective"
+
+
+def test_definitions_for_the_books_part_of_speech_come_first(
+    user_client: TestClient, tmp_path: Path, dictionary: FakeDictionary
+) -> None:
+    dictionary.entries["lugubrious"] = [
+        Sense(pos="noun", definition="a made-up noun sense", rank=0),
+        Sense(pos="adjective", definition="excessively mournful", rank=1),
+    ]
+    created = upload(user_client, epub_bytes(tmp_path))
+
+    words = user_client.get(f"/api/documents/{created['id']}/words").json()
+
+    lugubrious = next(w for w in words if w["lemma"] == "lugubrious")
+    assert lugubrious["pos"] == "adjective"
+    assert [d["text"] for d in lugubrious["definitions"]] == [
+        "excessively mournful",
+        "a made-up noun sense",
+    ]
 
 
 def test_words_without_a_definition_are_left_out(

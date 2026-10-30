@@ -1,7 +1,7 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.enums import DocumentFormat
+from app.core.enums import DocumentFormat, PartOfSpeech
 from app.db.models import Chapter, Document, Word
 from app.extraction.words import ExtractedWord
 from app.services.words import WordService
@@ -30,6 +30,7 @@ def extracted(lemma: str) -> ExtractedWord:
         first_position=0,
         occurrences=1,
         context_sentence=f"A {lemma} sentence.",
+        pos=PartOfSpeech.NOUN,
     )
 
 

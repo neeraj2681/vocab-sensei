@@ -1,6 +1,7 @@
 import pytest
 
 from app.core.config import ExtractionSettings
+from app.core.enums import PartOfSpeech
 from app.extraction.types import ParsedChapter
 from app.extraction.words import ExtractedWord, WordExtractor
 
@@ -70,3 +71,14 @@ def test_long_sentences_are_trimmed_around_the_word() -> None:
     assert "lugubrious" in word.context_sentence
     assert word.context_sentence.startswith("…")
     assert word.context_sentence.endswith("…")
+
+
+def test_records_how_the_book_uses_each_word() -> None:
+    words = extract(
+        "The sailors were perambulating slowly.",
+        "It was a damp morning. The damp cellar smelled of the sea.",
+    )
+
+    pos = {w.lemma: w.pos for w in words}
+    assert pos["perambulate"] == PartOfSpeech.VERB
+    assert pos["damp"] == PartOfSpeech.ADJECTIVE

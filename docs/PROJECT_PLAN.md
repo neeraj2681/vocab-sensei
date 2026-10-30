@@ -268,7 +268,7 @@ because git and the workflow files carry over.
 - [x] NLP pipeline: lemmatize, filter, difficulty threshold, context sentences; runs on upload (`feat/word-extraction`)
 - [x] WordNet dictionary import (`feat/dictionary`)
 - [x] Library page (upload, my books, chapter-by-chapter words) + current-reading chooser with priorities and current chapter (`feat/library-ui`)
-- [ ] Part of speech per book word, so the matching definitions come first (`feat/word-pos`)
+- [x] Part of speech per book word, so the matching definitions come first (`feat/word-pos`)
 - [ ] Learning list ordering
 - [ ] Quiz: 10 MCQs, safe distractors, re-randomized options
 - [ ] Scoring rules + lazy decay + answer log

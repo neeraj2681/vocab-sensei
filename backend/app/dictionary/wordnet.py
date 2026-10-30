@@ -9,9 +9,16 @@ from threading import Lock
 
 import wn
 
+from app.core.enums import PartOfSpeech
 from app.dictionary.types import DictionaryUnavailableError, Sense
 
-_POS_NAMES = {"n": "noun", "v": "verb", "a": "adjective", "s": "adjective", "r": "adverb"}
+_POS_NAMES = {
+    "n": PartOfSpeech.NOUN,
+    "v": PartOfSpeech.VERB,
+    "a": PartOfSpeech.ADJECTIVE,
+    "s": PartOfSpeech.ADJECTIVE,  # "satellite" adjectives, e.g. "drizzly"
+    "r": PartOfSpeech.ADVERB,
+}
 
 # `wn.config` is process-wide, so every WordNetDictionary must agree on the data directory.
 _config_lock = Lock()
@@ -61,5 +68,5 @@ class WordNetDictionary:
                     continue
                 seen.add(definition)
                 per_pos[pos] = per_pos.get(pos, 0) + 1
-                found.append(Sense(pos=pos, definition=definition, rank=len(found)))
+                found.append(Sense(pos=pos.value, definition=definition, rank=len(found)))
         return found

@@ -7,7 +7,7 @@ from datetime import datetime
 from sqlalchemy import ForeignKey, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.core.enums import DocumentFormat, DocumentStatus
+from app.core.enums import DocumentFormat, DocumentStatus, PartOfSpeech
 from app.db.base import Base
 from app.db.types import UTCDateTime, str_enum, utcnow
 
@@ -97,3 +97,4 @@ class DocumentWord(Base):
     first_position: Mapped[int]  # token offset inside the chapter
     occurrences: Mapped[int] = mapped_column(default=1)
     context_sentence: Mapped[str | None] = mapped_column(Text)
+    pos: Mapped[PartOfSpeech | None] = mapped_column(str_enum(PartOfSpeech))  # most common use
