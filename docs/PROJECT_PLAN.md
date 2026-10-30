@@ -266,7 +266,7 @@ because git and the workflow files carry over.
 - [x] Upload endpoint: store file, parse in the background, strip Gutenberg boilerplate (`feat/upload`)
 - [ ] PDF + TXT parsing
 - [x] NLP pipeline: lemmatize, filter, difficulty threshold, context sentences; runs on upload (`feat/word-extraction`)
-- [ ] WordNet dictionary import
+- [x] WordNet dictionary import
 - [ ] Current-reading chooser + current chapter
 - [ ] Learning list ordering
 - [ ] Quiz: 10 MCQs, safe distractors, re-randomized options

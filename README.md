@@ -10,7 +10,10 @@ every day, starting with the chapter you're about to read. When you get there, y
 
 ## Run it locally
 
-Three terminals (Python 3.12 via [uv](https://docs.astral.sh/uv/), Node 24, `brew install mailpit`):
+Once, download the dictionary (Open English WordNet, ~125 MB, about a minute):
+`cd backend && uv run python -m app.dictionary.install`.
+
+Then three terminals (Python 3.12 via [uv](https://docs.astral.sh/uv/), Node 24, `brew install mailpit`):
 
 ```bash
 mailpit                                                        # 1. catches emails: http://localhost:8025
