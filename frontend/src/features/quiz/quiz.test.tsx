@@ -16,6 +16,7 @@ const question = (id: number, word: string): QuizQuestion => ({
 const result = (overrides: Partial<AnswerResult>): AnswerResult => ({
   correct: true,
   correct_index: 0,
+  points: 5,
   score_delta: 5,
   counted: true,
   word_score: 5,
@@ -81,7 +82,12 @@ describe('quiz', () => {
       'GET /api/quiz/question': questions(question(1, 'drizzly')),
       [ANSWER_URL(1)]: () =>
         json(
-          result({ correct: false, score_delta: -10, stats: { ...STATS, total: 110, today: 4 } }),
+          result({
+            correct: false,
+            points: -10,
+            score_delta: 0,
+            stats: { ...STATS, total: 110, today: 4 },
+          }),
         ),
     })
     const user = renderApp('/quiz')
@@ -112,7 +118,7 @@ describe('quiz', () => {
   it('works from the keyboard: a number answers, Enter moves on', async () => {
     const api = quiz({
       'GET /api/quiz/question': questions(question(1, 'drizzly'), question(2, 'lugubrious')),
-      [ANSWER_URL(1)]: () => json(result({ correct: false, score_delta: 0 })),
+      [ANSWER_URL(1)]: () => json(result({ correct: false, points: -10, score_delta: 0 })),
     })
     const user = renderApp('/quiz')
     await screen.findByRole('heading', { name: 'drizzly' })
@@ -144,7 +150,7 @@ describe('quiz', () => {
   it('says when an early repeat did not score', async () => {
     quiz({
       'GET /api/quiz/question': questions(question(1, 'drizzly')),
-      [ANSWER_URL(1)]: () => json(result({ counted: false, score_delta: 0 })),
+      [ANSWER_URL(1)]: () => json(result({ counted: false, points: 0, score_delta: 0 })),
     })
     const user = renderApp('/quiz')
 

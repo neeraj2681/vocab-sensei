@@ -7,6 +7,7 @@ from app.core.enums import WordStatus
 from app.scoring.rules import (
     Triage,
     WordProgress,
+    answer_points,
     apply_answer,
     current_status,
     effective_score,
@@ -111,3 +112,17 @@ def test_rules_come_from_settings() -> None:
 
     assert apply_answer(WordProgress(score=40), correct=True, now=NOW, rules=gentle).score == 50
     assert apply_answer(WordProgress(score=40), correct=False, now=NOW, rules=gentle).score == 35
+
+
+@pytest.mark.parametrize(
+    ("total", "correct", "expected"),
+    [(0, True, 5), (50, False, -10), (0, False, 0), (4, False, -4)],
+)
+def test_answer_points_always_move_the_total_but_never_below_zero(
+    total: int, correct: bool, expected: int
+) -> None:
+    assert answer_points(total, correct=correct, counted=True, rules=RULES) == expected
+
+
+def test_answers_that_do_not_count_give_no_points() -> None:
+    assert answer_points(50, correct=False, counted=False, rules=RULES) == 0

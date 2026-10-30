@@ -74,3 +74,18 @@ def apply_answer(
 def mark_known(progress: WordProgress) -> WordProgress:
     """The "I know this" button."""
     return replace(progress, status=WordStatus.KNOWN)
+
+
+def answer_points(
+    total_before: int, *, correct: bool, counted: bool, rules: ScoringSettings
+) -> int:
+    """How an answer changes the lifetime score shown at the top of the quiz.
+
+    Unlike a word's score, this always moves: +5 for a right answer, -10 for a wrong one, even
+    on a word that is already at 0. Only the total itself never drops below 0. Answers that
+    don't count (a word asked again too soon) change nothing.
+    """
+    if not counted:
+        return 0
+    delta = rules.correct_delta if correct else rules.wrong_delta
+    return max(delta, rules.floor - total_before)

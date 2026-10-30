@@ -1,8 +1,9 @@
 """The never-ending quiz (docs/PROJECT_PLAN.md §5.3).
 
 There are no rounds: the screen always shows the user's newest unanswered question, and answering it
-makes the next one. Each answer changes the word's score (+5 / -10, never below 0); the change is
-logged, and lifetime points are the sum of those changes. A word isn't asked again within
+makes the next one. Each answer changes the word's score (+5 / -10, never below 0) and the lifetime
+score at the top (+5 / -10 every time; only the total never goes below 0). Both changes are
+logged; the lifetime score is the sum of the points. A word isn't asked again within
 `spacing` questions; if the user has fewer words than that, it may come back sooner, but then the
 answer is practice and doesn't score.
 """
@@ -31,6 +32,7 @@ from app.quiz.selection import Pool, choose_pool, streak
 from app.repositories.quiz import QuizRepository
 from app.scoring.rules import (
     WordProgress,
+    answer_points,
     apply_answer,
     current_status,
     effective_score,
@@ -74,7 +76,8 @@ class Stats:
 class AnswerOutcome:
     correct: bool
     correct_index: int
-    score_delta: int
+    score_delta: int  # change in the word's score
+    points: int  # change in the lifetime score
     counted: bool  # False when the word was asked again too soon to score
     word: UserWord
     question: Question
@@ -241,6 +244,12 @@ class QuizService:
             word.score, word.status, word.learned_at = after.score, after.status, after.learned_at
             delta = after.score - before
         word.last_reviewed_at = now
+        points = answer_points(
+            self._repo.total_points(user_id),
+            correct=correct,
+            counted=counted,
+            rules=self._settings.scoring,
+        )
 
         self._repo.add(
             QuizAnswer(
@@ -250,6 +259,7 @@ class QuizService:
                 chosen_index=chosen_index,
                 correct=correct,
                 score_delta=delta,
+                points=points,
                 answered_at=now,
             )
         )
@@ -258,6 +268,7 @@ class QuizService:
             correct=correct,
             correct_index=question.correct_index,
             score_delta=delta,
+            points=points,
             counted=counted,
             word=word,
             question=question,
@@ -319,6 +330,6 @@ class QuizService:
         points: list[HistoryPoint] = []
         total = 0
         for number, answer in enumerate(self._repo.answers(user_id), start=1):
-            total += answer.score_delta
+            total += answer.points
             points.append(HistoryPoint(number, total, answer.correct, answer.answered_at))
         return points
