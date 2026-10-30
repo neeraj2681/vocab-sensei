@@ -548,3 +548,46 @@ button.primary {
   cursor: pointer;
   color: var(--accent);
 }
+
+/* Sorting words */
+
+.sort {
+  max-width: 40rem;
+}
+
+.sort__card {
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.sort__choices {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+}
+
+.sort__choice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--fg);
+  cursor: pointer;
+}
+
+.sort__choice:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.sort__choice span {
+  font-size: 0.85em;
+}
+
+.sort__footer {
+  margin-top: 1rem;
+}

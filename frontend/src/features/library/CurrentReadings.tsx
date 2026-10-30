@@ -47,6 +47,9 @@ export function CurrentReadings({ readings, onChange }: Props) {
                   </span>
                 </span>
                 <span className="row__actions">
+                  <Link to={`/books/${String(id)}/sort`} aria-label={`Sort the words of ${title}`}>
+                    Sort words
+                  </Link>
                   <button
                     type="button"
                     aria-label={`Move ${title} up`}
