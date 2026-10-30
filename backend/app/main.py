@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import auth, documents, health, readings
+from app.api import auth, documents, health, learning, readings
 
 
 def create_app() -> FastAPI:
@@ -17,6 +17,7 @@ def create_app() -> FastAPI:
     app.include_router(auth.router, prefix="/api")
     app.include_router(documents.router, prefix="/api")
     app.include_router(readings.router, prefix="/api")
+    app.include_router(learning.router, prefix="/api")
     return app
 
 
