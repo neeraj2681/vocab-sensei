@@ -87,19 +87,28 @@ Extract text per chapter ──► tokenize + lemmatize ──► filter (stopwo
 - **Chapter primer** view: "Before you read Chapter 4, these 23 words are new to you" + readiness %.
 
 ### 5.3 Daily quiz
-- "Play" → a **round of 10** MCQ questions. Question: the word; 4 options: definitions; exactly one correct.
-- The first completed round of the day is the **daily goal** (counts for the streak). After it, "Play another round"
-  is offered; extra rounds are optional.
+- **Never-ending quiz** (decided, replaces rounds): the screen always shows a question (the word; 4 definitions,
+  exactly one correct). Answering, right or wrong, leads straight to the next one; there is no end screen.
+  An unanswered question stays on screen when the user comes back (reloading can't skip a hard word).
+- **Live score** at the top: **lifetime points**, the sum of every answer's score change (+5 / −10; a word can't
+  drop below 0, so a wrong answer on a 0-score word costs nothing). A green "+5" or red "−10" pops over it on each
+  answer, next to a sparkline of the visit's last ~20 answers.
+- After each answer: ✓/✗, the correct meaning and the sentence from the book, then "Next".
+- **Daily goal:** 10 answers a day keeps the streak (days are counted in the user's time zone).
+- **Progress page** (under the profile menu): a graph of lifetime points after every answer since the first one.
 - Every question has an **"I know this"** button: marks the word `known` and replaces it with another question.
 - **Close-but-wrong distractors** (the hard part):
   - Prefer definitions of words with the **same part of speech** and **similar difficulty**.
   - Optionally semantically *near* words (WordNet siblings / embedding neighbours) — **but never synonyms**, otherwise
     two answers are right. Rule: reject a distractor if it shares a synset or is a listed synonym of the target.
-- When a word repeats in a session, regenerate and reshuffle options (never the same option set twice).
-- Question mix per session (configurable), e.g.:
-  - 6 — next words from the learning list frontier (new)
-  - 3 — words in progress (0 < score < 100)
-  - 1 — review of decayed "learned" words
+- Options are reshuffled (and regenerated) every time a word is asked; options close in length to the answer are
+  preferred so the longest one isn't a giveaway.
+- **Spacing:** a word isn't asked again within 10 questions. With fewer than 10 words available it can come back
+  sooner, but then the answer is practice and scores nothing. A missed word simply returns later.
+- Each next word comes from one of three pools, picked at random 6 : 3 : 1 (configurable):
+  - new: next words from the learning list frontier
+  - learning: words in progress, least recently reviewed first
+  - review: learned words whose decayed score fell below 100
 - Show the context sentence from the book after answering (reinforces usage).
 
 ### 5.4 Scoring rules (as specified, all configurable)
@@ -155,7 +164,7 @@ How it will work in Phase 5:
 - **Never trust raw output:** responses must match a JSON schema; the correct option must agree with the dictionary
   sense; distractors that are WordNet synonyms are rejected. Anything that fails falls back to the rule-based
   generator.
-- **Fast quizzes:** questions are pre-generated in the background for the next rounds and cached.
+- **Fast quizzes:** the next questions are pre-generated in the background and cached.
 - **Privacy:** with a local model, book text never leaves the machine. A hosted model would only receive short
   snippets, and only if the user opts in.
 
@@ -271,11 +280,11 @@ because git and the workflow files carry over.
 - [x] Library page (upload, my books, chapter-by-chapter words) + current-reading chooser with priorities and current chapter (`feat/library-ui`)
 - [x] Part of speech per book word, so the matching definitions come first (`feat/word-pos`)
 - [x] Learning list ordering: current chapter onward, books mixed 3:2:1 by priority, "Up next" preview (`feat/learning-list`)
-- [ ] Quiz: 10 MCQs, safe distractors, re-randomized options
-- [ ] Scoring rules + lazy decay + answer log
+- [x] Quiz engine: never-ending MCQs, safe distractors, spacing, 6:3:1 pools, scoring + answer log, stats, history (`feat/quiz-engine`)
+- [ ] Quiz page: live score with +5/−10 pops and sparkline, feedback with the book's sentence (`feat/quiz-ui`)
 - [ ] Optional post-upload triage (Known / Unsure / New) + "I know this" button
-- [ ] Daily goal (first round of 10) + streak, optional extra rounds
-- [ ] Basic progress page
+- [x] Daily goal (10 answers a day) + streak (API, in `feat/quiz-engine`)
+- [ ] Progress page under the profile menu: lifetime points graph since the first answer (`feat/progress-page`)
 - [ ] Export / backup (JSON) and import
 
 ### Phase 2 — Better learning
@@ -324,7 +333,7 @@ because git and the workflow files carry over.
 | # | Question | Decision |
 |---|----------|----------|
 | 1 | One book or several current reads? | **Several, with priority**; quiz slots weighted by priority (§5.2) |
-| 2 | Quiz length | **Rounds of 10**; first round = daily goal/streak, more rounds optional (§5.3) |
+| 2 | Quiz length | **Never-ending quiz** with a live lifetime score; 10 answers a day = daily goal/streak (§5.3). Replaced "rounds of 10" on 30 Oct 2026 |
 | 3 | Words already known | **Optional triage after upload** (Known / Unsure / New) **+ "I know this" button** in quizzes (§5.1, §5.3) |
 | 4 | Devices | **Desktop first**; mobile-friendly layout and PWA in Phase 2 |
 | 5 | Scanned PDFs | **Text PDFs only** in MVP; OCR (Tesseract) in Phase 2 (§5.1) |
