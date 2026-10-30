@@ -5,7 +5,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, U
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session, sessionmaker
 
-from app.api.deps import CurrentUser, SettingsDep
+from app.api.deps import CurrentUser, DictionaryLoader, SettingsDep, get_dictionary
 from app.core.config import Settings
 from app.core.enums import DocumentFormat, DocumentStatus
 from app.db.models import Document
@@ -59,28 +59,44 @@ class DocumentDetailResponse(DocumentResponse):
         return cls(**summary, chapters=chapters)
 
 
+class DefinitionResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    pos: str
+    text: str
+
+
 class WordResponse(BaseModel):
     lemma: str
     zipf: float | None
     chapter_index: int
     occurrences: int
     context_sentence: str | None
+    definitions: list[DefinitionResponse]
+
+
+DictionaryDep = Annotated[DictionaryLoader, Depends(get_dictionary)]
 
 
 def get_document_service(
-    session: Annotated[Session, Depends(get_session)], settings: SettingsDep
+    session: Annotated[Session, Depends(get_session)],
+    settings: SettingsDep,
+    dictionary: DictionaryDep,
 ) -> DocumentService:
-    return DocumentService(session, settings)
+    return DocumentService(session, settings, dictionary)
 
 
 DocumentServiceDep = Annotated[DocumentService, Depends(get_document_service)]
 
 
 def process_in_background(
-    session_factory: sessionmaker[Session], settings: Settings, document_id: int
+    session_factory: sessionmaker[Session],
+    settings: Settings,
+    dictionary: DictionaryLoader,
+    document_id: int,
 ) -> None:
     with session_factory() as session:
-        DocumentService(session, settings).process(document_id)
+        DocumentService(session, settings, dictionary).process(document_id)
 
 
 def owned_document(user: CurrentUser, documents: DocumentServiceDep, document_id: int) -> Document:
@@ -99,6 +115,7 @@ def upload(
     user: CurrentUser,
     documents: DocumentServiceDep,
     settings: SettingsDep,
+    dictionary: DictionaryDep,
     session_factory: Annotated[sessionmaker[Session], Depends(get_session_factory)],
     background: BackgroundTasks,
 ) -> DocumentResponse:
@@ -108,7 +125,7 @@ def upload(
         raise HTTPException(status.HTTP_413_CONTENT_TOO_LARGE, str(exc)) from None
     except UploadError as exc:
         raise HTTPException(status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, str(exc)) from None
-    background.add_task(process_in_background, session_factory, settings, document.id)
+    background.add_task(process_in_background, session_factory, settings, dictionary, document.id)
     return DocumentResponse.of(document)
 
 
@@ -136,6 +153,7 @@ def list_words(
             chapter_index=chapter_index,
             occurrences=occurrence.occurrences,
             context_sentence=occurrence.context_sentence,
+            definitions=[DefinitionResponse.model_validate(d) for d in word.definitions],
         )
         for occurrence, word, chapter_index in WordService(session).words_for_document(
             document, chapter

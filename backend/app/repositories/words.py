@@ -1,7 +1,7 @@
 from collections.abc import Iterable, Sequence
 
 from sqlalchemy import delete, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.db.models import Chapter, DocumentWord, Word
 
@@ -13,10 +13,14 @@ class WordRepository:
         self._session = session
 
     def get_by_lemmas(self, lemmas: Sequence[str]) -> dict[str, Word]:
+        """The stored words among `lemmas`, with their definitions loaded."""
         found: dict[str, Word] = {}
         for start in range(0, len(lemmas), _CHUNK):
             chunk = lemmas[start : start + _CHUNK]
-            for word in self._session.scalars(select(Word).where(Word.lemma.in_(chunk))):
+            query = (
+                select(Word).where(Word.lemma.in_(chunk)).options(selectinload(Word.definitions))
+            )
+            for word in self._session.scalars(query):
                 found[word.lemma] = word
         return found
 
@@ -37,6 +41,7 @@ class WordRepository:
             .join(Chapter, Chapter.id == DocumentWord.chapter_id)
             .where(DocumentWord.document_id == document_id)
             .order_by(Chapter.index, DocumentWord.first_position)
+            .options(selectinload(Word.definitions))
         )
         if chapter_index is not None:
             query = query.where(Chapter.index == chapter_index)

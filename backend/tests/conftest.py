@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
-from app.api.deps import get_email_sender
+from app.api.deps import get_dictionary, get_email_sender
 from app.core import security
 from app.core.config import Settings, get_settings
 from app.core.email import Email
@@ -15,6 +15,7 @@ from app.db.base import Base
 from app.db.models import User
 from app.db.session import get_session, get_session_factory, make_engine
 from app.db.types import utcnow
+from app.dictionary.types import Sense
 from app.main import create_app
 
 TEST_PASSWORD = "correct horse battery"
@@ -26,6 +27,22 @@ class FakeEmailSender:
 
     def send(self, email: Email) -> None:
         self.outbox.append(email)
+
+
+class FakeDictionary:
+    """Knows every word except those in `unknown`; each has one noun sense, "meaning of <word>"."""
+
+    source = "fake:1"
+
+    def __init__(self) -> None:
+        self.unknown: set[str] = set()
+        self.lookups: list[str] = []
+
+    def senses(self, lemma: str) -> list[Sense]:
+        self.lookups.append(lemma)
+        if lemma in self.unknown:
+            return []
+        return [Sense(pos="noun", definition=f"meaning of {lemma}", rank=0)]
 
 
 @pytest.fixture
@@ -59,17 +76,24 @@ def mailer() -> FakeEmailSender:
 
 
 @pytest.fixture
+def dictionary() -> FakeDictionary:
+    return FakeDictionary()
+
+
+@pytest.fixture
 def client(
     session: Session,
     session_factory: sessionmaker[Session],
     settings: Settings,
     mailer: FakeEmailSender,
+    dictionary: FakeDictionary,
 ) -> Iterator[TestClient]:
     app = create_app()
     app.dependency_overrides[get_session] = lambda: session
     app.dependency_overrides[get_session_factory] = lambda: session_factory
     app.dependency_overrides[get_settings] = lambda: settings
     app.dependency_overrides[get_email_sender] = lambda: mailer
+    app.dependency_overrides[get_dictionary] = lambda: lambda: dictionary
     with TestClient(app) as c:
         yield c
 
