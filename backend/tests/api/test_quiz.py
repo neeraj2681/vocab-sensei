@@ -176,6 +176,7 @@ class TestAnswering:
         result = answer(user_client, session)
 
         assert result["correct"] is True
+        assert result["points"] == 5
         assert result["score_delta"] == 5
         assert result["counted"] is True
         assert result["word_score"] == 5
@@ -183,12 +184,29 @@ class TestAnswering:
         assert result["context_sentence"] == "A sentence with word00."
         assert result["stats"] == {"total": 5, "today": 1, "daily_goal": 10, "streak": 0}
 
-    def test_a_wrong_answer_takes_ten_but_never_below_zero(
+    def test_a_wrong_answer_always_takes_ten_from_the_total(
         self, user_client: TestClient, session: Session
     ) -> None:
-        first = answer(user_client, session, right=False)
-        assert (first["correct"], first["score_delta"], first["word_score"]) == (False, 0, 0)
+        answer(user_client, session)
+        answer(user_client, session)
 
+        result = answer(user_client, session, right=False)  # a new word, its score stays at 0
+
+        assert (result["points"], result["stats"]["total"]) == (-10, 0)
+        assert (result["score_delta"], result["word_score"]) == (0, 0)
+
+    def test_the_total_never_drops_below_zero(
+        self, user_client: TestClient, session: Session
+    ) -> None:
+        answer(user_client, session)  # total 5
+
+        result = answer(user_client, session, right=False)
+
+        assert (result["points"], result["stats"]["total"]) == (-5, 0)
+
+    def test_a_wrong_answer_takes_ten_from_a_words_score(
+        self, user_client: TestClient, session: Session
+    ) -> None:
         word = session.scalars(select(Word).where(Word.lemma == "word01")).one()
         session.add(
             UserWord(user_id=reader(session).id, word_id=word.id, score=30, status="learning")
@@ -212,7 +230,7 @@ class TestAnswering:
         for right in (True, True, False, True):
             result = answer(user_client, session, right=right)
 
-        assert result["stats"]["total"] == 15  # the wrong answer hit a word at 0
+        assert result["stats"]["total"] == 5  # 5, 10, 0, 5
 
     def test_a_question_can_only_be_answered_once(
         self, user_client: TestClient, session: Session
@@ -253,7 +271,7 @@ def test_repeats_sooner_than_ten_questions_do_not_score(
     results = [answer(user_client, session) for _ in range(7)]
 
     assert [r["counted"] for r in results] == [True] * 5 + [False] * 2
-    assert [r["score_delta"] for r in results[5:]] == [0, 0]
+    assert [(r["score_delta"], r["points"]) for r in results[5:]] == [(0, 0), (0, 0)]
     assert results[-1]["stats"]["total"] == 25
 
 
@@ -316,6 +334,7 @@ def test_learned_words_come_back_for_review_once_their_score_decays(
 
     assert result["word"] == "word07"
     assert result["score_delta"] == 5  # 85 after three weeks of decay, now 90
+    assert result["points"] == 5
     assert result["word_score"] == 90
 
 
@@ -363,7 +382,7 @@ class TestStats:
         assert [(p["number"], p["total"], p["correct"]) for p in history] == [
             (1, 5, True),
             (2, 10, True),
-            (3, 10, False),
+            (3, 0, False),
         ]
 
 

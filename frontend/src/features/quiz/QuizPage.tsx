@@ -71,7 +71,7 @@ export function QuizPage() {
       setRecent((values) => [...values, result.stats.total].slice(-(RECENT_ANSWERS + 1)))
       setPop((previous) => ({
         id: (previous?.id ?? 0) + 1,
-        delta: result.score_delta,
+        delta: result.points,
         correct: result.correct,
       }))
     } catch (err) {

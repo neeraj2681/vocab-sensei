@@ -88,7 +88,8 @@ class AnswerRequest(BaseModel):
 class AnswerResponse(BaseModel):
     correct: bool
     correct_index: int
-    score_delta: int  # what the live score changes by: +5, -10, or 0 (floor, or asked too soon)
+    points: int  # what the live score changes by: +5, -10, or 0 (asked too soon, or total at 0)
+    score_delta: int  # what the word's own score changed by
     counted: bool  # False when the word came back too soon to score
     word_score: int
     word_status: WordStatus
@@ -136,6 +137,7 @@ def answer(
     return AnswerResponse(
         correct=outcome.correct,
         correct_index=outcome.correct_index,
+        points=outcome.points,
         score_delta=outcome.score_delta,
         counted=outcome.counted,
         word_score=outcome.word.score,

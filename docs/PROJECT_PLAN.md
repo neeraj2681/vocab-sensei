@@ -90,8 +90,9 @@ Extract text per chapter ──► tokenize + lemmatize ──► filter (stopwo
 - **Never-ending quiz** (decided, replaces rounds): the screen always shows a question (the word; 4 definitions,
   exactly one correct). Answering, right or wrong, leads straight to the next one; there is no end screen.
   An unanswered question stays on screen when the user comes back (reloading can't skip a hard word).
-- **Live score** at the top: **lifetime points**, the sum of every answer's score change (+5 / −10; a word can't
-  drop below 0, so a wrong answer on a 0-score word costs nothing). A green "+5" or red "−10" pops over it on each
+- **Live score** at the top: **lifetime points**. Every counted answer moves it: +5 right, −10 wrong, even when
+  the word's own score is already 0 (decided 30 Oct 2026). Only the total never goes below 0. Word scores keep
+  their own rules (§5.4); the two are logged separately (`quiz_answers.points` and `score_delta`). A green "+5" or red "−10" pops over it on each
   answer, next to a sparkline of the visit's last ~20 answers.
 - After each answer: ✓/✗, the correct meaning and the sentence from the book, then "Next".
 - **Daily goal:** 10 answers a day keeps the streak (days are counted in the user's time zone).

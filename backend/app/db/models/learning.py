@@ -88,5 +88,6 @@ class QuizAnswer(Base):
     )
     chosen_index: Mapped[int | None]  # None = "I know this" was pressed
     correct: Mapped[bool]
-    score_delta: Mapped[int]  # change in the word's score; lifetime points are the sum
+    score_delta: Mapped[int]  # change in the word's score
+    points: Mapped[int] = mapped_column(server_default="0")  # change in the lifetime score
     answered_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)

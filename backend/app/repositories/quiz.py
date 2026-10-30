@@ -62,7 +62,7 @@ class QuizRepository:
 
     def total_points(self, user_id: int) -> int:
         total = self._session.scalar(
-            select(func.sum(QuizAnswer.score_delta)).where(QuizAnswer.user_id == user_id)
+            select(func.sum(QuizAnswer.points)).where(QuizAnswer.user_id == user_id)
         )
         return int(total or 0)
 

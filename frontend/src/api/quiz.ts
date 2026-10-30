@@ -16,7 +16,8 @@ export interface QuizStats {
 export interface AnswerResult {
   correct: boolean
   correct_index: number
-  score_delta: number // +5, -10, or 0 (score floor, or the word came back too soon)
+  points: number // what the live score changes by: +5, -10, or 0 (asked too soon, or total at 0)
+  score_delta: number // what the word's own score changed by
   counted: boolean
   word_score: number
   word_status: 'new' | 'learning' | 'learned' | 'known'
