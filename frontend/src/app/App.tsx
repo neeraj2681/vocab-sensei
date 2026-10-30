@@ -1,4 +1,4 @@
-import { BrowserRouter, Link, Navigate, Route, Routes } from 'react-router'
+import { BrowserRouter, Link, NavLink, Navigate, Route, Routes } from 'react-router'
 import { useAuth } from '../features/auth/AuthContext'
 import { AuthProvider } from '../features/auth/AuthProvider'
 import { ForgotPasswordPage } from '../features/auth/ForgotPasswordPage'
@@ -9,6 +9,7 @@ import { ResetPasswordPage } from '../features/auth/ResetPasswordPage'
 import { VerifyEmailPage } from '../features/auth/VerifyEmailPage'
 import { BookPage } from '../features/library/BookPage'
 import { LibraryPage } from '../features/library/LibraryPage'
+import { QuizPage } from '../features/quiz/QuizPage'
 
 function AppRoutes() {
   return (
@@ -26,6 +27,14 @@ function AppRoutes() {
         element={
           <RequireAuth>
             <BookPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/quiz"
+        element={
+          <RequireAuth>
+            <QuizPage />
           </RequireAuth>
         }
       />
@@ -48,6 +57,14 @@ function Header() {
         <Link to="/">Vocab Sensei</Link>
       </h1>
       <p className="app__tagline">Learn the words of your next read before you read them.</p>
+      {user && (
+        <nav className="app__nav" aria-label="Main">
+          <NavLink to="/" end>
+            Library
+          </NavLink>
+          <NavLink to="/quiz">Quiz</NavLink>
+        </nav>
+      )}
       {user && (
         <p className="app__user">
           {user.email}{' '}

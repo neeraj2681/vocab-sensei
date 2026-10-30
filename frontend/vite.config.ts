@@ -11,6 +11,7 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
+    env: { TZ: 'UTC' }, // same results on every machine (the quiz sends the browser's time zone)
     restoreMocks: true,
   },
 })
