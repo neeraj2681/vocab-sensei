@@ -12,6 +12,7 @@ import { BookPage } from '../features/library/BookPage'
 import { LibraryPage } from '../features/library/LibraryPage'
 import { ProgressPage } from '../features/progress/ProgressPage'
 import { QuizPage } from '../features/quiz/QuizPage'
+import { SortPage } from '../features/sorting/SortPage'
 
 function AppRoutes() {
   return (
@@ -29,6 +30,14 @@ function AppRoutes() {
         element={
           <RequireAuth>
             <BookPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/books/:id/sort"
+        element={
+          <RequireAuth>
+            <SortPage />
           </RequireAuth>
         }
       />

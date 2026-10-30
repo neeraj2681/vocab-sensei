@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import auth, documents, health, learning, quiz, readings
+from app.api import auth, documents, health, learning, quiz, readings, triage
 
 
 def create_app() -> FastAPI:
@@ -19,6 +19,7 @@ def create_app() -> FastAPI:
     app.include_router(readings.router, prefix="/api")
     app.include_router(learning.router, prefix="/api")
     app.include_router(quiz.router, prefix="/api")
+    app.include_router(triage.router, prefix="/api")
     return app
 
 

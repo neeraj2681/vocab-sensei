@@ -283,7 +283,7 @@ because git and the workflow files carry over.
 - [x] Learning list ordering: current chapter onward, books mixed 3:2:1 by priority, "Up next" preview (`feat/learning-list`)
 - [x] Quiz engine: never-ending MCQs, safe distractors, spacing, 6:3:1 pools, scoring + answer log, stats, history (`feat/quiz-engine`)
 - [ ] Quiz page: live score with +5/−10 pops and sparkline, feedback with the book's sentence (`feat/quiz-ui`)
-- [ ] Optional post-upload triage (Known / Unsure / New) + "I know this" button
+- [x] Optional sorting of a book's words, one card at a time (Known / Unsure / New, K/U/N keys, undo) + "I know this" button (`feat/triage`)
 - [x] Daily goal (10 answers a day) + streak (API, in `feat/quiz-engine`)
 - [ ] Progress page under the profile menu: lifetime points graph since the first answer (`feat/progress-page`)
 - [ ] Export / backup (JSON) and import

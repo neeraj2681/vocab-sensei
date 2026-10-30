@@ -5,6 +5,7 @@ import { documentsApi, type BookDocumentDetail, type BookWord } from '../../api/
 import { readingsApi, type Reading } from '../../api/readings'
 import { FormError } from '../../components/Form'
 import { useSubmit } from '../../components/useSubmit'
+import { SortLink } from '../sorting/SortLink'
 import { bookSummary, chapterLabel } from './labels'
 
 interface Book {
@@ -81,6 +82,11 @@ export function BookPage() {
       <BackLink />
       <h2>{detail.title}</h2>
       {detail.author && <p className="muted">by {detail.author}</p>}
+      {ready && (
+        <p>
+          <SortLink documentId={documentId} />
+        </p>
+      )}
       {!ready ? (
         <p>{bookSummary(detail)}</p>
       ) : (
