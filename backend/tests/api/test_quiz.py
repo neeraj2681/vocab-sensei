@@ -1,0 +1,408 @@
+from collections.abc import Iterator
+from datetime import UTC, datetime, timedelta
+from typing import Any
+
+import pytest
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from app.api.deps import get_dictionary
+from app.api.quiz import get_now
+from app.core.enums import DocumentFormat, DocumentStatus, PartOfSpeech, WordStatus
+from app.db.models import (
+    Chapter,
+    CurrentReading,
+    Definition,
+    Document,
+    DocumentWord,
+    Question,
+    User,
+    UserWord,
+    Word,
+)
+from app.dictionary.types import DictionaryUnavailableError
+from tests.conftest import FakeDictionary, log_in, make_user
+
+NOW = datetime(2026, 10, 30, 12, 0, tzinfo=UTC)
+LEMMAS = [f"word{i:02d}" for i in range(20)]
+
+
+class Clock:
+    def __init__(self) -> None:
+        self.now = NOW
+
+
+@pytest.fixture
+def clock(user_client: TestClient) -> Iterator[Clock]:
+    clock = Clock()
+    app = user_client.app
+    assert isinstance(app, FastAPI)
+    app.dependency_overrides[get_now] = lambda: clock.now
+    yield clock
+
+
+def reader(session: Session) -> User:
+    return session.scalars(select(User).where(User.email == "reader@example.com")).one()
+
+
+def add_word(session: Session, lemma: str, pos: str = "noun", zipf: float = 3.0) -> Word:
+    word = Word(
+        lemma=lemma,
+        zipf_frequency=zipf,
+        definitions=[Definition(pos=pos, text=f"meaning of {lemma}", source="test", sense_rank=0)],
+    )
+    session.add(word)
+    session.flush()
+    return word
+
+
+def add_book(session: Session, user: User, lemmas: list[str], *, reading: bool = True) -> Document:
+    """A ready book whose first chapter uses `lemmas` in order, optionally being read."""
+    document = Document(
+        owner_user_id=user.id,
+        title="Moby-Dick",
+        original_filename="moby.epub",
+        file_path="uploads/1/moby.epub",
+        format=DocumentFormat.EPUB,
+        status=DocumentStatus.READY,
+        chapters=[Chapter(index=0, title="Loomings")],
+    )
+    session.add(document)
+    session.flush()
+    for position, lemma in enumerate(lemmas):
+        word = session.scalars(select(Word).where(Word.lemma == lemma)).first() or add_word(
+            session, lemma
+        )
+        session.add(
+            DocumentWord(
+                document_id=document.id,
+                word_id=word.id,
+                chapter_id=document.chapters[0].id,
+                first_position=position,
+                context_sentence=f"A sentence with {lemma}.",
+                pos=PartOfSpeech.NOUN,
+            )
+        )
+    if reading:
+        session.add(CurrentReading(user_id=user.id, document_id=document.id))
+    session.commit()
+    return document
+
+
+@pytest.fixture
+def book(user_client: TestClient, session: Session) -> Document:
+    return add_book(session, reader(session), LEMMAS)
+
+
+def question(client: TestClient) -> dict[str, Any]:
+    response = client.get("/api/quiz/question")
+    assert response.status_code == 200, response.text
+    body: dict[str, Any] = response.json()
+    return body
+
+
+def correct_index(session: Session, question_id: int) -> int:
+    found = session.get(Question, question_id)
+    assert found is not None
+    return found.correct_index
+
+
+def answer(
+    client: TestClient, session: Session, *, right: bool = True, tz: str = "UTC"
+) -> dict[str, Any]:
+    asked = question(client)
+    right_index = correct_index(session, asked["id"])
+    chosen = right_index if right else (right_index + 1) % len(asked["options"])
+    response = client.post(
+        f"/api/quiz/questions/{asked['id']}/answer?tz={tz}", json={"chosen_index": chosen}
+    )
+    assert response.status_code == 200, response.text
+    body: dict[str, Any] = response.json()
+    body["word"] = asked["word"]
+    return body
+
+
+@pytest.mark.usefixtures("book", "clock")
+class TestAsking:
+    def test_asks_the_first_word_of_the_learning_list(self, user_client: TestClient) -> None:
+        asked = question(user_client)
+
+        assert asked["word"] == "word00"
+        assert len(asked["options"]) == 4
+        assert "meaning of word00" in asked["options"]
+        assert "correct_index" not in asked  # only revealed after answering
+
+    def test_the_same_question_stays_until_it_is_answered(self, user_client: TestClient) -> None:
+        first = question(user_client)
+
+        assert question(user_client) == first
+
+    def test_wrong_options_are_other_words_meanings(self, user_client: TestClient) -> None:
+        options = question(user_client)["options"]
+
+        assert len(set(options)) == 4
+        assert all(o.startswith("meaning of word") for o in options)
+
+    def test_the_quiz_never_ends(self, user_client: TestClient, session: Session) -> None:
+        asked = [answer(user_client, session)["word"] for _ in range(30)]
+
+        assert len(asked) == 30  # more answers than words: it just keeps going
+
+    def test_a_word_is_not_asked_again_within_ten_questions(
+        self, user_client: TestClient, session: Session
+    ) -> None:
+        words = [answer(user_client, session, right=False)["word"] for _ in range(25)]
+
+        for i in range(len(words)):
+            assert words[i] not in words[i + 1 : i + 11]
+
+
+def test_without_current_reads_there_is_nothing_to_ask(
+    user_client: TestClient, session: Session
+) -> None:
+    add_book(session, reader(session), LEMMAS, reading=False)
+
+    response = user_client.get("/api/quiz/question")
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == "Start reading a book to get questions"
+
+
+@pytest.mark.usefixtures("book", "clock")
+class TestAnswering:
+    def test_a_right_answer_adds_five(self, user_client: TestClient, session: Session) -> None:
+        result = answer(user_client, session)
+
+        assert result["correct"] is True
+        assert result["score_delta"] == 5
+        assert result["counted"] is True
+        assert result["word_score"] == 5
+        assert result["word_status"] == "learning"
+        assert result["context_sentence"] == "A sentence with word00."
+        assert result["stats"] == {"total": 5, "today": 1, "daily_goal": 10, "streak": 0}
+
+    def test_a_wrong_answer_takes_ten_but_never_below_zero(
+        self, user_client: TestClient, session: Session
+    ) -> None:
+        first = answer(user_client, session, right=False)
+        assert (first["correct"], first["score_delta"], first["word_score"]) == (False, 0, 0)
+
+        word = session.scalars(select(Word).where(Word.lemma == "word01")).one()
+        session.add(
+            UserWord(user_id=reader(session).id, word_id=word.id, score=30, status="learning")
+        )
+        session.commit()
+        while (result := answer(user_client, session, right=False))["word"] != "word01":
+            pass
+
+        assert (result["score_delta"], result["word_score"]) == (-10, 20)
+
+    def test_the_answer_reveals_the_correct_option(
+        self, user_client: TestClient, session: Session
+    ) -> None:
+        asked = question(user_client)
+
+        result = answer(user_client, session, right=False)
+
+        assert asked["options"][result["correct_index"]] == "meaning of word00"
+
+    def test_lifetime_points_add_up(self, user_client: TestClient, session: Session) -> None:
+        for right in (True, True, False, True):
+            result = answer(user_client, session, right=right)
+
+        assert result["stats"]["total"] == 15  # the wrong answer hit a word at 0
+
+    def test_a_question_can_only_be_answered_once(
+        self, user_client: TestClient, session: Session
+    ) -> None:
+        asked = question(user_client)
+        url = f"/api/quiz/questions/{asked['id']}/answer"
+        user_client.post(url, json={"chosen_index": 0})
+
+        assert user_client.post(url, json={"chosen_index": 0}).status_code == 409
+
+    def test_choice_must_be_one_of_the_options(self, user_client: TestClient) -> None:
+        asked = question(user_client)
+
+        response = user_client.post(
+            f"/api/quiz/questions/{asked['id']}/answer", json={"chosen_index": 4}
+        )
+
+        assert response.status_code == 422
+
+    def test_other_users_questions_are_hidden(
+        self, user_client: TestClient, session: Session
+    ) -> None:
+        asked = question(user_client)
+        log_in(user_client, make_user(session, "other@example.com").email)
+
+        response = user_client.post(
+            f"/api/quiz/questions/{asked['id']}/answer", json={"chosen_index": 0}
+        )
+
+        assert response.status_code == 404
+
+
+def test_repeats_sooner_than_ten_questions_do_not_score(
+    user_client: TestClient, session: Session, clock: Clock
+) -> None:
+    add_book(session, reader(session), LEMMAS[:5])  # fewer words than the spacing
+
+    results = [answer(user_client, session) for _ in range(7)]
+
+    assert [r["counted"] for r in results] == [True] * 5 + [False] * 2
+    assert [r["score_delta"] for r in results[5:]] == [0, 0]
+    assert results[-1]["stats"]["total"] == 25
+
+
+@pytest.mark.usefixtures("book", "clock")
+def test_i_know_this_retires_the_word(user_client: TestClient, session: Session) -> None:
+    asked = question(user_client)
+
+    response = user_client.post(f"/api/quiz/questions/{asked['id']}/know")
+
+    assert response.status_code == 204
+    assert question(user_client)["word"] != asked["word"]
+    word = session.scalars(select(Word).where(Word.lemma == asked["word"])).one()
+    progress = session.get(UserWord, (reader(session).id, word.id))
+    assert progress is not None
+    assert progress.status == WordStatus.KNOWN
+    words = [answer(user_client, session)["word"] for _ in range(25)]
+    assert asked["word"] not in words
+
+
+def test_synonyms_are_never_wrong_options(
+    user_client: TestClient, session: Session, dictionary: FakeDictionary, clock: Clock
+) -> None:
+    add_book(session, reader(session), LEMMAS[:8])
+    dictionary.synonym_sets["word00"] = frozenset(LEMMAS[1:5])
+
+    options = question(user_client)["options"]
+
+    assert not {f"meaning of {lemma}" for lemma in LEMMAS[1:5]} & set(options)
+
+
+def test_wrong_options_share_the_words_part_of_speech(
+    user_client: TestClient, session: Session, clock: Clock
+) -> None:
+    for lemma in ["verb1", "verb2", "verb3", "verb4"]:
+        add_word(session, lemma, pos="verb")
+    add_book(session, reader(session), LEMMAS[:4])
+
+    options = question(user_client)["options"]
+
+    assert all(o.startswith("meaning of word") for o in options)
+
+
+def test_learned_words_come_back_for_review_once_their_score_decays(
+    user_client: TestClient, session: Session, clock: Clock
+) -> None:
+    add_book(session, reader(session), LEMMAS, reading=False)  # nothing new to learn
+    word = session.scalars(select(Word).where(Word.lemma == "word07")).one()
+    session.add(
+        UserWord(
+            user_id=reader(session).id,
+            word_id=word.id,
+            score=100,
+            status=WordStatus.LEARNED,
+            learned_at=NOW - timedelta(weeks=3),
+        )
+    )
+    session.commit()
+
+    result = answer(user_client, session)
+
+    assert result["word"] == "word07"
+    assert result["score_delta"] == 5  # 85 after three weeks of decay, now 90
+    assert result["word_score"] == 90
+
+
+@pytest.mark.usefixtures("book")
+class TestStats:
+    def test_streak_counts_days_that_met_the_goal(
+        self, user_client: TestClient, session: Session, clock: Clock
+    ) -> None:
+        for day in range(3):
+            clock.now = NOW + timedelta(days=day)
+            for _ in range(10):
+                result = answer(user_client, session)
+
+        assert result["stats"]["streak"] == 3
+        assert result["stats"]["today"] == 10
+
+    def test_today_depends_on_the_users_time_zone(
+        self, user_client: TestClient, session: Session, clock: Clock
+    ) -> None:
+        clock.now = datetime(2026, 10, 30, 20, 0, tzinfo=UTC)  # already the 31st in Kolkata
+        answer(user_client, session)
+        clock.now = datetime(2026, 10, 30, 22, 0, tzinfo=UTC)
+
+        utc = user_client.get("/api/quiz/stats?tz=UTC").json()
+        kolkata = user_client.get("/api/quiz/stats?tz=Asia/Kolkata").json()
+
+        assert (utc["today"], kolkata["today"]) == (1, 1)
+        clock.now = datetime(2026, 10, 31, 1, 0, tzinfo=UTC)
+        assert user_client.get("/api/quiz/stats?tz=UTC").json()["today"] == 0
+        assert user_client.get("/api/quiz/stats?tz=Asia/Kolkata").json()["today"] == 1
+
+    def test_unknown_time_zones_are_rejected(self, user_client: TestClient) -> None:
+        assert user_client.get("/api/quiz/stats?tz=Mars/Olympus").status_code == 422
+
+    def test_history_has_the_running_total_after_every_answer(
+        self, user_client: TestClient, session: Session, clock: Clock
+    ) -> None:
+        for right in (True, True, False):
+            answer(user_client, session, right=right)
+        asked = question(user_client)
+        user_client.post(f"/api/quiz/questions/{asked['id']}/know")  # not part of the graph
+
+        history = user_client.get("/api/quiz/history").json()
+
+        assert [(p["number"], p["total"], p["correct"]) for p in history] == [
+            (1, 5, True),
+            (2, 10, True),
+            (3, 10, False),
+        ]
+
+
+def test_requires_login(client: TestClient) -> None:
+    assert client.get("/api/quiz/question").status_code == 401
+    assert client.get("/api/quiz/stats").status_code == 401
+    assert client.get("/api/quiz/history").status_code == 401
+
+
+def test_too_few_words_for_four_options(user_client: TestClient, session: Session) -> None:
+    add_book(session, reader(session), LEMMAS[:3])
+
+    response = user_client.get("/api/quiz/question")
+
+    assert response.status_code == 409
+    assert "enough words" in response.json()["detail"]
+
+
+@pytest.mark.usefixtures("book")
+def test_missing_dictionary(user_client: TestClient) -> None:
+    def unavailable() -> FakeDictionary:
+        raise DictionaryUnavailableError("not installed")
+
+    app = user_client.app
+    assert isinstance(app, FastAPI)
+    app.dependency_overrides[get_dictionary] = lambda: unavailable
+
+    response = user_client.get("/api/quiz/question")
+
+    assert response.status_code == 503
+
+
+@pytest.mark.usefixtures("book", "clock")
+def test_i_know_this_needs_an_open_question_of_your_own(
+    user_client: TestClient, session: Session
+) -> None:
+    asked = question(user_client)
+    know = f"/api/quiz/questions/{asked['id']}/know"
+    assert user_client.post(know).status_code == 204
+
+    assert user_client.post(know).status_code == 409
+    assert user_client.post("/api/quiz/questions/999/know").status_code == 404

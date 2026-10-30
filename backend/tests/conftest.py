@@ -37,6 +37,7 @@ class FakeDictionary:
     def __init__(self) -> None:
         self.unknown: set[str] = set()
         self.entries: dict[str, list[Sense]] = {}  # replaces the default sense for these words
+        self.synonym_sets: dict[str, frozenset[str]] = {}
         self.lookups: list[str] = []
 
     def senses(self, lemma: str) -> list[Sense]:
@@ -45,6 +46,9 @@ class FakeDictionary:
             return []
         default = [Sense(pos="noun", definition=f"meaning of {lemma}", rank=0)]
         return self.entries.get(lemma, default)
+
+    def synonyms(self, lemma: str) -> frozenset[str]:
+        return self.synonym_sets.get(lemma, frozenset())
 
 
 @pytest.fixture

@@ -15,9 +15,9 @@ def test_scoring_defaults_match_plan() -> None:
 
 def test_settings_overridable_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("VOCAB_SCORING__CORRECT_DELTA", "7")
-    monkeypatch.setenv("VOCAB_QUIZ__ROUND_SIZE", "5")
+    monkeypatch.setenv("VOCAB_QUIZ__DAILY_GOAL", "5")
 
     settings = Settings()
 
     assert settings.scoring.correct_delta == 7
-    assert settings.quiz.round_size == 5
+    assert settings.quiz.daily_goal == 5

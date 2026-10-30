@@ -14,7 +14,6 @@ from app.db.models import (
     DocumentWord,
     Question,
     QuizAnswer,
-    QuizSession,
     User,
     UserWord,
     Word,
@@ -86,6 +85,7 @@ def test_deleting_a_user_deletes_their_data(session: Session) -> None:
     session.add(word)
     session.flush()
     question = Question(
+        user_id=user.id,
         word_id=word.id,
         type=QuestionType.DEFINITION_MCQ,
         prompt="lugubrious",
@@ -93,7 +93,6 @@ def test_deleting_a_user_deletes_their_data(session: Session) -> None:
         correct_index=0,
         generator="wordnet-rules",
     )
-    quiz = QuizSession(user_id=user.id)
     session.add_all(
         [
             AuthSession(user_id=user.id, token_hash="c" * 64, expires_at=NOW + timedelta(days=30)),
@@ -106,13 +105,11 @@ def test_deleting_a_user_deletes_their_data(session: Session) -> None:
             CurrentReading(user_id=user.id, document_id=book.id),
             UserWord(user_id=user.id, word_id=word.id, score=5, status=WordStatus.LEARNING),
             question,
-            quiz,
         ]
     )
     session.flush()
     session.add(
         QuizAnswer(
-            session_id=quiz.id,
             user_id=user.id,
             word_id=word.id,
             question_id=question.id,
@@ -128,9 +125,9 @@ def test_deleting_a_user_deletes_their_data(session: Session) -> None:
 
     for table in ["auth_sessions", "documents", "chapters", "document_words", "current_readings"]:
         assert session.execute(text(f"SELECT COUNT(*) FROM {table}")).scalar_one() == 0, table
-    for table in ["user_words", "quiz_sessions", "quiz_answers"]:
+    for table in ["user_words", "questions", "quiz_answers"]:
         assert session.execute(text(f"SELECT COUNT(*) FROM {table}")).scalar_one() == 0, table
-    # Shared data stays: words and their questions belong to no single user.
+    # Shared data stays: words belong to no single user.
     assert session.scalars(select(Word)).one().lemma == "lugubrious"
 
 

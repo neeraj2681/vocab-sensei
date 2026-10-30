@@ -50,23 +50,19 @@ class UserWord(Base):
     updated_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, onupdate=utcnow)
 
 
-class QuizSession(Base):
-    """One round of questions."""
-
-    __tablename__ = "quiz_sessions"
-
-    id: Mapped[int] = mapped_column(primary_key=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
-    started_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
-    finished_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
-
-
 class Question(Base):
-    """A generated question, kept so answers can be traced to the generator that made it (§5.6)."""
+    """A question asked to a user; answers can be traced to the generator that made it (§5.6).
+
+    The quiz never ends: the user's newest question without an answer is the one on screen.
+    """
 
     __tablename__ = "questions"
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    document_id: Mapped[int | None] = mapped_column(  # the book the word was taken from
+        ForeignKey("documents.id", ondelete="SET NULL")
+    )
     word_id: Mapped[int] = mapped_column(ForeignKey("words.id", ondelete="CASCADE"), index=True)
     type: Mapped[QuestionType] = mapped_column(str_enum(QuestionType))
     prompt: Mapped[str] = mapped_column(Text)
@@ -75,7 +71,7 @@ class Question(Base):
     generator: Mapped[str] = mapped_column(String(50))  # e.g. "wordnet-rules", "llm"
     model: Mapped[str | None] = mapped_column(String(100))  # LLM model name, if any
     source_sentence: Mapped[str | None] = mapped_column(Text)
-    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)  # when it was asked
 
 
 class QuizAnswer(Base):
@@ -84,13 +80,13 @@ class QuizAnswer(Base):
     __tablename__ = "quiz_answers"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    session_id: Mapped[int] = mapped_column(
-        ForeignKey("quiz_sessions.id", ondelete="CASCADE"), index=True
-    )
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     word_id: Mapped[int] = mapped_column(ForeignKey("words.id", ondelete="CASCADE"), index=True)
-    question_id: Mapped[int] = mapped_column(ForeignKey("questions.id", ondelete="CASCADE"))
+    question_id: Mapped[int] = mapped_column(
+        ForeignKey("questions.id", ondelete="CASCADE"),
+        unique=True,  # one answer per question
+    )
     chosen_index: Mapped[int | None]  # None = "I know this" was pressed
     correct: Mapped[bool]
-    score_delta: Mapped[int]
+    score_delta: Mapped[int]  # change in the word's score; lifetime points are the sum
     answered_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)

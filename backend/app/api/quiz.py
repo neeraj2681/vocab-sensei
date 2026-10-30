@@ -1,0 +1,172 @@
+from datetime import datetime
+from typing import Annotated, Self
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
+
+from app.api.deps import CurrentUser, DictionaryLoader, SettingsDep, get_dictionary
+from app.core.enums import WordStatus
+from app.db.models import Question
+from app.db.session import get_session
+from app.db.types import utcnow
+from app.dictionary.types import DictionaryUnavailableError
+from app.services.quiz import (
+    AlreadyAnsweredError,
+    InvalidChoiceError,
+    NoWordsError,
+    QuestionNotFoundError,
+    QuizService,
+    Stats,
+)
+
+router = APIRouter(prefix="/quiz", tags=["quiz"])
+
+
+def get_now() -> datetime:
+    """The current time; tests override it to move between days."""
+    return utcnow()
+
+
+def get_timezone(
+    tz: Annotated[str, Query(description="IANA name, e.g. Asia/Kolkata")] = "UTC",
+) -> ZoneInfo:
+    """The user's time zone, which decides when "today" starts for the daily goal."""
+    try:
+        return ZoneInfo(tz)
+    except (ZoneInfoNotFoundError, ValueError):
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT, f"Unknown time zone {tz!r}"
+        ) from None
+
+
+Now = Annotated[datetime, Depends(get_now)]
+TimeZone = Annotated[ZoneInfo, Depends(get_timezone)]
+
+
+def get_quiz_service(
+    session: Annotated[Session, Depends(get_session)],
+    settings: SettingsDep,
+    dictionary: Annotated[DictionaryLoader, Depends(get_dictionary)],
+) -> QuizService:
+    return QuizService(session, settings, dictionary)
+
+
+QuizServiceDep = Annotated[QuizService, Depends(get_quiz_service)]
+
+
+class QuestionResponse(BaseModel):
+    """What the screen shows. The correct answer is only revealed after answering."""
+
+    id: int
+    word: str
+    options: list[str]
+
+    @classmethod
+    def of(cls, question: Question) -> Self:
+        return cls(id=question.id, word=question.prompt, options=list(question.options))
+
+
+class StatsResponse(BaseModel):
+    total: int
+    today: int
+    daily_goal: int
+    streak: int
+
+    @classmethod
+    def of(cls, stats: Stats) -> Self:
+        return cls(
+            total=stats.total, today=stats.today, daily_goal=stats.daily_goal, streak=stats.streak
+        )
+
+
+class AnswerRequest(BaseModel):
+    chosen_index: int
+
+
+class AnswerResponse(BaseModel):
+    correct: bool
+    correct_index: int
+    score_delta: int  # what the live score changes by: +5, -10, or 0 (floor, or asked too soon)
+    counted: bool  # False when the word came back too soon to score
+    word_score: int
+    word_status: WordStatus
+    context_sentence: str | None  # the sentence from the book, shown after answering
+    stats: StatsResponse
+
+
+class HistoryPointResponse(BaseModel):
+    number: int
+    total: int
+    correct: bool
+    answered_at: datetime
+
+
+@router.get("/question")
+def current_question(user: CurrentUser, quiz: QuizServiceDep, now: Now) -> QuestionResponse:
+    """The question to show: the unanswered one if there is one, otherwise a new one."""
+    try:
+        return QuestionResponse.of(quiz.current_question(user.id, now))
+    except NoWordsError as exc:
+        raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from None
+    except DictionaryUnavailableError:
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE, "The dictionary isn't installed on the server yet"
+        ) from None
+
+
+@router.post("/questions/{question_id}/answer")
+def answer(
+    question_id: int,
+    body: AnswerRequest,
+    user: CurrentUser,
+    quiz: QuizServiceDep,
+    now: Now,
+    tz: TimeZone,
+) -> AnswerResponse:
+    try:
+        outcome = quiz.answer(user.id, question_id, body.chosen_index, now, tz)
+    except QuestionNotFoundError as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from None
+    except AlreadyAnsweredError as exc:
+        raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from None
+    except InvalidChoiceError as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from None
+    return AnswerResponse(
+        correct=outcome.correct,
+        correct_index=outcome.correct_index,
+        score_delta=outcome.score_delta,
+        counted=outcome.counted,
+        word_score=outcome.word.score,
+        word_status=outcome.word.status,
+        context_sentence=outcome.question.source_sentence,
+        stats=StatsResponse.of(outcome.stats),
+    )
+
+
+@router.post("/questions/{question_id}/know", status_code=status.HTTP_204_NO_CONTENT)
+def know(question_id: int, user: CurrentUser, quiz: QuizServiceDep, now: Now) -> None:
+    """Marks the word known ("I know this"); fetch the next question afterwards."""
+    try:
+        quiz.know(user.id, question_id, now)
+    except QuestionNotFoundError as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from None
+    except AlreadyAnsweredError as exc:
+        raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from None
+
+
+@router.get("/stats")
+def stats(user: CurrentUser, quiz: QuizServiceDep, now: Now, tz: TimeZone) -> StatsResponse:
+    return StatsResponse.of(quiz.stats(user.id, now, tz))
+
+
+@router.get("/history")
+def history(user: CurrentUser, quiz: QuizServiceDep) -> list[HistoryPointResponse]:
+    """Lifetime points after every answer since the first one (for the progress graph)."""
+    return [
+        HistoryPointResponse(
+            number=p.number, total=p.total, correct=p.correct, answered_at=p.answered_at
+        )
+        for p in quiz.history(user.id)
+    ]
