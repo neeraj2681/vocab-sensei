@@ -1,3 +1,4 @@
+import { useRef } from 'react'
 import { BrowserRouter, Link, NavLink, Navigate, Route, Routes } from 'react-router'
 import { useAuth } from '../features/auth/AuthContext'
 import { AuthProvider } from '../features/auth/AuthProvider'
@@ -9,6 +10,7 @@ import { ResetPasswordPage } from '../features/auth/ResetPasswordPage'
 import { VerifyEmailPage } from '../features/auth/VerifyEmailPage'
 import { BookPage } from '../features/library/BookPage'
 import { LibraryPage } from '../features/library/LibraryPage'
+import { ProgressPage } from '../features/progress/ProgressPage'
 import { QuizPage } from '../features/quiz/QuizPage'
 
 function AppRoutes() {
@@ -35,6 +37,14 @@ function AppRoutes() {
         element={
           <RequireAuth>
             <QuizPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/progress"
+        element={
+          <RequireAuth>
+            <ProgressPage />
           </RequireAuth>
         }
       />
@@ -65,15 +75,37 @@ function Header() {
           <NavLink to="/quiz">Quiz</NavLink>
         </nav>
       )}
-      {user && (
-        <p className="app__user">
-          {user.email}{' '}
-          <button type="button" className="link-button" onClick={() => void logout()}>
-            Log out
-          </button>
-        </p>
-      )}
+      {user && <ProfileMenu name={user.display_name} email={user.email} onLogout={logout} />}
     </header>
+  )
+}
+
+function ProfileMenu(props: { name: string; email: string; onLogout: () => Promise<void> }) {
+  const menu = useRef<HTMLDetailsElement>(null)
+  const close = () => {
+    menu.current?.removeAttribute('open')
+  }
+
+  return (
+    <details className="profile" ref={menu}>
+      <summary>{props.name}</summary>
+      <div className="profile__menu">
+        <p className="muted">{props.email}</p>
+        <Link to="/progress" onClick={close}>
+          Progress
+        </Link>
+        <button
+          type="button"
+          className="link-button"
+          onClick={() => {
+            close()
+            void props.onLogout()
+          }}
+        >
+          Log out
+        </button>
+      </div>
+    </details>
   )
 }
 
