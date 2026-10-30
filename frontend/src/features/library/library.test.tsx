@@ -40,6 +40,7 @@ function home(books: BookDocument[], readings: Reading[] = [], extra: Routes = {
     'GET /api/health': () => json({ status: 'ok', database: 'ok' }),
     'GET /api/documents': () => json(books),
     'GET /api/readings': () => json(readings),
+    'GET /api/learning/next?count=10': () => json([]),
     ...extra,
   })
 }
