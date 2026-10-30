@@ -59,6 +59,13 @@ class ExtractionSettings(BaseModel):
     context_chars: int = 300
 
 
+class DictionarySettings(BaseModel):
+    """Definitions come from Open English WordNet (https://en-word.net, CC BY 4.0)."""
+
+    lexicon: str = "oewn:2025"
+    senses_per_pos: int = Field(default=3, gt=0)  # e.g. at most 3 noun and 3 verb meanings
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="VOCAB_", env_nested_delimiter="__", env_file=".env", extra="ignore"
@@ -71,8 +78,12 @@ class Settings(BaseSettings):
     auth: AuthSettings = AuthSettings()
     email: EmailSettings = EmailSettings()
     upload: UploadSettings = UploadSettings()
-
     extraction: ExtractionSettings = ExtractionSettings()
+    dictionary: DictionarySettings = DictionarySettings()
+
+    @property
+    def dictionary_dir(self) -> Path:
+        return self.data_dir / "wordnet"
 
 
 @lru_cache

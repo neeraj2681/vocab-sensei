@@ -7,6 +7,7 @@ never stuck processing.
 
 import logging
 import uuid
+from collections.abc import Callable
 from pathlib import Path, PurePath
 from typing import BinaryIO
 
@@ -15,6 +16,7 @@ from sqlalchemy.orm import Session
 from app.core.config import Settings
 from app.core.enums import DocumentFormat, DocumentStatus
 from app.db.models import Chapter, Document
+from app.dictionary.types import Dictionary, DictionaryUnavailableError
 from app.extraction.cleanup import strip_gutenberg_boilerplate
 from app.extraction.registry import UnsupportedFormatError, get_parser
 from app.extraction.types import ParseError
@@ -41,9 +43,12 @@ class FileTooLargeError(UploadError):
 
 
 class DocumentService:
-    def __init__(self, session: Session, settings: Settings) -> None:
+    def __init__(
+        self, session: Session, settings: Settings, dictionary: Callable[[], Dictionary]
+    ) -> None:
         self._session = session
         self._settings = settings
+        self._dictionary = dictionary  # loaded only when a book is processed
         self._documents = DocumentRepository(session)
 
     def create(self, owner_user_id: int, filename: str, content: BinaryIO) -> Document:
@@ -92,12 +97,15 @@ class DocumentService:
                 for i, c in enumerate(parsed.chapters)
             ]
             self._session.flush()  # chapter ids are needed for the word list
-            WordService(self._session).save_for_document(document, words)
+            WordService(self._session).save_for_document(document, words, self._dictionary())
             document.status = DocumentStatus.READY
             document.error = None
             self._session.commit()
         except (ParseError, UnsupportedFormatError) as exc:
             self._fail(document, f"Couldn't read this file: {exc}")
+        except DictionaryUnavailableError:
+            logger.exception("processing document %s failed", document_id)
+            self._fail(document, "The dictionary isn't installed on the server yet")
         except Exception:
             logger.exception("processing document %s failed", document_id)
             self._fail(document, "Something went wrong while reading this file")

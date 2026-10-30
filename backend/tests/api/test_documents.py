@@ -5,8 +5,10 @@ from fastapi.testclient import TestClient
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.api.deps import get_dictionary
 from app.core.config import Settings
-from tests.conftest import log_in, make_user
+from app.dictionary.types import DictionaryUnavailableError
+from tests.conftest import FakeDictionary, log_in, make_user
 from tests.extraction.epub_builder import Chapter, EpubSpec, build_epub
 
 TEXT = (
@@ -234,3 +236,41 @@ def test_words_of_other_users_books_are_hidden(
     log_in(user_client, make_user(session, "other@example.com").email)
 
     assert user_client.get(f"/api/documents/{created['id']}/words").status_code == 404
+
+
+def test_words_come_with_their_definitions(user_client: TestClient, tmp_path: Path) -> None:
+    created = upload(user_client, epub_bytes(tmp_path))
+
+    words = user_client.get(f"/api/documents/{created['id']}/words").json()
+
+    lugubrious = next(w for w in words if w["lemma"] == "lugubrious")
+    assert lugubrious["definitions"] == [{"pos": "noun", "text": "meaning of lugubrious"}]
+
+
+def test_words_without_a_definition_are_left_out(
+    user_client: TestClient, tmp_path: Path, dictionary: FakeDictionary, session: Session
+) -> None:
+    dictionary.unknown = {"perfunctory"}
+    created = upload(user_client, epub_bytes(tmp_path))
+
+    lemmas = [w["lemma"] for w in user_client.get(f"/api/documents/{created['id']}/words").json()]
+
+    assert "lugubrious" in lemmas
+    assert "perfunctory" not in lemmas
+    stored = session.execute(text("SELECT COUNT(*) FROM words WHERE lemma = 'perfunctory'"))
+    assert stored.scalar_one() == 0
+
+
+def test_missing_dictionary_fails_the_document_with_a_reason(
+    user_client: TestClient, tmp_path: Path
+) -> None:
+    def unavailable() -> FakeDictionary:
+        raise DictionaryUnavailableError("not installed")
+
+    user_client.app.dependency_overrides[get_dictionary] = lambda: unavailable  # type: ignore[attr-defined]
+    created = upload(user_client, epub_bytes(tmp_path))
+
+    detail = user_client.get(f"/api/documents/{created['id']}").json()
+
+    assert detail["status"] == "failed"
+    assert detail["error"] == "The dictionary isn't installed on the server yet"

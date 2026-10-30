@@ -17,6 +17,7 @@ dependencies = [
     "spacy>=3.8.18",
     "sqlalchemy>=2",
     "uvicorn[standard]>=0.54.0",
+    "wn>=1.1.1",
     "wordfreq>=3.1.1",
 ]
 
@@ -47,6 +48,10 @@ strict = true
 plugins = ["pydantic.mypy"]
 files = ["app", "tests"]
 exclude = ["app/db/migrations/"]
+
+[[tool.mypy.overrides]]
+module = ["wn"]
+implicit_reexport = true  # `wn.config` is re-exported without an `__all__` entry
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
