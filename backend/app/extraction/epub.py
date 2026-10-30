@@ -19,10 +19,10 @@ from urllib.parse import unquote
 from bs4 import BeautifulSoup, XMLParsedAsHTMLWarning
 from bs4.element import NavigableString, PreformattedString, Tag
 
+from app.extraction.chapters import merge_short
 from app.extraction.types import ParsedChapter, ParsedDocument, ParseError
 
 MAX_UNCOMPRESSED_BYTES = 300 * 1024 * 1024  # guards against zip bombs
-MIN_CHAPTER_CHARS = 100  # shorter sections (a lone "PART ONE" heading) merge into the next one
 _HTML_TYPES = {"application/xhtml+xml", "text/html"}
 # A new paragraph (line) starts at these elements; inline ones (<i>, <span>, ...) stay in the line.
 _BLOCK_TAGS = {
@@ -76,7 +76,7 @@ class _EpubReader:
         for path in self._spine_paths(opf, manifest, opf_dir):
             self._add_file(drafts, path, [e for e in toc if e.path == path], has_toc=bool(toc))
 
-        chapters = _merge_short(
+        chapters = merge_short(
             [ParsedChapter(title=d.title, text=text) for d in drafts if (text := _clean(d.parts))]
         )
         if not chapters:
@@ -199,23 +199,6 @@ def _split_at_anchors(
             # comments, doctype, CDATA, ...)
             current.append(_WHITESPACE.sub(" ", str(node)))
     return preamble, sections
-
-
-def _merge_short(chapters: list[ParsedChapter]) -> list[ParsedChapter]:
-    """Fold heading-only sections into the following chapter, keeping the outer title."""
-    merged: list[ParsedChapter] = []
-    pending: ParsedChapter | None = None
-    for chapter in chapters:
-        if pending is not None:
-            chapter = ParsedChapter(pending.title, f"{pending.text}\n{chapter.text}")
-            pending = None
-        if len(chapter.text) < MIN_CHAPTER_CHARS:
-            pending = chapter
-        else:
-            merged.append(chapter)
-    if pending is not None:  # a short last section stays on its own
-        merged.append(pending)
-    return merged
 
 
 def _clean(parts: list[str]) -> str:

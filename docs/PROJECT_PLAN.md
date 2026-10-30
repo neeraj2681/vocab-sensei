@@ -275,7 +275,7 @@ because git and the workflow files carry over.
 - [x] Login / sign-up / verify / reset pages in the frontend (`feat/auth-ui`)
 - [x] EPUB parsing into chapters (`feat/epub-parser`)
 - [x] Upload endpoint: store file, parse in the background, strip Gutenberg boilerplate (`feat/upload`)
-- [ ] PDF + TXT parsing
+- [x] PDF + TXT parsing: pypdf with bookmarks or heading detection, contents skipped, scanned PDFs rejected (`feat/pdf-txt-parser`)
 - [x] NLP pipeline: lemmatize, filter, difficulty threshold, context sentences; runs on upload (`feat/word-extraction`)
 - [x] WordNet dictionary import (`feat/dictionary`)
 - [x] Library page (upload, my books, chapter-by-chapter words) + current-reading chooser with priorities and current chapter (`feat/library-ui`)
