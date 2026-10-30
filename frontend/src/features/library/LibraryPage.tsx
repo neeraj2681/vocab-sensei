@@ -1,5 +1,6 @@
 import { useAuth } from '../auth/AuthContext'
 import { HealthStatus } from '../health/HealthStatus'
+import { UpNext } from '../learning/UpNext'
 import { CurrentReadings } from './CurrentReadings'
 import { MyBooks } from './MyBooks'
 import { useLibrary } from './useLibrary'
@@ -19,6 +20,7 @@ export function LibraryPage() {
       {library && (
         <>
           <CurrentReadings readings={library.readings} onChange={refresh} />
+          <UpNext readings={library.readings} />
           <MyBooks books={library.books} readings={library.readings} onChange={refresh} />
         </>
       )}
