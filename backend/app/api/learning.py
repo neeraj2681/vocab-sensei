@@ -6,15 +6,18 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import CurrentUser
 from app.api.documents import DefinitionResponse
+from app.core.enums import PartOfSpeech
 from app.db.session import get_session
 from app.services.learning import LearningService
+from app.services.words import definitions_in_context
 
 router = APIRouter(prefix="/learning", tags=["learning"])
 
 
 class LearningWordResponse(BaseModel):
     lemma: str
-    definitions: list[DefinitionResponse]
+    pos: PartOfSpeech | None
+    definitions: list[DefinitionResponse]  # the book's part of speech first
     context_sentence: str | None
     document_id: int
     document_title: str
@@ -32,7 +35,11 @@ def next_words(
     return [
         LearningWordResponse(
             lemma=item.word.lemma,
-            definitions=[DefinitionResponse.model_validate(d) for d in item.word.definitions],
+            pos=item.occurrence.pos,
+            definitions=[
+                DefinitionResponse.model_validate(d)
+                for d in definitions_in_context(item.word, item.occurrence.pos)
+            ],
             context_sentence=item.occurrence.context_sentence,
             document_id=item.document.id,
             document_title=item.document.title,

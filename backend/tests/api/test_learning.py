@@ -60,6 +60,7 @@ def test_each_word_says_where_it_comes_from(user_client: TestClient, tmp_path: P
     assert first["chapter_index"] == 0
     assert first["chapter_title"] == "Part 0"
     assert first["context_sentence"] == "The tune was lugubrious."
+    assert first["pos"] == "adjective"
     assert first["definitions"] == [{"pos": "noun", "text": "meaning of lugubrious"}]
 
 
