@@ -3,7 +3,7 @@ import { Link } from 'react-router'
 import { authApi } from '../../api/auth'
 import { AuthCard, Field, FormError } from '../../components/Form'
 import { formValues } from '../../components/formValues'
-import { useSubmit } from './useSubmit'
+import { useSubmit } from '../../components/useSubmit'
 
 export const MIN_PASSWORD_LENGTH = 8
 

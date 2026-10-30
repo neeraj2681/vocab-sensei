@@ -115,3 +115,93 @@ button[type='submit']:disabled {
 .auth-links {
   color: var(--muted);
 }
+
+.muted {
+  color: var(--muted);
+}
+
+button {
+  font: inherit;
+}
+
+.panel {
+  margin: 1.5rem 0;
+}
+
+.readings,
+.books {
+  padding-left: 0;
+  list-style-position: inside;
+}
+
+.books {
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.row__actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
+  align-items: center;
+}
+
+.status--failed {
+  color: var(--bad);
+}
+
+.upload {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.upload .form-error {
+  flex-basis: 100%;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.toolbar select {
+  font: inherit;
+  max-width: 28rem;
+}
+
+.words {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.words th,
+.words td {
+  text-align: left;
+  vertical-align: top;
+  padding: 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.words tbody th {
+  white-space: nowrap;
+}
+
+.words__context {
+  color: var(--muted);
+  font-style: italic;
+  font-size: 0.9em;
+}

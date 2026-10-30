@@ -5,7 +5,11 @@ import { renderApp } from '../../test/renderApp'
 
 const USER = { id: 1, email: 'reader@example.com', display_name: 'Reader', email_verified_at: 'x' }
 const loggedOut = { 'GET /api/auth/me': () => fail(401, 'Not logged in') }
-const health = { 'GET /api/health': () => json({ status: 'ok', database: 'ok' }) }
+const home = {
+  'GET /api/health': () => json({ status: 'ok', database: 'ok' }),
+  'GET /api/documents': () => json([]),
+  'GET /api/readings': () => json([]),
+}
 
 describe('login', () => {
   it('sends logged-out visitors to the login page', async () => {
@@ -17,7 +21,7 @@ describe('login', () => {
   })
 
   it('logs in and shows the home page', async () => {
-    const api = fakeApi({ ...loggedOut, ...health, 'POST /api/auth/login': () => json(USER) })
+    const api = fakeApi({ ...loggedOut, ...home, 'POST /api/auth/login': () => json(USER) })
     const user = renderApp('/')
 
     await user.type(await screen.findByLabelText('Email'), 'reader@example.com')
@@ -79,7 +83,7 @@ describe('logout', () => {
   it('returns to the login page', async () => {
     const api = fakeApi({
       'GET /api/auth/me': () => json(USER),
-      ...health,
+      ...home,
       'POST /api/auth/logout': noContent,
     })
     const user = renderApp('/')

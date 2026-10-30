@@ -253,7 +253,7 @@ because git and the workflow files carry over.
 - [x] Git workflow guide, PR template, pre-commit, CI hygiene job (`chore/dev-workflow`)
 - [x] Public GitHub repo, squash-merge only, auto-delete merged branches, `main` protected (CI must pass,
       linear history, no force-push, applies to admins too)
-- [ ] Backend skeleton: FastAPI, SQLAlchemy, Alembic, ruff, mypy, pytest + CI job (`feat/backend-skeleton`)
+- [x] Backend skeleton: FastAPI, SQLAlchemy, Alembic, ruff, mypy, pytest + CI job (`feat/backend-skeleton`)
 - [x] Frontend skeleton: Vite + React + TS, ESLint, Prettier, Vitest + CI job (`feat/frontend-skeleton`)
 - [ ] Docker Compose for local run; release workflow (tag → GHCR image)
 
@@ -266,8 +266,9 @@ because git and the workflow files carry over.
 - [x] Upload endpoint: store file, parse in the background, strip Gutenberg boilerplate (`feat/upload`)
 - [ ] PDF + TXT parsing
 - [x] NLP pipeline: lemmatize, filter, difficulty threshold, context sentences; runs on upload (`feat/word-extraction`)
-- [x] WordNet dictionary import
-- [ ] Current-reading chooser + current chapter
+- [x] WordNet dictionary import (`feat/dictionary`)
+- [x] Library page (upload, my books, chapter-by-chapter words) + current-reading chooser with priorities and current chapter (`feat/library-ui`)
+- [ ] Part of speech per book word, so the matching definitions come first (`feat/word-pos`)
 - [ ] Learning list ordering
 - [ ] Quiz: 10 MCQs, safe distractors, re-randomized options
 - [ ] Scoring rules + lazy decay + answer log

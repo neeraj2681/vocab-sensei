@@ -5,7 +5,7 @@ import { ApiError } from '../../api/client'
 import { AuthCard, Field, FormError } from '../../components/Form'
 import { formValues } from '../../components/formValues'
 import { useAuth } from './AuthContext'
-import { useSubmit } from './useSubmit'
+import { useSubmit } from '../../components/useSubmit'
 
 export function LoginPage() {
   const { user, login } = useAuth()

@@ -1,7 +1,9 @@
-from sqlalchemy import select
+from collections.abc import Sequence
+
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.db.models import Document
+from app.db.models import Document, DocumentWord
 
 
 class DocumentRepository:
@@ -31,3 +33,12 @@ class DocumentRepository:
 
     def delete(self, document: Document) -> None:
         self._session.delete(document)
+
+    def word_counts(self, document_ids: Sequence[int]) -> dict[int, int]:
+        """How many learnable words each document has; documents without words are left out."""
+        rows = self._session.execute(
+            select(DocumentWord.document_id, func.count())
+            .where(DocumentWord.document_id.in_(document_ids))
+            .group_by(DocumentWord.document_id)
+        )
+        return {document_id: count for document_id, count in rows}
