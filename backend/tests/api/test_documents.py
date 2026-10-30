@@ -186,6 +186,9 @@ def test_processing_builds_the_word_list(user_client: TestClient, tmp_path: Path
     assert by_lemma["lugubrious"]["occurrences"] == 2
     assert by_lemma["lugubrious"]["context_sentence"] == "A lugubrious tune played."
     assert by_lemma["perfunctory"]["chapter_index"] == 1
+    detail = user_client.get(f"/api/documents/{created['id']}").json()
+    assert detail["word_count"] == len(words)
+    assert user_client.get("/api/documents").json()[0]["word_count"] == len(words)
 
 
 def test_words_can_be_filtered_by_chapter(user_client: TestClient, tmp_path: Path) -> None:

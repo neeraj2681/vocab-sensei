@@ -3,14 +3,17 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import JSON, ForeignKey, String, Text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.enums import QuestionType, WordStatus
 from app.db.base import Base
 from app.db.types import UTCDateTime, str_enum, utcnow
+
+if TYPE_CHECKING:
+    from app.db.models.library import Document
 
 
 class CurrentReading(Base):
@@ -25,6 +28,8 @@ class CurrentReading(Base):
     current_chapter_index: Mapped[int] = mapped_column(default=0)
     priority: Mapped[int] = mapped_column(default=0)  # 0 = highest
     started_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+
+    document: Mapped[Document] = relationship(lazy="joined")
 
 
 class UserWord(Base):

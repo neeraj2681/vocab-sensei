@@ -33,9 +33,10 @@ class DocumentResponse(BaseModel):
     error: str | None
     uploaded_at: datetime
     chapter_count: int
+    word_count: int
 
     @classmethod
-    def of(cls, document: Document) -> Self:
+    def of(cls, document: Document, word_count: int) -> Self:
         return cls(
             id=document.id,
             title=document.title,
@@ -46,6 +47,7 @@ class DocumentResponse(BaseModel):
             error=document.error,
             uploaded_at=document.uploaded_at,
             chapter_count=len(document.chapters),
+            word_count=word_count,
         )
 
 
@@ -53,8 +55,8 @@ class DocumentDetailResponse(DocumentResponse):
     chapters: list[ChapterResponse]
 
     @classmethod
-    def of(cls, document: Document) -> Self:
-        summary = DocumentResponse.of(document).model_dump()
+    def of(cls, document: Document, word_count: int) -> Self:
+        summary = DocumentResponse.of(document, word_count).model_dump()
         chapters = [ChapterResponse.model_validate(c) for c in document.chapters]
         return cls(**summary, chapters=chapters)
 
@@ -126,17 +128,19 @@ def upload(
     except UploadError as exc:
         raise HTTPException(status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, str(exc)) from None
     background.add_task(process_in_background, session_factory, settings, dictionary, document.id)
-    return DocumentResponse.of(document)
+    return DocumentResponse.of(document, word_count=0)
 
 
 @router.get("")
 def list_documents(user: CurrentUser, documents: DocumentServiceDep) -> list[DocumentResponse]:
-    return [DocumentResponse.of(d) for d in documents.list_for(user.id)]
+    owned = documents.list_for(user.id)
+    counts = documents.word_counts(owned)
+    return [DocumentResponse.of(d, counts[d.id]) for d in owned]
 
 
 @router.get("/{document_id}")
-def get_document(document: OwnedDocument) -> DocumentDetailResponse:
-    return DocumentDetailResponse.of(document)
+def get_document(document: OwnedDocument, documents: DocumentServiceDep) -> DocumentDetailResponse:
+    return DocumentDetailResponse.of(document, documents.word_counts([document])[document.id])
 
 
 @router.get("/{document_id}/words")

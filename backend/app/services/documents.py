@@ -116,6 +116,10 @@ class DocumentService:
     def get_for(self, owner_user_id: int, document_id: int) -> Document | None:
         return self._documents.get_owned(document_id, owner_user_id)
 
+    def word_counts(self, documents: list[Document]) -> dict[int, int]:
+        counts = self._documents.word_counts([d.id for d in documents])
+        return {d.id: counts.get(d.id, 0) for d in documents}
+
     def delete(self, document: Document) -> None:
         path = self._path(document)
         self._documents.delete(document)
