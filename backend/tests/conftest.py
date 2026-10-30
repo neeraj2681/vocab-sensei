@@ -36,13 +36,15 @@ class FakeDictionary:
 
     def __init__(self) -> None:
         self.unknown: set[str] = set()
+        self.entries: dict[str, list[Sense]] = {}  # replaces the default sense for these words
         self.lookups: list[str] = []
 
     def senses(self, lemma: str) -> list[Sense]:
         self.lookups.append(lemma)
         if lemma in self.unknown:
             return []
-        return [Sense(pos="noun", definition=f"meaning of {lemma}", rank=0)]
+        default = [Sense(pos="noun", definition=f"meaning of {lemma}", rank=0)]
+        return self.entries.get(lemma, default)
 
 
 @pytest.fixture

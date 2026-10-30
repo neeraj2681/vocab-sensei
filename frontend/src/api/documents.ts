@@ -35,6 +35,7 @@ export interface BookWord {
   chapter_index: number
   occurrences: number
   context_sentence: string | null
+  pos: string | null // how the book uses the word; its definitions come first
   definitions: Definition[]
 }
 

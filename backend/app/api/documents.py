@@ -7,11 +7,11 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from app.api.deps import CurrentUser, DictionaryLoader, SettingsDep, get_dictionary
 from app.core.config import Settings
-from app.core.enums import DocumentFormat, DocumentStatus
+from app.core.enums import DocumentFormat, DocumentStatus, PartOfSpeech
 from app.db.models import Document
 from app.db.session import get_session, get_session_factory
 from app.services.documents import DocumentService, FileTooLargeError, UploadError
-from app.services.words import WordService
+from app.services.words import WordService, definitions_in_context
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
@@ -74,6 +74,7 @@ class WordResponse(BaseModel):
     chapter_index: int
     occurrences: int
     context_sentence: str | None
+    pos: PartOfSpeech | None  # how the book uses the word; its definitions come first
     definitions: list[DefinitionResponse]
 
 
@@ -157,7 +158,11 @@ def list_words(
             chapter_index=chapter_index,
             occurrences=occurrence.occurrences,
             context_sentence=occurrence.context_sentence,
-            definitions=[DefinitionResponse.model_validate(d) for d in word.definitions],
+            pos=occurrence.pos,
+            definitions=[
+                DefinitionResponse.model_validate(d)
+                for d in definitions_in_context(word, occurrence.pos)
+            ],
         )
         for occurrence, word, chapter_index in WordService(session).words_for_document(
             document, chapter

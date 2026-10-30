@@ -5,6 +5,7 @@ its lemma ("perambulating" -> "perambulate"). We keep content words (nouns, verb
 adverbs) whose lemma is rare enough by wordfreq's Zipf score, skipping names and stopwords.
 """
 
+from collections import Counter
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, replace
 from functools import cache
@@ -15,10 +16,17 @@ from spacy.tokens import Token
 from wordfreq import zipf_frequency
 
 from app.core.config import ExtractionSettings
+from app.core.enums import PartOfSpeech
 from app.extraction.types import ParsedChapter
 
 SPACY_MODEL = "en_core_web_sm"
-_CONTENT_POS = {"NOUN", "VERB", "ADJ", "ADV"}  # PROPN (names) is deliberately absent
+# spaCy's tags for content words; PROPN (names) is deliberately absent.
+_CONTENT_POS = {
+    "NOUN": PartOfSpeech.NOUN,
+    "VERB": PartOfSpeech.VERB,
+    "ADJ": PartOfSpeech.ADJECTIVE,
+    "ADV": PartOfSpeech.ADVERB,
+}
 
 
 @dataclass(frozen=True)
@@ -29,6 +37,7 @@ class ExtractedWord:
     first_position: int  # token offset inside that chapter
     occurrences: int  # across the whole book
     context_sentence: str  # the sentence of the first appearance
+    pos: PartOfSpeech  # how the book uses the word most often ("damp": adjective, not noun)
 
 
 @cache
@@ -51,14 +60,15 @@ class WordExtractor:
 
     def extract(self, chapters: Sequence[ParsedChapter]) -> list[ExtractedWord]:
         first_seen: dict[str, ExtractedWord] = {}
-        counts: dict[str, int] = {}
+        uses: dict[str, Counter[PartOfSpeech]] = {}
 
         for chapter_index, chapter in enumerate(chapters):
             for position, token in self._tokens(chapter.text):
                 lemma = self._learnable_lemma(token)
                 if lemma is None:
                     continue
-                counts[lemma] = counts.get(lemma, 0) + 1
+                pos = _CONTENT_POS[token.pos_]
+                uses.setdefault(lemma, Counter())[pos] += 1
                 if lemma not in first_seen:
                     first_seen[lemma] = ExtractedWord(
                         lemma=lemma,
@@ -67,9 +77,14 @@ class WordExtractor:
                         first_position=position,
                         occurrences=0,
                         context_sentence=self._context(token),
+                        pos=pos,
                     )
 
-        words = [replace(w, occurrences=counts[w.lemma]) for w in first_seen.values()]
+        words = [
+            # most_common keeps first-seen order on ties, so a tie goes to the first use
+            replace(w, occurrences=uses[w.lemma].total(), pos=uses[w.lemma].most_common(1)[0][0])
+            for w in first_seen.values()
+        ]
         return sorted(words, key=lambda w: (w.chapter_index, w.first_position))
 
     def _tokens(self, text: str) -> Iterable[tuple[int, Token]]:

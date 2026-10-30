@@ -2,6 +2,7 @@
 
 from sqlalchemy.orm import Session
 
+from app.core.enums import PartOfSpeech
 from app.db.models import Definition, Document, DocumentWord, Word
 from app.dictionary.types import Dictionary
 from app.extraction.words import ExtractedWord
@@ -43,6 +44,7 @@ class WordService:
                     first_position=w.first_position,
                     occurrences=w.occurrences,
                     context_sentence=w.context_sentence,
+                    pos=w.pos,
                 )
                 for w in defined
             ),
@@ -56,6 +58,11 @@ class WordService:
             (dw, w, chapter.index)
             for dw, w, chapter in self._words.document_words(document.id, chapter_index)
         ]
+
+
+def definitions_in_context(word: Word, pos: PartOfSpeech | None) -> list[Definition]:
+    """The word's definitions, those for the part of speech the book uses first."""
+    return sorted(word.definitions, key=lambda d: (d.pos != pos, d.sense_rank))
 
 
 def _definitions(lemma: str, dictionary: Dictionary) -> list[Definition]:

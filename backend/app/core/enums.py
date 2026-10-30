@@ -10,6 +10,15 @@ class WordStatus(StrEnum):
     KNOWN = "known"  # user said they already know it; never quizzed
 
 
+class PartOfSpeech(StrEnum):
+    """The parts of speech we learn words for (names match dictionary definitions)."""
+
+    NOUN = "noun"
+    VERB = "verb"
+    ADJECTIVE = "adjective"
+    ADVERB = "adverb"
+
+
 class DocumentFormat(StrEnum):
     EPUB = "epub"
     PDF = "pdf"

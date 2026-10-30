@@ -213,6 +213,7 @@ describe('book page', () => {
     chapter_index: chapter,
     occurrences: 1,
     context_sentence: `A sentence with ${lemma}.`,
+    pos: 'noun',
     definitions: [{ pos: 'noun', text: definition }],
   })
 
