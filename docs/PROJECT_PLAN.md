@@ -83,6 +83,7 @@ Extract text per chapter ──► tokenize + lemmatize ──► filter (stopwo
 - Each current read tracks **current chapter** (user updates it, or "I finished chapter N" button).
 - `learning_list` is derived (not hand-maintained): words from current reads, ordered by
   `book priority → chapter (starting at current chapter) → first position in chapter`, excluding learned/known words.
+  **Decided:** chapters before the current one are left out; books share new-word slots n : n−1 : … : 1 by priority.
 - **Chapter primer** view: "Before you read Chapter 4, these 23 words are new to you" + readiness %.
 
 ### 5.3 Daily quiz
@@ -269,7 +270,7 @@ because git and the workflow files carry over.
 - [x] WordNet dictionary import (`feat/dictionary`)
 - [x] Library page (upload, my books, chapter-by-chapter words) + current-reading chooser with priorities and current chapter (`feat/library-ui`)
 - [x] Part of speech per book word, so the matching definitions come first (`feat/word-pos`)
-- [ ] Learning list ordering
+- [x] Learning list ordering: current chapter onward, books mixed 3:2:1 by priority, "Up next" preview (`feat/learning-list`)
 - [ ] Quiz: 10 MCQs, safe distractors, re-randomized options
 - [ ] Scoring rules + lazy decay + answer log
 - [ ] Optional post-upload triage (Known / Unsure / New) + "I know this" button
