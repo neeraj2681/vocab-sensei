@@ -7,7 +7,8 @@ import { RegisterPage } from '../features/auth/RegisterPage'
 import { RequireAuth } from '../features/auth/RequireAuth'
 import { ResetPasswordPage } from '../features/auth/ResetPasswordPage'
 import { VerifyEmailPage } from '../features/auth/VerifyEmailPage'
-import { HomePage } from '../features/home/HomePage'
+import { BookPage } from '../features/library/BookPage'
+import { LibraryPage } from '../features/library/LibraryPage'
 
 function AppRoutes() {
   return (
@@ -16,7 +17,15 @@ function AppRoutes() {
         path="/"
         element={
           <RequireAuth>
-            <HomePage />
+            <LibraryPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/books/:id"
+        element={
+          <RequireAuth>
+            <BookPage />
           </RequireAuth>
         }
       />

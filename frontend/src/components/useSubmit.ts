@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ApiError } from '../../api/client'
+import { ApiError } from '../api/client'
 
 /** Tracks "busy" and error state around an async form submit. */
 export function useSubmit() {

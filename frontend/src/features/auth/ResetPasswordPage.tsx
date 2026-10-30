@@ -4,7 +4,7 @@ import { authApi } from '../../api/auth'
 import { AuthCard, Field, FormError } from '../../components/Form'
 import { formValues } from '../../components/formValues'
 import { MIN_PASSWORD_LENGTH } from './RegisterPage'
-import { useSubmit } from './useSubmit'
+import { useSubmit } from '../../components/useSubmit'
 
 export function ResetPasswordPage() {
   const [params] = useSearchParams()
