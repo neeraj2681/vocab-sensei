@@ -70,3 +70,12 @@ class WordNetDictionary:
                 per_pos[pos] = per_pos.get(pos, 0) + 1
                 found.append(Sense(pos=pos.value, definition=definition, rank=len(found)))
         return found
+
+    def synonyms(self, lemma: str) -> frozenset[str]:
+        return frozenset(
+            other
+            for word in self._wordnet.words(lemma)
+            for synset in word.synsets()
+            for other in synset.lemmas()
+            if other != lemma
+        )

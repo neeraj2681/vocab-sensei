@@ -22,8 +22,18 @@ class ScoringSettings(BaseModel):
 
 
 class QuizSettings(BaseModel):
-    round_size: int = Field(default=10, gt=0)
+    """The never-ending quiz (docs/PROJECT_PLAN.md §5.3)."""
+
     options_per_question: int = Field(default=4, ge=2)
+    spacing: int = Field(default=10, ge=0)  # a word isn't asked again within this many questions
+    daily_goal: int = Field(default=10, gt=0)  # answers per day that keep the streak going
+    # How often the next word is new / in progress / a learned word due for review (6:3:1).
+    new_weight: int = Field(default=6, ge=0)
+    learning_weight: int = Field(default=3, ge=0)
+    review_weight: int = Field(default=1, ge=0)
+    distractor_zipf_window: float = Field(
+        default=0.75, gt=0
+    )  # "similar difficulty" for wrong options
 
 
 class AuthSettings(BaseModel):

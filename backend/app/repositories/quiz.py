@@ -1,0 +1,141 @@
+from collections.abc import Collection
+from datetime import datetime
+
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session, aliased
+
+from app.core.enums import WordStatus
+from app.db.models import (
+    CurrentReading,
+    Definition,
+    Document,
+    DocumentWord,
+    Question,
+    QuizAnswer,
+    UserWord,
+    Word,
+)
+
+
+class QuizRepository:
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    # Questions and answers
+
+    def pending_question(self, user_id: int) -> Question | None:
+        """The user's newest question that hasn't been answered yet."""
+        return self._session.scalars(
+            select(Question)
+            .outerjoin(QuizAnswer, QuizAnswer.question_id == Question.id)
+            .where(Question.user_id == user_id, QuizAnswer.id.is_(None))
+            .order_by(Question.id.desc())
+            .limit(1)
+        ).first()
+
+    def question(self, user_id: int, question_id: int) -> Question | None:
+        question = self._session.get(Question, question_id)
+        return question if question and question.user_id == user_id else None
+
+    def answer_for(self, question_id: int) -> QuizAnswer | None:
+        return self._session.scalars(
+            select(QuizAnswer).where(QuizAnswer.question_id == question_id)
+        ).first()
+
+    def recently_answered_word_ids(self, user_id: int, count: int) -> set[int]:
+        """Words of the user's last `count` answers."""
+        if count == 0:
+            return set()
+        return set(
+            self._session.scalars(
+                select(QuizAnswer.word_id)
+                .where(QuizAnswer.user_id == user_id)
+                .order_by(QuizAnswer.id.desc())
+                .limit(count)
+            )
+        )
+
+    def add(self, item: Question | QuizAnswer | UserWord) -> None:
+        self._session.add(item)
+
+    # Scores
+
+    def total_points(self, user_id: int) -> int:
+        total = self._session.scalar(
+            select(func.sum(QuizAnswer.score_delta)).where(QuizAnswer.user_id == user_id)
+        )
+        return int(total or 0)
+
+    def answers(self, user_id: int, since: datetime | None = None) -> list[QuizAnswer]:
+        """Real answers ("I know this" excluded), oldest first."""
+        query = select(QuizAnswer).where(
+            QuizAnswer.user_id == user_id, QuizAnswer.chosen_index.is_not(None)
+        )
+        if since is not None:
+            query = query.where(QuizAnswer.answered_at >= since)
+        return list(self._session.scalars(query.order_by(QuizAnswer.id)))
+
+    # Word progress
+
+    def user_word(self, user_id: int, word_id: int) -> UserWord | None:
+        return self._session.get(UserWord, (user_id, word_id))
+
+    def words_with_status(
+        self, user_id: int, status: WordStatus, exclude: Collection[int]
+    ) -> list[UserWord]:
+        """Least recently reviewed first."""
+        return list(
+            self._session.scalars(
+                select(UserWord)
+                .where(
+                    UserWord.user_id == user_id,
+                    UserWord.status == status,
+                    UserWord.word_id.not_in(exclude),
+                )
+                .order_by(UserWord.last_reviewed_at.is_not(None), UserWord.last_reviewed_at)
+            )
+        )
+
+    # Building questions
+
+    def word(self, word_id: int) -> Word | None:
+        return self._session.get(Word, word_id)
+
+    def occurrence(self, user_id: int, word_id: int) -> tuple[DocumentWord, Document] | None:
+        """Where the user's books use the word, preferring their current reads by priority."""
+        row = self._session.execute(
+            select(DocumentWord, Document)
+            .join(Document, Document.id == DocumentWord.document_id)
+            .outerjoin(
+                CurrentReading,
+                (CurrentReading.document_id == Document.id) & (CurrentReading.user_id == user_id),
+            )
+            .where(Document.owner_user_id == user_id, DocumentWord.word_id == word_id)
+            .order_by(CurrentReading.priority.is_(None), CurrentReading.priority, Document.id)
+            .limit(1)
+        ).first()
+        return (row[0], row[1]) if row else None
+
+    def distractors(
+        self, word_id: int, pos: str | None, zipf: float | None, window: float | None, limit: int
+    ) -> list[tuple[str, str]]:
+        """(lemma, definition) of other words, in random order; narrowed by part of speech and
+        difficulty when given. Only each word's first sense of that part of speech is used."""
+        query = (
+            select(Word.lemma, Definition.text)
+            .join(Definition, Definition.word_id == Word.id)
+            .where(Word.id != word_id)
+        )
+        if pos is not None:
+            query = query.where(Definition.pos == pos)
+        if zipf is not None and window is not None:
+            query = query.where(Word.zipf_frequency.between(zipf - window, zipf + window))
+        other = aliased(Definition)
+        first_sense = (
+            select(func.min(other.sense_rank)).where(other.word_id == Word.id).correlate(Word)
+        )
+        if pos is not None:
+            first_sense = first_sense.where(other.pos == pos)
+        query = query.where(Definition.sense_rank == first_sense.scalar_subquery())
+        rows = self._session.execute(query.order_by(func.random()).limit(limit))
+        return [(lemma, text) for lemma, text in rows]

@@ -109,6 +109,12 @@ def test_unknown_words_have_no_senses(dictionary: WordNetDictionary) -> None:
     assert dictionary.senses("hypos") == []
 
 
+def test_synonyms_share_a_meaning(dictionary: WordNetDictionary) -> None:
+    assert dictionary.synonyms("drizzly") == {"damp"}
+    assert dictionary.synonyms("spleen") == frozenset()
+    assert dictionary.synonyms("hypos") == frozenset()
+
+
 def test_source_names_the_lexicon(dictionary: WordNetDictionary) -> None:
     assert dictionary.source == LEXICON
 

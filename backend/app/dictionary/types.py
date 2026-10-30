@@ -21,3 +21,7 @@ class Dictionary(Protocol):
     def senses(self, lemma: str) -> list[Sense]:
         """The lemma's meanings, best first; empty if the dictionary doesn't know it."""
         ...
+
+    def synonyms(self, lemma: str) -> frozenset[str]:
+        """Words sharing at least one meaning with the lemma (never wrong options in a quiz)."""
+        ...
