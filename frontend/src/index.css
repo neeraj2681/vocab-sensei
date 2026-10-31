@@ -591,3 +591,20 @@ button.primary {
 .sort__footer {
   margin-top: 1rem;
 }
+
+/* Account deletion */
+
+.danger {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--bad);
+  border-radius: 10px;
+}
+
+.danger h3 {
+  margin-top: 0;
+  color: var(--bad);
+}
+
+button[type='submit'].danger__confirm {
+  background: var(--bad);
+}

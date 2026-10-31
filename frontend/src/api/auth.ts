@@ -1,4 +1,4 @@
-import { apiGet, apiPost } from './client'
+import { apiDelete, apiGet, apiPost } from './client'
 
 export interface User {
   id: number
@@ -22,4 +22,5 @@ export const authApi = {
   forgotPassword: (email: string) => apiPost<Message>('/auth/forgot-password', { email }),
   resetPassword: (token: string, new_password: string) =>
     apiPost('/auth/reset-password', { token, new_password }),
+  deleteAccount: (password: string) => apiDelete('/auth/me', { password }),
 }

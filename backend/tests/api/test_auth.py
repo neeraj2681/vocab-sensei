@@ -7,9 +7,10 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_email_sender
+from app.core.config import Settings
 from app.core.email import Email
-from app.db.models import User
-from tests.conftest import FakeEmailSender
+from app.db.models import Document, User
+from tests.conftest import FakeEmailSender, log_in, make_user
 
 EMAIL = "reader@example.com"
 PASSWORD = "correct horse battery"
@@ -199,3 +200,35 @@ def test_sign_up_works_when_the_mail_server_is_down(
     assert (
         client.post("/api/auth/forgot-password", json={"email": "x@example.com"}).status_code == 202
     )
+
+
+def test_deleting_an_account_removes_its_data_and_files(
+    client: TestClient, session: Session, settings: Settings
+) -> None:
+    user = make_user(session)
+    log_in(client, user.email)
+    upload = client.post("/api/documents", files={"file": ("book.txt", b"A lugubrious tale " * 20)})
+    assert upload.status_code == 202
+    assert list((settings.data_dir / "uploads" / str(user.id)).iterdir())
+
+    response = client.request("DELETE", "/api/auth/me", json={"password": PASSWORD})
+
+    assert response.status_code == 204
+    assert session.scalars(select(User)).all() == []
+    assert session.scalars(select(Document)).all() == []
+    assert not (settings.data_dir / "uploads" / str(user.id)).exists()
+    assert client.get("/api/auth/me").status_code == 401  # logged out
+    assert login(client, email=user.email) == 401  # and gone
+
+
+def test_deleting_an_account_needs_the_password(client: TestClient, session: Session) -> None:
+    log_in(client, make_user(session).email)
+
+    response = client.request("DELETE", "/api/auth/me", json={"password": "not my password"})
+
+    assert response.status_code == 403
+    assert client.get("/api/auth/me").status_code == 200
+
+
+def test_deleting_an_account_needs_a_login(client: TestClient) -> None:
+    assert client.request("DELETE", "/api/auth/me", json={"password": PASSWORD}).status_code == 401

@@ -26,6 +26,10 @@ class LoginRequest(BaseModel):
     password: Annotated[str, Field(max_length=128)]
 
 
+class PasswordRequest(BaseModel):
+    password: Annotated[str, Field(max_length=128)]
+
+
 class EmailRequest(BaseModel):
     email: EmailStr
 
@@ -125,6 +129,22 @@ def logout(
 @router.get("/me")
 def me(user: CurrentUser) -> UserResponse:
     return UserResponse.model_validate(user)
+
+
+@router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
+def delete_account(
+    body: PasswordRequest,
+    user: CurrentUser,
+    response: Response,
+    auth: AuthServiceDep,
+    settings: SettingsDep,
+) -> None:
+    """Deletes your account and everything in it. Asks for the password again."""
+    try:
+        auth.delete_account(user, body.password)
+    except InvalidCredentialsError:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Wrong password") from None
+    response.delete_cookie(settings.auth.cookie_name, path="/api")
 
 
 @router.post("/forgot-password", status_code=status.HTTP_202_ACCEPTED)
