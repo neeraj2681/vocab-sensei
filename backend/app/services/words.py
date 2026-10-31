@@ -44,6 +44,7 @@ class WordService:
                     first_position=w.first_position,
                     occurrences=w.occurrences,
                     context_sentence=w.context_sentence,
+                    context_form=w.context_form,
                     pos=w.pos,
                 )
                 for w in defined

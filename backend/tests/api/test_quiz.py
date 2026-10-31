@@ -1,16 +1,16 @@
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_dictionary
 from app.api.quiz import get_now
-from app.core.enums import DocumentFormat, DocumentStatus, PartOfSpeech, WordStatus
+from app.core.enums import DocumentFormat, DocumentStatus, PartOfSpeech, QuestionType, WordStatus
 from app.db.models import (
     Chapter,
     CurrentReading,
@@ -82,6 +82,7 @@ def add_book(session: Session, user: User, lemmas: list[str], *, reading: bool =
                 chapter_id=document.chapters[0].id,
                 first_position=position,
                 context_sentence=f"A sentence with {lemma}.",
+                context_form=lemma,
                 pos=PartOfSpeech.NOUN,
             )
         )
@@ -120,7 +121,6 @@ def answer(
     )
     assert response.status_code == 200, response.text
     body: dict[str, Any] = response.json()
-    body["word"] = asked["word"]
     return body
 
 
@@ -129,7 +129,7 @@ class TestAsking:
     def test_asks_the_first_word_of_the_learning_list(self, user_client: TestClient) -> None:
         asked = question(user_client)
 
-        assert asked["word"] == "word00"
+        assert (asked["type"], asked["prompt"]) == ("definition_mcq", "word00")
         assert len(asked["options"]) == 4
         assert "meaning of word00" in asked["options"]
         assert "correct_index" not in asked  # only revealed after answering
@@ -282,13 +282,13 @@ def test_i_know_this_retires_the_word(user_client: TestClient, session: Session)
     response = user_client.post(f"/api/quiz/questions/{asked['id']}/know")
 
     assert response.status_code == 204
-    assert question(user_client)["word"] != asked["word"]
-    word = session.scalars(select(Word).where(Word.lemma == asked["word"])).one()
+    assert question(user_client)["prompt"] != asked["prompt"]
+    word = session.scalars(select(Word).where(Word.lemma == asked["prompt"])).one()
     progress = session.get(UserWord, (reader(session).id, word.id))
     assert progress is not None
     assert progress.status == WordStatus.KNOWN
     words = [answer(user_client, session)["word"] for _ in range(25)]
-    assert asked["word"] not in words
+    assert asked["prompt"] not in words
 
 
 def test_synonyms_are_never_wrong_options(
@@ -425,3 +425,66 @@ def test_i_know_this_needs_an_open_question_of_your_own(
 
     assert user_client.post(know).status_code == 409
     assert user_client.post("/api/quiz/questions/999/know").status_code == 404
+
+
+@pytest.mark.usefixtures("book", "clock")
+class TestQuestionTypes:
+    @pytest.fixture
+    def forced(self, monkeypatch: pytest.MonkeyPatch) -> Callable[[QuestionType], None]:
+        def force(kind: QuestionType) -> None:
+            monkeypatch.setattr(
+                "app.services.quiz.choose_question_type", lambda *args, **kwargs: kind
+            )
+
+        return force
+
+    def test_reverse_shows_a_meaning_and_hides_the_word(
+        self, user_client: TestClient, session: Session, forced: Callable[[QuestionType], None]
+    ) -> None:
+        forced(QuestionType.REVERSE)
+
+        asked = question(user_client)
+
+        assert (asked["type"], asked["prompt"]) == ("reverse", "meaning of word00")
+        assert "word00" in asked["options"]
+        result = answer(user_client, session)
+        assert (result["word"], result["meaning"]) == ("word00", "meaning of word00")
+
+    def test_fill_in_blanks_the_book_sentence(
+        self, user_client: TestClient, session: Session, forced: Callable[[QuestionType], None]
+    ) -> None:
+        forced(QuestionType.FILL_IN_BLANK)
+
+        asked = question(user_client)
+
+        assert (asked["type"], asked["prompt"]) == ("fill_in_blank", "A sentence with _____.")
+        assert "word00" in asked["options"]
+        result = answer(user_client, session)
+        assert result["context_sentence"] == "A sentence with word00."
+
+    def test_without_the_sentence_form_it_asks_the_meaning(
+        self, user_client: TestClient, session: Session, forced: Callable[[QuestionType], None]
+    ) -> None:
+        forced(QuestionType.FILL_IN_BLANK)
+        session.execute(text("UPDATE document_words SET context_form = NULL"))
+        session.commit()
+
+        assert question(user_client)["type"] == "definition_mcq"
+
+    def test_well_known_words_get_harder_formats(
+        self, user_client: TestClient, session: Session
+    ) -> None:
+        user = reader(session)
+        for word in session.scalars(select(Word)):
+            session.add(UserWord(user_id=user.id, word_id=word.id, score=80, status="learning"))
+        session.commit()
+
+        kinds = {question_type(user_client, session) for _ in range(30)}
+
+        assert kinds == {"definition_mcq", "reverse", "fill_in_blank"}
+
+
+def question_type(client: TestClient, session: Session) -> str:
+    kind: str = question(client)["type"]
+    answer(client, session)
+    return kind

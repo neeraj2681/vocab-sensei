@@ -44,6 +44,7 @@ def test_records_first_chapter_position_count_and_sentence() -> None:
     assert word.first_position == 5  # "Nothing rare here ." is 4 tokens, then "A" is 4
     assert word.occurrences == 2
     assert word.context_sentence == "A lugubrious tune played."
+    assert word.context_form == "lugubrious"
     assert 1.0 <= word.zipf < 4.0
 
 
@@ -82,3 +83,13 @@ def test_records_how_the_book_uses_each_word() -> None:
     pos = {w.lemma: w.pos for w in words}
     assert pos["perambulate"] == PartOfSpeech.VERB
     assert pos["damp"] == PartOfSpeech.ADJECTIVE
+
+
+def test_remembers_the_form_used_in_the_sentence() -> None:
+    [word] = [
+        w
+        for w in extract("The sailors were perambulating along the docks.")
+        if w.lemma == "perambulate"
+    ]
+
+    assert word.context_form == "perambulating"

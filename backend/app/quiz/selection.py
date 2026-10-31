@@ -5,6 +5,8 @@ from datetime import date, timedelta
 from enum import StrEnum
 from random import Random
 
+from app.core.enums import QuestionType
+
 
 class Pool(StrEnum):
     NEW = "new"  # next words from the learning list
@@ -37,3 +39,16 @@ def streak(answers_per_day: Mapping[date, int], today: date, goal: int) -> int:
         days += 1
         day -= timedelta(days=1)
     return days
+
+
+def choose_question_type(
+    score: int, can_fill: bool, rng: Random, *, reverse_from: int, fill_from: int
+) -> QuestionType:
+    """Harder formats as a word gets learned: meaning only at first, then also reverse, then
+    also fill-in-the-blank (only when the book's sentence for the word is known)."""
+    kinds = [QuestionType.DEFINITION_MCQ]
+    if score >= reverse_from:
+        kinds.append(QuestionType.REVERSE)
+    if score >= fill_from and can_fill:
+        kinds.append(QuestionType.FILL_IN_BLANK)
+    return rng.choice(kinds)

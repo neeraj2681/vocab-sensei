@@ -608,3 +608,17 @@ button.primary {
 button[type='submit'].danger__confirm {
   background: var(--bad);
 }
+
+.quiz__meaning {
+  font-size: 1.4rem;
+  font-weight: 600;
+  margin: 0.25rem 0 1rem;
+}
+
+.quiz__sentence {
+  margin: 0.25rem 0 1rem;
+  padding-left: 0.75rem;
+  border-left: 3px solid var(--accent);
+  font-size: 1.2rem;
+  font-style: italic;
+}

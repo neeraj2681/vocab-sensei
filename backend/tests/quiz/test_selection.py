@@ -2,7 +2,8 @@ from collections import Counter
 from datetime import date
 from random import Random
 
-from app.quiz.selection import Pool, choose_pool, streak
+from app.core.enums import QuestionType
+from app.quiz.selection import Pool, choose_pool, choose_question_type, streak
 
 WEIGHTS = {Pool.NEW: 6, Pool.LEARNING: 3, Pool.REVIEW: 1}
 TODAY = date(2026, 10, 30)
@@ -60,3 +61,26 @@ def test_today_counts_once_its_goal_is_met() -> None:
 def test_a_missed_day_resets_the_streak() -> None:
     assert streak({day(2): 10, day(3): 10}, TODAY, goal=10) == 0
     assert streak({}, TODAY, goal=10) == 0
+
+
+def kinds_for(score: int, can_fill: bool = True) -> set[QuestionType]:
+    rng = Random(3)
+    return {
+        choose_question_type(score, can_fill, rng, reverse_from=30, fill_from=70)
+        for _ in range(200)
+    }
+
+
+def test_harder_formats_unlock_as_a_word_is_learned() -> None:
+    meaning, reverse, fill = (
+        QuestionType.DEFINITION_MCQ,
+        QuestionType.REVERSE,
+        QuestionType.FILL_IN_BLANK,
+    )
+    assert kinds_for(0) == kinds_for(29) == {meaning}
+    assert kinds_for(30) == kinds_for(69) == {meaning, reverse}
+    assert kinds_for(70) == kinds_for(150) == {meaning, reverse, fill}
+
+
+def test_fill_in_needs_a_sentence() -> None:
+    assert QuestionType.FILL_IN_BLANK not in kinds_for(90, can_fill=False)
