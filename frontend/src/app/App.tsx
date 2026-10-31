@@ -12,6 +12,7 @@ import { BookPage } from '../features/library/BookPage'
 import { LibraryPage } from '../features/library/LibraryPage'
 import { ProgressPage } from '../features/progress/ProgressPage'
 import { QuizPage } from '../features/quiz/QuizPage'
+import { SettingsPage } from '../features/settings/SettingsPage'
 import { SortPage } from '../features/sorting/SortPage'
 
 function AppRoutes() {
@@ -54,6 +55,14 @@ function AppRoutes() {
         element={
           <RequireAuth>
             <ProgressPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/settings"
+        element={
+          <RequireAuth>
+            <SettingsPage />
           </RequireAuth>
         }
       />
@@ -102,6 +111,9 @@ function ProfileMenu(props: { name: string; email: string; onLogout: () => Promi
         <p className="muted">{props.email}</p>
         <Link to="/progress" onClick={close}>
           Progress
+        </Link>
+        <Link to="/settings" onClick={close}>
+          Settings
         </Link>
         <button
           type="button"

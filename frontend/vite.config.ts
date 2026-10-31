@@ -10,6 +10,10 @@ export default defineConfig({
     // for fast start-up; /api is never cached, so scores and questions always come from the server.
     VitePWA({
       registerType: 'autoUpdate',
+      // Our own service worker (src/sw.ts), which also shows daily-reminder notifications.
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
       includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
       manifest: {
         name: 'Vocab Sensei',
@@ -24,7 +28,6 @@ export default defineConfig({
           { src: 'icon-512.png', sizes: '512x512', type: 'image/png' },
         ],
       },
-      workbox: { navigateFallbackDenylist: [/^\/api\//] },
     }),
   ],
   server: {
