@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="112" fill="#0969da"/>
+  <rect width="512" height="512" rx="112" fill="#8a4b1f"/>
   <!-- an open book -->
-  <path d="M256 150c-40-28-96-36-150-30v232c54-6 110 2 150 30 40-28 96-36 150-30V120c-54-6-110 2-150 30z" fill="#ffffff"/>
-  <path d="M256 150v232" stroke="#0969da" stroke-width="14" stroke-linecap="round"/>
-  <path d="M146 182c30-2 60 4 84 16M146 232c30-2 60 4 84 16M146 282c30-2 60 4 84 16M366 182c-30-2-60 4-84 16M366 232c-30-2-60 4-84 16M366 282c-30-2-60 4-84 16" stroke="#9ec5f8" stroke-width="12" stroke-linecap="round" fill="none"/>
+  <path d="M256 150c-40-28-96-36-150-30v232c54-6 110 2 150 30 40-28 96-36 150-30V120c-54-6-110 2-150 30z" fill="#fbf6e9"/>
+  <path d="M256 150v232" stroke="#8a4b1f" stroke-width="14" stroke-linecap="round"/>
+  <path d="M146 182c30-2 60 4 84 16M146 232c30-2 60 4 84 16M146 282c30-2 60 4 84 16M366 182c-30-2-60 4-84 16M366 232c-30-2-60 4-84 16M366 282c-30-2-60 4-84 16" stroke="#d9b98c" stroke-width="12" stroke-linecap="round" fill="none"/>
 </svg>

@@ -8,6 +8,7 @@ import { RegisterPage } from '../features/auth/RegisterPage'
 import { RequireAuth } from '../features/auth/RequireAuth'
 import { ResetPasswordPage } from '../features/auth/ResetPasswordPage'
 import { VerifyEmailPage } from '../features/auth/VerifyEmailPage'
+import { ThemeToggle } from '../components/ThemeToggle'
 import { BookPage } from '../features/library/BookPage'
 import { LibraryPage } from '../features/library/LibraryPage'
 import { ProgressPage } from '../features/progress/ProgressPage'
@@ -93,7 +94,10 @@ function Header() {
           <NavLink to="/quiz">Quiz</NavLink>
         </nav>
       )}
-      {user && <ProfileMenu name={user.display_name} email={user.email} onLogout={logout} />}
+      <div className="app__corner">
+        <ThemeToggle />
+        {user && <ProfileMenu name={user.display_name} email={user.email} onLogout={logout} />}
+      </div>
     </header>
   )
 }
