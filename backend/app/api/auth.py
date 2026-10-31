@@ -138,6 +138,7 @@ def delete_account(
     response: Response,
     auth: AuthServiceDep,
     settings: SettingsDep,
+    _: LoginLimit,  # the password check must not become a way to guess passwords
 ) -> None:
     """Deletes your account and everything in it. Asks for the password again."""
     try:
