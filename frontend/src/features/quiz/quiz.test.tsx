@@ -9,7 +9,8 @@ const STATS: QuizStats = { total: 120, today: 3, daily_goal: 10, streak: 4 }
 
 const question = (id: number, word: string): QuizQuestion => ({
   id,
-  word,
+  type: 'definition_mcq',
+  prompt: word,
   options: ['wet with light rain', 'excessively mournful', 'a small bag', 'confidently optimistic'],
 })
 
@@ -19,6 +20,8 @@ const result = (overrides: Partial<AnswerResult>): AnswerResult => ({
   points: 5,
   score_delta: 5,
   counted: true,
+  word: 'drizzly',
+  meaning: 'wet with light rain',
   word_score: 5,
   word_status: 'learning',
   context_sentence: 'It was a damp, drizzly November in my soul.',
@@ -210,5 +213,49 @@ describe('quiz', () => {
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: 'drizzly' })).toBeInTheDocument()
     })
+  })
+})
+
+describe('question types', () => {
+  it('reverse: shows a meaning and offers words, then names the word', async () => {
+    quiz({
+      'GET /api/quiz/question': () =>
+        json({
+          id: 1,
+          type: 'reverse',
+          prompt: 'wet with light rain',
+          options: ['drizzly', 'lugubrious', 'sanguine', 'purse'],
+        }),
+      [ANSWER_URL(1)]: () => json(result({ correct: false, points: -10 })),
+    })
+    const user = renderApp('/quiz')
+
+    expect(await screen.findByText('Which word has this meaning?')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'wet with light rain' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /lugubrious/ }))
+
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      '✗ Not quite. drizzly · wet with light rain',
+    )
+  })
+
+  it("fill in the blank: shows the book's sentence with a gap", async () => {
+    quiz({
+      'GET /api/quiz/question': () =>
+        json({
+          id: 1,
+          type: 'fill_in_blank',
+          prompt: 'It was a damp, _____ November in my soul.',
+          options: ['drizzly', 'lugubrious', 'sanguine', 'purse'],
+        }),
+      [ANSWER_URL(1)]: () => json(result({})),
+    })
+    const user = renderApp('/quiz')
+
+    expect(await screen.findByText('It was a damp, _____ November in my soul.')).toBeInTheDocument()
+    expect(screen.getByText('Which word fills the gap in the book’s sentence?')).toBeInTheDocument()
+    await user.keyboard('1')
+
+    expect(await screen.findByRole('status')).toHaveTextContent('✓ Right! drizzly')
   })
 })

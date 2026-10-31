@@ -31,9 +31,12 @@ class QuizSettings(BaseModel):
     new_weight: int = Field(default=6, ge=0)
     learning_weight: int = Field(default=3, ge=0)
     review_weight: int = Field(default=1, ge=0)
-    distractor_zipf_window: float = Field(
-        default=0.75, gt=0
-    )  # "similar difficulty" for wrong options
+    # "Similar difficulty" for wrong options: Zipf scores within this distance of the word's.
+    distractor_zipf_window: float = Field(default=0.75, gt=0)
+    # Question formats unlock as a word's score grows: reverse (meaning -> word), then also
+    # fill-in-the-blank with the book's sentence.
+    reverse_from_score: int = Field(default=30, ge=0)
+    fill_from_score: int = Field(default=70, ge=0)
 
 
 class AuthSettings(BaseModel):

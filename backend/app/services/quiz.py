@@ -18,17 +18,21 @@ from zoneinfo import ZoneInfo
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings
-from app.core.enums import WordStatus
+from app.core.enums import QuestionType, WordStatus
 from app.db.models import Question, QuizAnswer, UserWord
 from app.dictionary.types import Dictionary
 from app.quiz.questions import (
     Candidate,
     DefinitionQuestionGenerator,
+    FillInBlankQuestionGenerator,
     NotEnoughDistractorsError,
     QuestionGenerator,
+    QuestionNotPossibleError,
+    ReverseQuestionGenerator,
     Target,
+    blank_out,
 )
-from app.quiz.selection import Pool, choose_pool, streak
+from app.quiz.selection import Pool, choose_pool, choose_question_type, streak
 from app.repositories.quiz import QuizRepository
 from app.scoring.rules import (
     WordProgress,
@@ -79,6 +83,8 @@ class AnswerOutcome:
     score_delta: int  # change in the word's score
     points: int  # change in the lifetime score
     counted: bool  # False when the word was asked again too soon to score
+    lemma: str  # the word, revealed after answering (reverse and fill-in questions hide it)
+    meaning: str | None  # its meaning in the book's sense
     word: UserWord
     question: Question
     stats: Stats
@@ -103,14 +109,19 @@ class QuizService:
         settings: Settings,
         dictionary: Callable[[], Dictionary],
         rng: Random | None = None,
-        generator: QuestionGenerator | None = None,
+        generators: dict[QuestionType, QuestionGenerator] | None = None,
     ) -> None:
         self._session = session
         self._settings = settings
         self._quiz = settings.quiz
         self._dictionary = dictionary
         self._rng = rng or Random()
-        self._generator = generator or DefinitionQuestionGenerator(self._quiz.options_per_question)
+        options = self._quiz.options_per_question
+        self._generators = generators or {
+            QuestionType.DEFINITION_MCQ: DefinitionQuestionGenerator(options),
+            QuestionType.REVERSE: ReverseQuestionGenerator(options),
+            QuestionType.FILL_IN_BLANK: FillInBlankQuestionGenerator(options),
+        }
         self._repo = QuizRepository(session)
         self._learning = LearningService(session)
 
@@ -191,6 +202,15 @@ class QuizService:
             definition=correct.text,
             synonyms=self._dictionary().synonyms(word.lemma),
             context_sentence=occurrence.context_sentence if occurrence else None,
+            context_form=occurrence.context_form if occurrence else None,
+        )
+        progress = self._repo.user_word(user_id, word_id)
+        kind = choose_question_type(
+            progress.score if progress else 0,
+            blank_out(target.context_sentence, target.context_form) is not None,
+            self._rng,
+            reverse_from=self._quiz.reverse_from_score,
+            fill_from=self._quiz.fill_from_score,
         )
         needed = self._quiz.options_per_question - 1
         # Closest first: same part of speech and similar difficulty, then wider, then anything.
@@ -206,9 +226,12 @@ class QuizService:
                 for lemma, text in self._repo.distractors(word.id, pos, zipf, width, needed * 5)
             ]
             try:
-                draft = self._generator.generate(target, pool, self._rng)
+                draft = self._generators[kind].generate(target, pool, self._rng)
             except NotEnoughDistractorsError:
                 continue
+            except QuestionNotPossibleError:  # e.g. the sentence lost the word; ask its meaning
+                kind = QuestionType.DEFINITION_MCQ
+                draft = self._generators[kind].generate(target, pool, self._rng)
             return Question(
                 user_id=user_id,
                 document_id=document.id if document else None,
@@ -264,16 +287,27 @@ class QuizService:
             )
         )
         self._session.commit()
+        lemma, meaning = self._word_and_meaning(user_id, question.word_id)
         return AnswerOutcome(
             correct=correct,
             correct_index=question.correct_index,
             score_delta=delta,
             points=points,
             counted=counted,
+            lemma=lemma,
+            meaning=meaning,
             word=word,
             question=question,
             stats=self.stats(user_id, now, tz),
         )
+
+    def _word_and_meaning(self, user_id: int, word_id: int) -> tuple[str, str | None]:
+        word = self._repo.word(word_id)
+        if word is None:
+            return "", None
+        found = self._repo.occurrence(user_id, word_id)
+        definitions = definitions_in_context(word, found[0].pos if found else None)
+        return word.lemma, definitions[0].text if definitions else None
 
     def know(self, user_id: int, question_id: int, now: datetime) -> None:
         """The "I know this" button: the word is never asked again; a new question replaces it."""

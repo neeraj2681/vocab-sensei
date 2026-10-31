@@ -37,6 +37,7 @@ class ExtractedWord:
     first_position: int  # token offset inside that chapter
     occurrences: int  # across the whole book
     context_sentence: str  # the sentence of the first appearance
+    context_form: str  # the word as written in that sentence ("regulating" for "regulate")
     pos: PartOfSpeech  # how the book uses the word most often ("damp": adjective, not noun)
 
 
@@ -77,6 +78,7 @@ class WordExtractor:
                         first_position=position,
                         occurrences=0,
                         context_sentence=self._context(token),
+                        context_form=token.text,
                         pos=pos,
                     )
 

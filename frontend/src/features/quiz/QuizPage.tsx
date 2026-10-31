@@ -171,8 +171,7 @@ function QuestionCard({ phase, busy, onChoose, onKnow, onNext }: CardProps) {
 
   return (
     <div className="quiz__card">
-      <p className="muted quiz__prompt">What does this word mean?</p>
-      <h2 className="quiz__word">{question.word}</h2>
+      <Prompt question={question} />
       <ol className="options">
         {question.options.map((option, index) => (
           <li key={option}>
@@ -203,6 +202,25 @@ function QuestionCard({ phase, busy, onChoose, onKnow, onNext }: CardProps) {
   )
 }
 
+const INSTRUCTIONS: Record<QuizQuestion['type'], string> = {
+  definition_mcq: 'What does this word mean?',
+  reverse: 'Which word has this meaning?',
+  fill_in_blank: 'Which word fills the gap in the book’s sentence?',
+}
+
+function Prompt({ question }: { question: QuizQuestion }) {
+  return (
+    <>
+      <p className="muted quiz__prompt">{INSTRUCTIONS[question.type]}</p>
+      {question.type === 'definition_mcq' && <h2 className="quiz__word">{question.prompt}</h2>}
+      {question.type === 'reverse' && <h2 className="quiz__meaning">{question.prompt}</h2>}
+      {question.type === 'fill_in_blank' && (
+        <blockquote className="quiz__sentence">{question.prompt}</blockquote>
+      )}
+    </>
+  )
+}
+
 function Feedback({
   question,
   result,
@@ -216,9 +234,16 @@ function Feedback({
     <div className={`feedback feedback--${result.correct ? 'right' : 'wrong'}`}>
       <p role="status" className="feedback__verdict">
         {result.correct ? '✓ Right!' : '✗ Not quite.'}{' '}
-        {!result.correct && (
+        {question.type === 'definition_mcq' ? (
+          !result.correct && (
+            <>
+              It means: <strong>{question.options[result.correct_index]}</strong>
+            </>
+          )
+        ) : (
           <>
-            It means: <strong>{question.options[result.correct_index]}</strong>
+            <strong>{result.word}</strong>
+            {result.meaning && <span className="muted"> · {result.meaning}</span>}
           </>
         )}
         {result.correct && result.word_status === 'learned' && ' 🎉 Word learned!'}

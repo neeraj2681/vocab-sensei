@@ -97,4 +97,5 @@ class DocumentWord(Base):
     first_position: Mapped[int]  # token offset inside the chapter
     occurrences: Mapped[int] = mapped_column(default=1)
     context_sentence: Mapped[str | None] = mapped_column(Text)
+    context_form: Mapped[str | None] = mapped_column(String(100))  # the word as written there
     pos: Mapped[PartOfSpeech | None] = mapped_column(str_enum(PartOfSpeech))  # most common use

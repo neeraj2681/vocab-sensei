@@ -1,8 +1,13 @@
 import { apiGet, apiPost } from './client'
 
+export type QuestionType = 'definition_mcq' | 'reverse' | 'fill_in_blank'
+
 export interface QuizQuestion {
   id: number
-  word: string
+  type: QuestionType
+  // The word (definition_mcq), a meaning (reverse) or the book's sentence with a blank
+  // (fill_in_blank). The word itself is only revealed in the answer for the last two.
+  prompt: string
   options: string[]
 }
 
@@ -19,6 +24,8 @@ export interface AnswerResult {
   points: number // what the live score changes by: +5, -10, or 0 (asked too soon, or total at 0)
   score_delta: number // what the word's own score changed by
   counted: boolean
+  word: string
+  meaning: string | null
   word_score: number
   word_status: 'new' | 'learning' | 'learned' | 'known'
   context_sentence: string | null

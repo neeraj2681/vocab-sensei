@@ -30,6 +30,7 @@ def extracted(lemma: str) -> ExtractedWord:
         first_position=0,
         occurrences=1,
         context_sentence=f"A {lemma} sentence.",
+        context_form=lemma,
         pos=PartOfSpeech.NOUN,
     )
 

@@ -290,8 +290,8 @@ because git and the workflow files carry over.
 
 ### Phase 2 — Better learning
 - [ ] Chapter primer & readiness %
-- [ ] Fill-in-the-blank questions using sentences from the book
-- [ ] Reverse questions (definition → word)
+- [x] Fill-in-the-blank questions using sentences from the book (`feat/question-types`)
+- [x] Reverse questions (definition → word); formats unlock by word score: 0–29 meaning, 30–69 + reverse, 70+ + fill-in
 - [ ] Adjustable difficulty threshold per user
 - [ ] Spaced-repetition option (FSRS) alongside the point system
 - [ ] Mobile-friendly layout, PWA, daily reminder

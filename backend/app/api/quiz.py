@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.api.deps import CurrentUser, DictionaryLoader, SettingsDep, get_dictionary
-from app.core.enums import WordStatus
+from app.core.enums import QuestionType, WordStatus
 from app.db.models import Question
 from app.db.session import get_session
 from app.db.types import utcnow
@@ -57,15 +57,25 @@ QuizServiceDep = Annotated[QuizService, Depends(get_quiz_service)]
 
 
 class QuestionResponse(BaseModel):
-    """What the screen shows. The correct answer is only revealed after answering."""
+    """What the screen shows. The correct answer is only revealed after answering.
+
+    `prompt` is the word (definition_mcq), a meaning (reverse) or the book's sentence with a blank
+    (fill_in_blank); for the last two the word itself is the answer, so it isn't sent.
+    """
 
     id: int
-    word: str
+    type: QuestionType
+    prompt: str
     options: list[str]
 
     @classmethod
     def of(cls, question: Question) -> Self:
-        return cls(id=question.id, word=question.prompt, options=list(question.options))
+        return cls(
+            id=question.id,
+            type=question.type,
+            prompt=question.prompt,
+            options=list(question.options),
+        )
 
 
 class StatsResponse(BaseModel):
@@ -91,6 +101,8 @@ class AnswerResponse(BaseModel):
     points: int  # what the live score changes by: +5, -10, or 0 (asked too soon, or total at 0)
     score_delta: int  # what the word's own score changed by
     counted: bool  # False when the word came back too soon to score
+    word: str  # revealed now: reverse and fill-in questions hide it until answered
+    meaning: str | None
     word_score: int
     word_status: WordStatus
     context_sentence: str | None  # the sentence from the book, shown after answering
@@ -140,6 +152,8 @@ def answer(
         points=outcome.points,
         score_delta=outcome.score_delta,
         counted=outcome.counted,
+        word=outcome.lemma,
+        meaning=outcome.meaning,
         word_score=outcome.word.score,
         word_status=outcome.word.status,
         context_sentence=outcome.question.source_sentence,
