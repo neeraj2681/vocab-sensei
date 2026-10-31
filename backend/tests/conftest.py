@@ -1,9 +1,10 @@
+import os
 from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import Engine
+from sqlalchemy import Engine, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.api import rate_limit
@@ -58,13 +59,38 @@ def fresh_rate_limits() -> None:
     rate_limit.reset()
 
 
-@pytest.fixture
-def engine() -> Iterator[Engine]:
-    """A fresh in-memory database per test."""
-    engine = make_engine("sqlite://")
+# Tests use a fresh in-memory SQLite database each; CI also runs them against PostgreSQL by
+# setting VOCAB_TEST_DATABASE_URL (e.g. postgresql+psycopg://vocab:vocab@localhost/vocab_test).
+TEST_DATABASE_URL = os.environ.get("VOCAB_TEST_DATABASE_URL", "sqlite://")
+
+
+@pytest.fixture(scope="session")
+def server_engine() -> Iterator[Engine | None]:
+    """One PostgreSQL engine and schema for the whole run (None when testing on SQLite)."""
+    if TEST_DATABASE_URL.startswith("sqlite"):
+        yield None
+        return
+    engine = make_engine(TEST_DATABASE_URL)
+    Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
     yield engine
+    Base.metadata.drop_all(engine)
     engine.dispose()
+
+
+@pytest.fixture
+def engine(server_engine: Engine | None) -> Iterator[Engine]:
+    """An empty database per test."""
+    if server_engine is None:
+        engine = make_engine("sqlite://")
+        Base.metadata.create_all(engine)
+        yield engine
+        engine.dispose()
+        return
+    yield server_engine
+    tables = ", ".join(t.name for t in Base.metadata.sorted_tables)
+    with server_engine.begin() as connection:
+        connection.execute(text(f"TRUNCATE {tables} RESTART IDENTITY CASCADE"))
 
 
 @pytest.fixture
