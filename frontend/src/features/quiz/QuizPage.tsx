@@ -32,6 +32,7 @@ export function QuizPage() {
   const [recent, setRecent] = useState<number[]>([])
   const [pop, setPop] = useState<Pop | null>(null)
   const [busy, setBusy] = useState(false)
+  const [answerError, setAnswerError] = useState<string | null>(null) // the question stays on screen
   const [questionVersion, setQuestionVersion] = useState(0) // bump to fetch the next question
   // "Study this chapter": /quiz?book=1&chapter=4 asks only that chapter's words.
   const [params] = useSearchParams()
@@ -75,6 +76,7 @@ export function QuizPage() {
 
   async function choose(question: QuizQuestion, index: number) {
     setBusy(true)
+    setAnswerError(null)
     try {
       const result = await quizApi.answer(question.id, index)
       setPhase({ kind: 'answered', question, chosen: index, result })
@@ -86,7 +88,9 @@ export function QuizPage() {
         correct: result.correct,
       }))
     } catch (err) {
-      setPhase(errorPhase(err))
+      // Keep the question so a tap can simply be tried again.
+      const failed = errorPhase(err)
+      setAnswerError(failed.kind === 'error' ? failed.message : 'Something went wrong')
     } finally {
       setBusy(false)
     }
@@ -105,6 +109,7 @@ export function QuizPage() {
   }
 
   function next() {
+    setAnswerError(null)
     setPhase({ kind: 'loading' })
     setQuestionVersion((v) => v + 1)
   }
@@ -163,6 +168,11 @@ export function QuizPage() {
           onKnow={() => void know(phase.question)}
           onNext={next}
         />
+      )}
+      {answerError && (
+        <p role="alert" className="form-error">
+          Couldn’t save that answer: {answerError}. Tap an option to try again.
+        </p>
       )}
     </section>
   )

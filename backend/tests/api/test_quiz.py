@@ -366,8 +366,17 @@ class TestStats:
         assert user_client.get("/api/quiz/stats?tz=UTC").json()["today"] == 0
         assert user_client.get("/api/quiz/stats?tz=Asia/Kolkata").json()["today"] == 1
 
-    def test_unknown_time_zones_are_rejected(self, user_client: TestClient) -> None:
-        assert user_client.get("/api/quiz/stats?tz=Mars/Olympus").status_code == 422
+    def test_old_time_zone_names_work(self, user_client: TestClient, clock: Clock) -> None:
+        # Phones report legacy names; slim Docker images don't ship them, the tzdata package does.
+        for name in ("Asia/Calcutta", "US/Eastern"):
+            assert user_client.get(f"/api/quiz/stats?tz={name}").status_code == 200
+
+    def test_unknown_time_zones_count_days_in_utc(
+        self, user_client: TestClient, session: Session, clock: Clock
+    ) -> None:
+        result = answer(user_client, session, tz="Mars/Olympus")  # answering still works
+
+        assert result["stats"]["today"] == 1
 
     def test_history_has_the_running_total_after_every_answer(
         self, user_client: TestClient, session: Session, clock: Clock
