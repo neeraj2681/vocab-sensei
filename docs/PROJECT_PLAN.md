@@ -295,7 +295,7 @@ because git and the workflow files carry over.
 - [ ] Adjustable difficulty threshold per user
 - [ ] Spaced-repetition option (FSRS) alongside the point system
 - [x] Mobile-friendly layout + installable PWA (`feat/mobile-pwa`)
-- [ ] Daily reminder notification
+- [x] Daily reminder by push notification or email at a chosen time, only if the goal isn't met (`feat/reminders`, `feat/reminders-ui`)
 - [ ] OCR for scanned PDFs (Tesseract)
 
 ### Phase 3 — Multi-user (future plan items 1–2)
