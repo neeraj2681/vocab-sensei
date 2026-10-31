@@ -1,4 +1,8 @@
 import os
+
+# No background reminder thread in tests; they call ReminderService.send_due directly.
+os.environ.setdefault("VOCAB_REMINDERS__SCHEDULER_ENABLED", "false")
+
 from collections.abc import Iterator
 from pathlib import Path
 
