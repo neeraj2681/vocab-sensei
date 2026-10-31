@@ -18,8 +18,9 @@ Remaining before inviting friends (user steps, then a quick check):
 2. **Fixed address:** a Cloudflare account + domain → named tunnel (`TUNNEL_TOKEN`, `--profile tunnel`); the quick
    tunnel's `trycloudflare.com` URL changes on every restart (then update `VOCAB_EMAIL__APP_BASE_URL`).
 
-After that, choose: **Phase 2** (chapter primer, fill-in-the-blank, mobile/PWA, OCR) or **tuning** (difficulty
-threshold, sense choice).
+**Phase 2 (better learning) is under way** (31 Oct 2026): new question types, mobile layout + PWA and the chapter
+primer are done (#33–#35). Still open in Phase 2: daily reminder notification, adjustable difficulty threshold,
+spaced repetition (FSRS) option, OCR for scanned PDFs. Ask which next, or switch to tuning.
 
 **First steps in the session:**
 
@@ -75,7 +76,14 @@ For development, the old SQLite demo still works: `~/vocab_sensei-demo-data` (`e
 
 Required CI checks on `main`: Pre-commit, Backend, Frontend, Backend on PostgreSQL, Docker deploy.
 
-**Tests:** backend 268 (99% coverage, also run on PostgreSQL), frontend 66. CI: 5 required jobs.
+### Phase 2: better learning (in progress)
+| PR | What |
+|----|------|
+| #33 | Reverse (meaning → word) and fill-in-the-blank (the book's sentence) questions, unlocked by word score: 0–29 meaning, 30–69 + reverse, 70+ + fill-in; the sentence's word form is stored (migration) |
+| #34 | Phone layout (tap targets, wrapping, scrolling tables) and installable PWA (vite-plugin-pwa; never caches /api); new app icon |
+| #35 | Chapter readiness (average word progress), shown on the book page and current reads; "Study this chapter" focused quiz |
+
+**Tests:** backend 290 (99% coverage, also run on PostgreSQL), frontend 73. CI: 5 required jobs.
 
 ### What works end to end today
 Sign up → verify → upload an EPUB / PDF / TXT → book ready in ~20 s with chapters and ~6,700 defined words →
@@ -97,6 +105,8 @@ start reading, set the chapter → optionally sort words → Quiz (endless, live
 | Auth | Email + password (Argon2id), verification required, reset by email, httpOnly cookie sessions |
 | Dictionary | Open English WordNet 2025 via `wn`; ≤3 senses per part of speech; the book's part of speech first |
 | Reading | Several current reads, ordered by priority; the learning list starts at the current chapter (earlier chapters left out); books share new words n : n−1 : … : 1 |
+| Question types | Formats unlock by word score: meaning (0–29), + reverse (30–69), + fill-in-the-blank from the book's sentence (70+) |
+| Readiness | Average progress of a chapter's words; "Study this chapter" = focused endless quiz, says "Chapter ready!" at 100% |
 | Quiz | **Never-ending** (no rounds). 4 options; spacing 10 questions (early repeats don't score); pools new/learning/review 6:3:1; feedback with the book's sentence after each answer |
 | Score | Lifetime points at the top: +5 / −10 on every counted answer, total floored at 0; word scores separately (+5 / −10, floor 0, learned at 100, −5/week decay) |
 | Daily goal | 10 answers a day keeps the streak (user's time zone) |
