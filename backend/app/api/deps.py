@@ -1,26 +1,51 @@
 """Shared FastAPI dependencies. Tests override get_email_sender, get_dictionary and get_session."""
 
+import logging
 from collections.abc import Callable
 from functools import lru_cache
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import Depends, HTTPException, Request, status
+from fastapi import BackgroundTasks, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings, get_settings
-from app.core.email import EmailSender, SmtpEmailSender
+from app.core.email import Email, EmailSender, SmtpEmailSender
 from app.db.models import User
 from app.db.session import get_session
 from app.dictionary.types import Dictionary
 from app.dictionary.wordnet import WordNetDictionary
 from app.services.auth import AuthService
 
+logger = logging.getLogger(__name__)
+
 SettingsDep = Annotated[Settings, Depends(get_settings)]
 
 
 def get_email_sender(settings: SettingsDep) -> EmailSender:
     return SmtpEmailSender(settings.email)
+
+
+class BackgroundEmailSender:
+    """Sends emails after the response, so a slow or failing mail server never breaks a request.
+
+    It also keeps response times the same whether or not an email goes out, which would otherwise
+    hint at which addresses have accounts.
+    """
+
+    def __init__(self, sender: EmailSender, tasks: BackgroundTasks) -> None:
+        self._sender = sender
+        self._tasks = tasks
+
+    def send(self, email: Email) -> None:
+        self._tasks.add_task(_send_and_log_failures, self._sender, email)
+
+
+def _send_and_log_failures(sender: EmailSender, email: Email) -> None:
+    try:
+        sender.send(email)
+    except Exception:
+        logger.exception("couldn't send the %r email", email.subject)
 
 
 DictionaryLoader = Callable[[], Dictionary]
@@ -40,9 +65,10 @@ def get_dictionary(settings: SettingsDep) -> DictionaryLoader:
 def get_auth_service(
     session: Annotated[Session, Depends(get_session)],
     email_sender: Annotated[EmailSender, Depends(get_email_sender)],
+    background: BackgroundTasks,
     settings: SettingsDep,
 ) -> AuthService:
-    return AuthService(session, email_sender, settings)
+    return AuthService(session, BackgroundEmailSender(email_sender, background), settings)
 
 
 AuthServiceDep = Annotated[AuthService, Depends(get_auth_service)]

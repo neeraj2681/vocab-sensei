@@ -15,7 +15,7 @@ score → progress graph → backup. Next is a choice of direction; ask the user
 
 | Option | What | Why |
 |--------|------|-----|
-| **A. Phase 3: share with friends** (suggested) | Login rate limiting, sign-up working without SMTP, PostgreSQL, Docker Compose + a deploy target, account deletion | The app is usable daily; friends are the stated next audience |
+| **A. Phase 3: share with friends** (chosen, in progress) | Login rate limiting, sign-up working without SMTP (done, #26), PostgreSQL, Docker Compose + a deploy target, account deletion | The app is usable daily; friends are the stated next audience |
 | B. Phase 2: better learning | Chapter primer + readiness %, fill-in-the-blank questions from the book, mobile layout/PWA, OCR for scanned PDFs | Makes daily use better before inviting others |
 | C. Tuning from real use | Stricter difficulty threshold (Loomings has 188 words), sense choice within a part of speech (*spleen*: organ vs anger) | Quality issues seen in real data |
 
@@ -98,8 +98,6 @@ start reading, set the chapter → optionally sort words → Quiz (endless, live
 
 ## ⚠️ Known issues / tech debt
 
-- **Sign-up returns 500 when the SMTP server (Mailpit) isn't running**: the account is created but the email fails
-  inside the request. Fix before sharing: send emails in a background task and report failures gracefully.
 - No login rate limiting yet (needed before exposing the app on the internet).
 - Tests print a Starlette deprecation warning (`httpx` → `httpx2`); installing `httpx2` was blocked in-session.
 - Many words per chapter (Loomings: 188). Sorting helps; a stricter Zipf threshold (≈3.5) is worth trying.

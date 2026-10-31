@@ -1,7 +1,14 @@
 import re
 
+import pytest
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
+from app.api.deps import get_email_sender
+from app.core.email import Email
+from app.db.models import User
 from tests.conftest import FakeEmailSender
 
 EMAIL = "reader@example.com"
@@ -170,3 +177,25 @@ def test_invalid_email_is_rejected(client: TestClient) -> None:
     )
 
     assert response.status_code == 422
+
+
+class BrokenEmailSender:
+    def send(self, email: Email) -> None:
+        raise ConnectionRefusedError("no mail server")
+
+
+def test_sign_up_works_when_the_mail_server_is_down(
+    client: TestClient, session: Session, caplog: pytest.LogCaptureFixture
+) -> None:
+    """The account is created; the email failure is logged instead of breaking the request."""
+    app = client.app
+    assert isinstance(app, FastAPI)
+    app.dependency_overrides[get_email_sender] = BrokenEmailSender
+
+    register(client)  # asserts 202
+
+    assert session.scalars(select(User).where(User.email == EMAIL)).one()
+    assert "couldn't send the 'Verify your Vocab Sensei email' email" in caplog.text
+    assert (
+        client.post("/api/auth/forgot-password", json={"email": "x@example.com"}).status_code == 202
+    )
