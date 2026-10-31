@@ -59,8 +59,8 @@ export function apiPatch<T = void>(path: string, body: unknown): Promise<T> {
   return request<T>('PATCH', path, body)
 }
 
-export function apiDelete(path: string): Promise<void> {
-  return request<undefined>('DELETE', path)
+export function apiDelete(path: string, body?: unknown): Promise<void> {
+  return request<undefined>('DELETE', path, body)
 }
 
 /** Sends `file` as multipart form data under the field name "file". */

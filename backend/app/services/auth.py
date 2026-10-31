@@ -4,6 +4,7 @@ Responses never reveal whether an email address has an account: register, resend
 forgot-password behave the same either way, and the email itself tells the owner what happened.
 """
 
+import shutil
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -146,6 +147,21 @@ class AuthService:
         if auth_session := self._auth_sessions.get_by_token_hash(security.hash_token(token)):
             self._auth_sessions.delete(auth_session)
             self._session.commit()
+
+    # --- account deletion ---------------------------------------------------------------------
+
+    def delete_account(self, user: User, password: str) -> None:
+        """Deletes the user with all their books, uploads, progress and sessions.
+
+        The database removes everything that belongs to the user (foreign keys cascade); shared
+        words and definitions stay. The password is asked again so a borrowed session can't do it.
+        """
+        if not security.verify_password(user.password_hash, password):
+            raise InvalidCredentialsError
+        uploads = self._settings.data_dir / "uploads" / str(user.id)
+        self._users.delete(user)
+        self._session.commit()
+        shutil.rmtree(uploads, ignore_errors=True)
 
     # --- password reset -----------------------------------------------------------------------
 

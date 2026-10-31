@@ -6,6 +6,7 @@ export interface AuthState {
   loading: boolean // true until we know whether a session exists
   login: (email: string, password: string) => Promise<void>
   logout: () => Promise<void>
+  deleteAccount: (password: string) => Promise<void>
 }
 
 export const AuthContext = createContext<AuthState | null>(null)

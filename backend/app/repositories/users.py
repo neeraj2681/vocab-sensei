@@ -22,6 +22,11 @@ class UserRepository:
         self._session.flush()
         return user
 
+    def delete(self, user: User) -> None:
+        """A plain DELETE, so the database's ON DELETE CASCADE removes everything the user owns."""
+        self._session.execute(delete(User).where(User.id == user.id))
+        self._session.expunge(user)
+
 
 class AuthSessionRepository:
     def __init__(self, session: Session) -> None:

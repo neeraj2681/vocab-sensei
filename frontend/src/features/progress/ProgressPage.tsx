@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { quizApi, type HistoryPoint, type QuizStats } from '../../api/quiz'
 import { BackupPanel } from './BackupPanel'
+import { DeleteAccountPanel } from './DeleteAccountPanel'
 import { formatWhen } from './format'
 import { ScoreChart } from './ScoreChart'
 
@@ -85,6 +86,7 @@ export function ProgressPage() {
         </div>
       )}
       <BackupPanel />
+      <DeleteAccountPanel />
     </section>
   )
 }
