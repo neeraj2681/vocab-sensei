@@ -48,6 +48,32 @@ services:
     ports:
       - "127.0.0.1:8080:80" # http://localhost:8080 on this Mac only
 
+  # A compressed database backup once a day (the first right after start), kept for 7 days in
+  # deploy/backups/. Uploaded book files aren't included: they can be uploaded again.
+  backup:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ./backups:/backups
+    entrypoint: ["sh", "-c"]
+    command:
+      - |
+        while true; do
+          file=/backups/vocab_sensei-$$(date +%Y-%m-%d).sql.gz
+          if pg_dump -h db -U vocab vocab_sensei | gzip > "$$file.part"; then
+            mv "$$file.part" "$$file" && echo "backup written: $$file"
+          else
+            rm -f "$$file.part"; echo "backup FAILED" >&2
+          fi
+          find /backups -name 'vocab_sensei-*.sql.gz' -mtime +7 -delete
+          sleep 86400
+        done
+
   # A fixed public URL on your own domain (needs a free Cloudflare account): `--profile tunnel`.
   tunnel:
     image: cloudflare/cloudflared:2026.10.7

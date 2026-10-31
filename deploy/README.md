@@ -65,7 +65,22 @@ Set `VOCAB_EMAIL__APP_BASE_URL` to that hostname and run `docker compose up -d` 
 docker compose logs -f api                      # what the backend is doing
 git pull && docker compose up -d --build        # update to the latest version (migrations run on start)
 docker compose down                             # stop (data stays in the pgdata/appdata volumes)
-docker compose exec db pg_dump -U vocab vocab_sensei > backup.sql   # database backup
+docker compose exec db pg_dump -U vocab vocab_sensei > backup.sql   # a backup right now
+```
+
+## Backups
+
+The `backup` service writes a compressed database dump every day to `deploy/backups/`
+(`vocab_sensei-YYYY-MM-DD.sql.gz`, the last 7 days are kept; check with `ls deploy/backups`). Uploaded book
+files aren't included; they can be uploaded again, and the classics are re-downloaded automatically.
+
+To restore one (this **replaces** the current data):
+
+```bash
+docker compose stop api
+docker compose exec -T db psql -U vocab -d postgres -c "DROP DATABASE vocab_sensei;" -c "CREATE DATABASE vocab_sensei OWNER vocab;"
+gunzip -c backups/vocab_sensei-2026-11-01.sql.gz | docker compose exec -T db psql -U vocab -d vocab_sensei
+docker compose start api
 ```
 
 Each user can also download their own progress from **Profile → Progress → Download a backup**.
