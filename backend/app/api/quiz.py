@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.api.deps import CurrentUser, DictionaryLoader, SettingsDep, get_dictionary
+from app.api.documents import DocumentServiceDep
 from app.core.enums import QuestionType, WordStatus
 from app.db.models import Question
 from app.db.session import get_session
@@ -14,6 +15,7 @@ from app.db.types import utcnow
 from app.dictionary.types import DictionaryUnavailableError
 from app.services.quiz import (
     AlreadyAnsweredError,
+    Focus,
     InvalidChoiceError,
     NoWordsError,
     QuestionNotFoundError,
@@ -117,10 +119,28 @@ class HistoryPointResponse(BaseModel):
 
 
 @router.get("/question")
-def current_question(user: CurrentUser, quiz: QuizServiceDep, now: Now) -> QuestionResponse:
+def current_question(
+    user: CurrentUser,
+    quiz: QuizServiceDep,
+    documents: DocumentServiceDep,
+    now: Now,
+    document_id: Annotated[
+        int | None, Query(description="with `chapter`: study one chapter")
+    ] = None,
+    chapter: Annotated[int | None, Query(ge=0)] = None,
+) -> QuestionResponse:
     """The question to show: the unanswered one if there is one, otherwise a new one."""
+    focus = None
+    if (document_id is None) != (chapter is None):
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT, "Give both document_id and chapter, or neither"
+        )
+    if document_id is not None and chapter is not None:
+        if documents.get_for(user.id, document_id) is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Document not found")
+        focus = Focus(document_id, chapter)
     try:
-        return QuestionResponse.of(quiz.current_question(user.id, now))
+        return QuestionResponse.of(quiz.current_question(user.id, now, focus))
     except NoWordsError as exc:
         raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from None
     except DictionaryUnavailableError:

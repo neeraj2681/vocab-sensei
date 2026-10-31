@@ -44,6 +44,8 @@ export function CurrentReadings({ readings, onChange }: Props) {
                   <span className="muted">
                     {' · '}
                     {chapterLabel(reading.current_chapter_index, reading.current_chapter_title)}
+                    {reading.current_chapter_readiness != null &&
+                      ` · ${String(reading.current_chapter_readiness)}% ready`}
                   </span>
                 </span>
                 <span className="row__actions">

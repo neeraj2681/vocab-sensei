@@ -39,6 +39,16 @@ export interface BookWord {
   definitions: Definition[]
 }
 
+export interface ChapterReadiness {
+  index: number
+  title: string | null
+  words: number
+  done: number // learned or known
+  in_progress: number
+  new: number
+  readiness: number // 0-100: the average progress of the chapter's words
+}
+
 /** Still being read on the server; the list should be refreshed until it isn't. */
 export const isPending = (document: BookDocument) =>
   document.status === 'uploaded' || document.status === 'processing'
@@ -48,6 +58,7 @@ export const documentsApi = {
   get: (id: number) => apiGet<BookDocumentDetail>(`/documents/${String(id)}`),
   words: (id: number, chapter: number) =>
     apiGet<BookWord[]>(`/documents/${String(id)}/words?chapter=${String(chapter)}`),
+  readiness: (id: number) => apiGet<ChapterReadiness[]>(`/documents/${String(id)}/readiness`),
   upload: (file: File) => apiUpload<BookDocument>('/documents', file),
   remove: (id: number) => apiDelete(`/documents/${String(id)}`),
 }

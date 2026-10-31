@@ -17,6 +17,38 @@ class LearningRepository:
         query = self._book_words(user_id, document_id, from_chapter, not_started).limit(limit)
         return [(dw, w, c) for dw, w, c in self._session.execute(query)]
 
+    def new_words_in_chapter(
+        self, user_id: int, document_id: int, chapter_index: int, limit: int
+    ) -> list[tuple[DocumentWord, Word, Chapter]]:
+        """Like `new_words`, but only words that first appear in that one chapter."""
+        not_started = or_(UserWord.word_id.is_(None), UserWord.status == WordStatus.NEW)
+        query = self._book_words(user_id, document_id, chapter_index, not_started)
+        query = query.where(Chapter.index == chapter_index).limit(limit)
+        return [(dw, w, c) for dw, w, c in self._session.execute(query)]
+
+    def chapter_word_ids(self, document_id: int, chapter_index: int) -> set[int]:
+        return set(
+            self._session.scalars(
+                select(DocumentWord.word_id)
+                .join(Chapter, Chapter.id == DocumentWord.chapter_id)
+                .where(DocumentWord.document_id == document_id, Chapter.index == chapter_index)
+            )
+        )
+
+    def progress_by_chapter(
+        self, user_id: int, document_id: int
+    ) -> list[tuple[int, UserWord | None]]:
+        """(chapter index, the user's progress or None) for every word of the book."""
+        progress = and_(UserWord.word_id == DocumentWord.word_id, UserWord.user_id == user_id)
+        rows = self._session.execute(
+            select(Chapter.index, UserWord)
+            .select_from(DocumentWord)
+            .join(Chapter, Chapter.id == DocumentWord.chapter_id)
+            .outerjoin(UserWord, progress)
+            .where(DocumentWord.document_id == document_id)
+        )
+        return [(index, word) for index, word in rows]
+
     def unsorted_words(
         self, user_id: int, document_id: int, from_chapter: int, limit: int
     ) -> list[tuple[DocumentWord, Word, Chapter]]:

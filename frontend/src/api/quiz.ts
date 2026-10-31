@@ -44,8 +44,19 @@ export const timeZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone
 
 const tz = () => `tz=${encodeURIComponent(timeZone())}`
 
+/** "Study this chapter": quiz only one chapter's words. */
+export interface Focus {
+  documentId: number
+  chapter: number
+}
+
 export const quizApi = {
-  question: () => apiGet<QuizQuestion>('/quiz/question'),
+  question: (focus?: Focus) =>
+    apiGet<QuizQuestion>(
+      focus
+        ? `/quiz/question?document_id=${String(focus.documentId)}&chapter=${String(focus.chapter)}`
+        : '/quiz/question',
+    ),
   answer: (id: number, chosenIndex: number) =>
     apiPost<AnswerResult>(`/quiz/questions/${String(id)}/answer?${tz()}`, {
       chosen_index: chosenIndex,

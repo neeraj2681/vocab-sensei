@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 import { ApiError } from '../../api/client'
+import { documentsApi, type ChapterReadiness } from '../../api/documents'
 import { quizApi, type AnswerResult, type QuizQuestion, type QuizStats } from '../../api/quiz'
+import { chapterLabel } from '../library/labels'
 import { type Pop, ScoreBar } from './ScoreBar'
 
 const RECENT_ANSWERS = 20 // how many answers the sparkline shows
@@ -31,6 +33,11 @@ export function QuizPage() {
   const [pop, setPop] = useState<Pop | null>(null)
   const [busy, setBusy] = useState(false)
   const [questionVersion, setQuestionVersion] = useState(0) // bump to fetch the next question
+  // "Study this chapter": /quiz?book=1&chapter=4 asks only that chapter's words.
+  const [params] = useSearchParams()
+  const focusBook = params.has('book') ? Number(params.get('book')) : null
+  const focusChapter = params.has('chapter') ? Number(params.get('chapter')) : null
+  const focused = focusBook !== null && focusChapter !== null
 
   useEffect(() => {
     let current = true
@@ -49,8 +56,12 @@ export function QuizPage() {
 
   useEffect(() => {
     let current = true
+    const focus =
+      focusBook !== null && focusChapter !== null
+        ? { documentId: focusBook, chapter: focusChapter }
+        : undefined
     quizApi
-      .question()
+      .question(focus)
       .then((question) => {
         if (current) setPhase({ kind: 'asking', question })
       })
@@ -60,7 +71,7 @@ export function QuizPage() {
     return () => {
       current = false
     }
-  }, [questionVersion])
+  }, [questionVersion, focusBook, focusChapter])
 
   async function choose(question: QuizQuestion, index: number) {
     setBusy(true)
@@ -122,13 +133,20 @@ export function QuizPage() {
   return (
     <section className="quiz">
       {stats && <ScoreBar stats={stats} pop={pop} recent={recent} />}
+      {focused && (
+        <FocusBanner documentId={focusBook} chapter={focusChapter} refresh={pop?.id ?? 0} />
+      )}
       {phase.kind === 'loading' && <p className="muted">Loading the next word…</p>}
       {phase.kind === 'error' && (
         <div role="alert" className="quiz__error">
           <p>{phase.message}</p>
           {phase.noWords ? (
             <p>
-              <Link to="/">Go to your books</Link>
+              {focused ? (
+                <Link to="/quiz">Back to the normal quiz</Link>
+              ) : (
+                <Link to="/">Go to your books</Link>
+              )}
             </p>
           ) : (
             <button type="button" onClick={next}>
@@ -258,5 +276,39 @@ function Feedback({
         Next →
       </button>
     </div>
+  )
+}
+
+/** "Studying: Loomings · 61% ready · Leave", refreshed after every answer. */
+function FocusBanner({
+  documentId,
+  chapter,
+  refresh,
+}: {
+  documentId: number
+  chapter: number
+  refresh: number
+}) {
+  const [readiness, setReadiness] = useState<ChapterReadiness | null>(null)
+
+  useEffect(() => {
+    let current = true
+    documentsApi
+      .readiness(documentId)
+      .then((chapters) => {
+        if (current) setReadiness(chapters.find((c) => c.index === chapter) ?? null)
+      })
+      .catch(() => undefined)
+    return () => {
+      current = false
+    }
+  }, [documentId, chapter, refresh])
+
+  return (
+    <p className="focus-banner">
+      Studying{' '}
+      <strong>{readiness ? chapterLabel(readiness.index, readiness.title) : 'a chapter'}</strong>
+      {readiness && ` · ${String(readiness.readiness)}% ready`} · <Link to="/quiz">Leave</Link>
+    </p>
   )
 }

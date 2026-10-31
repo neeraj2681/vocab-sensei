@@ -717,3 +717,38 @@ button[type='submit'].danger__confirm {
     grid-column: 1 / -1;
   }
 }
+
+/* Chapter primer */
+
+.primer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.readiness {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.readiness__label {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.readiness progress {
+  width: 12rem;
+  accent-color: var(--ok);
+}
+
+.focus-banner {
+  padding: 0.5rem 0.75rem;
+  border-left: 3px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  border-radius: 6px;
+}
