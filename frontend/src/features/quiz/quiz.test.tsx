@@ -259,3 +259,26 @@ describe('question types', () => {
     expect(await screen.findByRole('status')).toHaveTextContent('✓ Right! drizzly')
   })
 })
+
+describe('answer errors', () => {
+  it('keep the question on screen so it can be answered again', async () => {
+    let calls = 0
+    quiz({
+      'GET /api/quiz/question': questions(question(1, 'drizzly')),
+      [ANSWER_URL(1)]: () => (++calls === 1 ? fail(500, 'Server hiccup') : json(result({}))),
+    })
+    const user = renderApp('/quiz')
+
+    await user.click(await screen.findByRole('button', { name: /wet with light rain/ }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Couldn’t save that answer: Server hiccup',
+    )
+    expect(screen.getByRole('heading', { name: 'drizzly' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /wet with light rain/ }))
+
+    expect(await screen.findByRole('status')).toHaveTextContent('✓ Right!')
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+})

@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 from typing import Annotated, Self
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -24,6 +25,8 @@ from app.services.quiz import (
     Stats,
 )
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/quiz", tags=["quiz"])
 
 
@@ -35,13 +38,16 @@ def get_now() -> datetime:
 def get_timezone(
     tz: Annotated[str, Query(description="IANA name, e.g. Asia/Kolkata")] = "UTC",
 ) -> ZoneInfo:
-    """The user's time zone, which decides when "today" starts for the daily goal."""
+    """The user's time zone, which decides when "today" starts for the daily goal.
+
+    Old names (Asia/Calcutta, US/Eastern) work through the tzdata package. A name nobody knows
+    falls back to UTC: a quirky browser must never stop someone from answering.
+    """
     try:
         return ZoneInfo(tz)
     except (ZoneInfoNotFoundError, ValueError):
-        raise HTTPException(
-            status.HTTP_422_UNPROCESSABLE_CONTENT, f"Unknown time zone {tz!r}"
-        ) from None
+        logger.warning("unknown time zone %r; counting days in UTC", tz)
+        return ZoneInfo("UTC")
 
 
 Now = Annotated[datetime, Depends(get_now)]
