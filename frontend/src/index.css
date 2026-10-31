@@ -752,3 +752,31 @@ button[type='submit'].danger__confirm {
   background: color-mix(in srgb, var(--accent) 8%, transparent);
   border-radius: 6px;
 }
+
+/* Settings */
+
+.settings {
+  max-width: 36rem;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.5rem 0;
+}
+
+.settings__time {
+  max-width: 14rem;
+  margin-top: 1rem;
+}
+
+.settings__channel {
+  border: 0;
+  padding: 0;
+  margin: 0 0 0.5rem;
+}
+
+.settings__channel legend {
+  color: var(--muted);
+}
