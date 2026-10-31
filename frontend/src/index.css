@@ -622,3 +622,98 @@ button[type='submit'].danger__confirm {
   font-size: 1.2rem;
   font-style: italic;
 }
+
+/* Phones */
+
+@media (max-width: 640px) {
+  .app {
+    padding: 1rem 0.75rem calc(1.5rem + env(safe-area-inset-bottom));
+  }
+
+  .app__header h1 {
+    font-size: 1.4rem;
+    margin: 0 6rem 0.25rem 0; /* room for the profile menu */
+  }
+
+  .app__tagline {
+    display: none;
+  }
+
+  .app__nav {
+    gap: 1.5rem;
+    font-size: 1.05rem;
+  }
+
+  /* Comfortable tap targets (about 44px, as Apple and Google recommend). */
+  button,
+  .option,
+  .sort__choice,
+  .app__nav a,
+  .profile summary {
+    min-height: 44px;
+  }
+
+  .app__nav a,
+  .profile summary {
+    display: inline-flex;
+    align-items: center;
+  }
+
+  /* iOS zooms into form fields smaller than 16px. */
+  .field input,
+  .toolbar select,
+  input[type='file'] {
+    font-size: 16px;
+  }
+
+  .row,
+  .row__actions {
+    flex-wrap: wrap;
+  }
+
+  .upload {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .toolbar select {
+    max-width: 100%;
+  }
+
+  /* Wide tables scroll sideways instead of squeezing the words. */
+  .words {
+    display: block;
+    overflow-x: auto;
+  }
+
+  .words__context {
+    min-width: 14rem;
+  }
+
+  .scorebar {
+    gap: 0.5rem 1rem;
+    padding: 0.5rem 0.75rem;
+  }
+
+  .scorebar__total {
+    font-size: 1.6rem;
+  }
+
+  .scorebar__daily {
+    margin-left: 0;
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .quiz__word {
+    font-size: 1.9rem;
+  }
+
+  .tiles {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .tile--hero {
+    grid-column: 1 / -1;
+  }
+}

@@ -294,7 +294,8 @@ because git and the workflow files carry over.
 - [x] Reverse questions (definition → word); formats unlock by word score: 0–29 meaning, 30–69 + reverse, 70+ + fill-in
 - [ ] Adjustable difficulty threshold per user
 - [ ] Spaced-repetition option (FSRS) alongside the point system
-- [ ] Mobile-friendly layout, PWA, daily reminder
+- [x] Mobile-friendly layout + installable PWA (`feat/mobile-pwa`)
+- [ ] Daily reminder notification
 - [ ] OCR for scanned PDFs (Tesseract)
 
 ### Phase 3 — Multi-user (future plan items 1–2)
