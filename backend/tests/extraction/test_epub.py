@@ -6,7 +6,9 @@ import pytest
 from app.core.enums import DocumentFormat
 from app.extraction import epub
 from app.extraction.epub import EpubParser
-from app.extraction.registry import UnsupportedFormatError, get_parser
+from app.extraction.pdf import PdfParser
+from app.extraction.registry import get_parser
+from app.extraction.txt import TxtParser
 from app.extraction.types import ParsedChapter, ParseError
 from tests.extraction.epub_builder import Chapter, EpubSpec, build_epub
 
@@ -201,10 +203,15 @@ def test_rejects_huge_uncompressed_size(tmp_path: Path, monkeypatch: pytest.Monk
         parse(tmp_path, EpubSpec([LOOMINGS]))
 
 
-def test_registry_returns_epub_parser() -> None:
-    assert isinstance(get_parser(DocumentFormat.EPUB), EpubParser)
-
-
-def test_registry_rejects_formats_not_built_yet() -> None:
-    with pytest.raises(UnsupportedFormatError, match="pdf"):
-        get_parser(DocumentFormat.PDF)
+@pytest.mark.parametrize(
+    ("document_format", "parser"),
+    [
+        (DocumentFormat.EPUB, EpubParser),
+        (DocumentFormat.PDF, PdfParser),
+        (DocumentFormat.TXT, TxtParser),
+    ],
+)
+def test_registry_has_a_parser_for_every_format(
+    document_format: DocumentFormat, parser: type
+) -> None:
+    assert isinstance(get_parser(document_format), parser)

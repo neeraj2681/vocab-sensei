@@ -104,7 +104,7 @@ describe('library', () => {
 
     const file = new File(['epub bytes'], 'moby.epub', { type: 'application/epub+zip' })
     expect(await screen.findByRole('button', { name: 'Upload' })).toBeDisabled()
-    await user.upload(await screen.findByLabelText('Add a book (EPUB)'), file)
+    await user.upload(await screen.findByLabelText('Add a book (EPUB, PDF or TXT)'), file)
     await user.click(screen.getByRole('button', { name: 'Upload' }))
 
     expect(await screen.findByText('Reading the book…')).toBeInTheDocument()
@@ -117,7 +117,10 @@ describe('library', () => {
     })
     const user = renderApp('/')
 
-    await user.upload(await screen.findByLabelText('Add a book (EPUB)'), new File(['x'], 'a.epub'))
+    await user.upload(
+      await screen.findByLabelText('Add a book (EPUB, PDF or TXT)'),
+      new File(['x'], 'a.epub'),
+    )
     await user.click(screen.getByRole('button', { name: 'Upload' }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Files can be at most 50 MB')

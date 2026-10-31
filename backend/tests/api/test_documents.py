@@ -1,7 +1,9 @@
+import io
 from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
+from pypdf import PdfWriter
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -10,6 +12,7 @@ from app.core.config import Settings
 from app.dictionary.types import DictionaryUnavailableError, Sense
 from tests.conftest import FakeDictionary, log_in, make_user
 from tests.extraction.epub_builder import Chapter, EpubSpec, build_epub
+from tests.extraction.pdf_builder import build_pdf
 
 TEXT = (
     " This paragraph is comfortably long enough to count as a real chapter of the book,"
@@ -113,11 +116,37 @@ def test_rejects_unsupported_file_types(user_client: TestClient, filename: str) 
     assert response.status_code == 415
 
 
-def test_rejects_formats_without_a_parser_yet(user_client: TestClient) -> None:
-    response = user_client.post("/api/documents", files={"file": ("book.pdf", b"%PDF-1.7")})
+def test_txt_books_are_read_too(user_client: TestClient) -> None:
+    text = "CHAPTER 1.\n\n" + TEXT + " " + RARE[1] + "\n\nCHAPTER 2.\n\n" + TEXT + " " + RARE[0]
+    created = upload(user_client, text.encode(), "notes.txt")
 
-    assert response.status_code == 415
-    assert "not supported yet" in response.json()["detail"]
+    detail = user_client.get(f"/api/documents/{created['id']}").json()
+
+    assert detail["status"] == "ready"
+    assert [c["title"] for c in detail["chapters"]] == ["CHAPTER 1.", "CHAPTER 2."]
+    assert detail["word_count"] > 0
+
+
+def test_pdf_books_are_read_too(user_client: TestClient, tmp_path: Path) -> None:
+    pdf = build_pdf(tmp_path / "book.pdf", [["CHAPTER 1.", TEXT, RARE[1]]], title="A PDF Book")
+    created = upload(user_client, pdf.read_bytes(), "book.pdf")
+
+    detail = user_client.get(f"/api/documents/{created['id']}").json()
+
+    assert (detail["status"], detail["title"]) == ("ready", "A PDF Book")
+
+
+def test_scanned_pdfs_fail_with_a_reason(user_client: TestClient) -> None:
+    writer = PdfWriter()
+    writer.add_blank_page(width=420, height=595)
+    buffer = io.BytesIO()
+    writer.write(buffer)
+    created = upload(user_client, buffer.getvalue(), "scan.pdf")
+
+    detail = user_client.get(f"/api/documents/{created['id']}").json()
+
+    assert detail["status"] == "failed"
+    assert "scanned PDFs aren't supported yet" in detail["error"]
 
 
 def test_rejects_empty_files(user_client: TestClient) -> None:

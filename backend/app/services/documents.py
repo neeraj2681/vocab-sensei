@@ -18,7 +18,7 @@ from app.core.enums import DocumentFormat, DocumentStatus
 from app.db.models import Chapter, Document
 from app.dictionary.types import Dictionary, DictionaryUnavailableError
 from app.extraction.cleanup import strip_gutenberg_boilerplate
-from app.extraction.registry import UnsupportedFormatError, get_parser
+from app.extraction.registry import get_parser
 from app.extraction.types import ParseError
 from app.extraction.words import WordExtractor
 from app.repositories.documents import DocumentRepository
@@ -56,10 +56,6 @@ class DocumentService:
         document_format = _FORMATS.get(PurePath(name).suffix.lower())
         if document_format is None:
             raise UnsupportedFileError("Upload an EPUB, PDF or TXT file")
-        try:
-            get_parser(document_format)
-        except UnsupportedFormatError as exc:
-            raise UnsupportedFileError(str(exc)) from None
 
         relative = Path("uploads", str(owner_user_id), f"{uuid.uuid4().hex}{document_format.ext}")
         self._save(content, self._settings.data_dir / relative)
@@ -101,7 +97,7 @@ class DocumentService:
             document.status = DocumentStatus.READY
             document.error = None
             self._session.commit()
-        except (ParseError, UnsupportedFormatError) as exc:
+        except ParseError as exc:
             self._fail(document, f"Couldn't read this file: {exc}")
         except DictionaryUnavailableError:
             logger.exception("processing document %s failed", document_id)

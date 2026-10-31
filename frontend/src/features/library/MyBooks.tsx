@@ -29,7 +29,7 @@ export function MyBooks({ books, readings, onChange }: Props) {
       <h3 id="books-heading">My books</h3>
       <UploadForm onUploaded={onChange} />
       {books.length === 0 ? (
-        <p className="muted">No books yet. Upload an EPUB to get started.</p>
+        <p className="muted">No books yet. Upload an EPUB, PDF or TXT file to get started.</p>
       ) : (
         <ul className="books">
           {books.map((book) => (
@@ -102,12 +102,12 @@ function UploadForm({ onUploaded }: { onUploaded: () => void }) {
         })
       }}
     >
-      <label htmlFor="book-file">Add a book (EPUB)</label>
+      <label htmlFor="book-file">Add a book (EPUB, PDF or TXT)</label>
       <input
         id="book-file"
         ref={input}
         type="file"
-        accept=".epub,application/epub+zip"
+        accept=".epub,.pdf,.txt,application/epub+zip,application/pdf,text/plain"
         onChange={(event) => {
           setChosen(Boolean(event.target.files?.length))
         }}
