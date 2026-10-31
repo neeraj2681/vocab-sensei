@@ -47,3 +47,8 @@ class QuestionType(StrEnum):
     CORRECT_USAGE = "correct_usage"
     NUANCE = "nuance"
     REVERSE = "reverse"
+
+
+class ReminderChannel(StrEnum):
+    PUSH = "push"  # a notification on the devices where the user enabled it
+    EMAIL = "email"

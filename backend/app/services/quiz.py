@@ -107,6 +107,21 @@ class HistoryPoint:
     answered_at: datetime
 
 
+def quiz_stats(repo: QuizRepository, goal: int, user_id: int, now: datetime, tz: ZoneInfo) -> Stats:
+    """Lifetime points, today's answers and the streak, with days in the user's time zone."""
+    today = now.astimezone(tz).date()
+    since = datetime.combine(today - timedelta(days=_STREAK_DAYS), datetime.min.time(), tz)
+    per_day: Counter[date] = Counter(
+        a.answered_at.astimezone(tz).date() for a in repo.answers(user_id, since)
+    )
+    return Stats(
+        total=repo.total_points(user_id),
+        today=per_day[today],
+        daily_goal=goal,
+        streak=streak(per_day, today, goal),
+    )
+
+
 def _progress(word: UserWord) -> WordProgress:
     return WordProgress(score=word.score, status=word.status, learned_at=word.learned_at)
 
@@ -379,18 +394,7 @@ class QuizService:
     # Progress
 
     def stats(self, user_id: int, now: datetime, tz: ZoneInfo) -> Stats:
-        today = now.astimezone(tz).date()
-        since = datetime.combine(today - timedelta(days=_STREAK_DAYS), datetime.min.time(), tz)
-        per_day: Counter[date] = Counter(
-            a.answered_at.astimezone(tz).date() for a in self._repo.answers(user_id, since)
-        )
-        goal = self._quiz.daily_goal
-        return Stats(
-            total=self._repo.total_points(user_id),
-            today=per_day[today],
-            daily_goal=goal,
-            streak=streak(per_day, today, goal),
-        )
+        return quiz_stats(self._repo, self._quiz.daily_goal, user_id, now, tz)
 
     def history(self, user_id: int) -> list[HistoryPoint]:
         points: list[HistoryPoint] = []

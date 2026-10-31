@@ -88,6 +88,19 @@ class DictionarySettings(BaseModel):
     senses_per_pos: int = Field(default=3, gt=0)  # e.g. at most 3 noun and 3 verb meanings
 
 
+class PushSettings(BaseModel):
+    """Web Push (VAPID). Leave the keys empty to have one pair created in the data directory."""
+
+    vapid_private_key: str | None = None  # PEM
+    vapid_public_key: str | None = None  # base64url
+    subject: str = "mailto:no-reply@vocab-sensei.local"  # who to contact about our pushes
+
+
+class ReminderSettings(BaseModel):
+    scheduler_enabled: bool = True  # tests and one-off scripts turn it off
+    check_seconds: int = Field(default=60, gt=0)
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="VOCAB_", env_nested_delimiter="__", env_file=".env", extra="ignore"
@@ -103,6 +116,8 @@ class Settings(BaseSettings):
     upload: UploadSettings = UploadSettings()
     extraction: ExtractionSettings = ExtractionSettings()
     dictionary: DictionarySettings = DictionarySettings()
+    push: PushSettings = PushSettings()
+    reminders: ReminderSettings = ReminderSettings()
 
     @property
     def dictionary_dir(self) -> Path:
