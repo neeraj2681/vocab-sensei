@@ -858,3 +858,33 @@ button.primary,
 .link-button {
   font-family: var(--sans);
 }
+
+/* Classics shelf */
+
+.classics {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+  gap: 0.75rem;
+}
+
+.classic {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.classic__title {
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.classic button {
+  margin-top: 0.4rem;
+}

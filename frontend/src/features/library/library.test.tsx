@@ -85,7 +85,9 @@ describe('library', () => {
 
     renderApp('/')
 
-    expect(await screen.findByText(/Choose “Start reading” on a book below/)).toBeInTheDocument()
+    expect(
+      await screen.findByText(/Start a classic below or upload your own book/),
+    ).toBeInTheDocument()
   })
 
   it('uploads a book and refreshes the list', async () => {
