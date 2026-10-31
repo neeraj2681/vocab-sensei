@@ -109,8 +109,16 @@ class DocumentService:
     def list_for(self, owner_user_id: int) -> list[Document]:
         return self._documents.list_owned(owner_user_id)
 
-    def get_for(self, owner_user_id: int, document_id: int) -> Document | None:
-        return self._documents.get_owned(document_id, owner_user_id)
+    def get_for(self, user_id: int, document_id: int) -> Document | None:
+        """A book the user may read: their own or a built-in classic."""
+        return self._documents.get_readable(document_id, user_id)
+
+    def get_owned(self, user_id: int, document_id: int) -> Document | None:
+        """A book the user may change or delete (classics belong to nobody)."""
+        return self._documents.get_owned(document_id, user_id)
+
+    def list_classics(self) -> list[Document]:
+        return self._documents.list_classics()
 
     def word_counts(self, documents: list[Document]) -> dict[int, int]:
         counts = self._documents.word_counts([d.id for d in documents])

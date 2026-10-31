@@ -13,12 +13,13 @@ from app.db.types import UTCDateTime, str_enum, utcnow
 
 
 class Document(Base):
-    """An uploaded book. Private to its owner."""
+    """A book: one uploaded by a user (private to them), or a built-in classic (no owner) that
+    everyone can read and nobody can delete."""
 
     __tablename__ = "documents"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    owner_user_id: Mapped[int] = mapped_column(
+    owner_user_id: Mapped[int | None] = mapped_column(  # None: a built-in classic
         ForeignKey("users.id", ondelete="CASCADE"), index=True
     )
     title: Mapped[str] = mapped_column(String(500))
@@ -31,6 +32,10 @@ class Document(Base):
     )
     error: Mapped[str | None] = mapped_column(Text)
     uploaded_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+
+    @property
+    def is_classic(self) -> bool:
+        return self.owner_user_id is None
 
     chapters: Mapped[list[Chapter]] = relationship(
         back_populates="document",

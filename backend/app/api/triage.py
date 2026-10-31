@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.api.deps import CurrentUser, SettingsDep
-from app.api.documents import OwnedDocument
+from app.api.documents import ReadableDocument
 from app.core.enums import PartOfSpeech, WordStatus
 from app.db.session import get_session
 from app.scoring.rules import Triage
@@ -53,7 +53,7 @@ class SortResponse(BaseModel):
 
 @router.get("/documents/{document_id}/sort")
 def next_to_sort(
-    document: OwnedDocument,
+    document: ReadableDocument,
     user: CurrentUser,
     triage: TriageServiceDep,
     session: Annotated[Session, Depends(get_session)],

@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.core.enums import WordStatus
 from app.db.models import Chapter, Document, DocumentWord, QuizAnswer, UserWord, Word
+from app.repositories.documents import readable_by
 
 
 class LearningRepository:
@@ -84,7 +85,7 @@ class LearningRepository:
                     exists()
                     .where(DocumentWord.word_id == word_id)
                     .where(Document.id == DocumentWord.document_id)
-                    .where(Document.owner_user_id == user_id)
+                    .where(readable_by(user_id))
                 )
             )
         )

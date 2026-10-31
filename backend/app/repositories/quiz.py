@@ -15,6 +15,7 @@ from app.db.models import (
     UserWord,
     Word,
 )
+from app.repositories.documents import readable_by
 
 
 class QuizRepository:
@@ -110,7 +111,7 @@ class QuizRepository:
                 CurrentReading,
                 (CurrentReading.document_id == Document.id) & (CurrentReading.user_id == user_id),
             )
-            .where(Document.owner_user_id == user_id, DocumentWord.word_id == word_id)
+            .where(readable_by(user_id), DocumentWord.word_id == word_id)
             .order_by(CurrentReading.priority.is_(None), CurrentReading.priority, Document.id)
             .limit(1)
         ).first()

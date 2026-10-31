@@ -13,6 +13,7 @@ from app.db.models import Question
 from app.db.session import get_session
 from app.db.types import utcnow
 from app.dictionary.types import DictionaryUnavailableError
+from app.services.library import LibraryService
 from app.services.quiz import (
     AlreadyAnsweredError,
     Focus,
@@ -123,6 +124,8 @@ def current_question(
     user: CurrentUser,
     quiz: QuizServiceDep,
     documents: DocumentServiceDep,
+    session: Annotated[Session, Depends(get_session)],
+    settings: SettingsDep,
     now: Now,
     document_id: Annotated[
         int | None, Query(description="with `chapter`: study one chapter")
@@ -139,6 +142,8 @@ def current_question(
         if documents.get_for(user.id, document_id) is None:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "Document not found")
         focus = Focus(document_id, chapter)
+    else:
+        LibraryService(session, settings).start_default_if_new(user.id)  # new users get a classic
     try:
         return QuestionResponse.of(quiz.current_question(user.id, now, focus))
     except NoWordsError as exc:

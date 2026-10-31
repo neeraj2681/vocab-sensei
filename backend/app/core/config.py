@@ -101,6 +101,12 @@ class ReminderSettings(BaseModel):
     check_seconds: int = Field(default=60, gt=0)
 
 
+class LibrarySettings(BaseModel):
+    """Built-in classics (see app/services/library.py)."""
+
+    default_classic: int = 1342  # Project Gutenberg id new users start on (Pride and Prejudice)
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="VOCAB_", env_nested_delimiter="__", env_file=".env", extra="ignore"
@@ -118,6 +124,7 @@ class Settings(BaseSettings):
     dictionary: DictionarySettings = DictionarySettings()
     push: PushSettings = PushSettings()
     reminders: ReminderSettings = ReminderSettings()
+    library: LibrarySettings = LibrarySettings()
 
     @property
     def dictionary_dir(self) -> Path:
