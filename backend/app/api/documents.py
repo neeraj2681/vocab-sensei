@@ -37,6 +37,7 @@ class DocumentResponse(BaseModel):
     uploaded_at: datetime
     chapter_count: int
     word_count: int
+    classic: bool = False  # a built-in book everyone can read
 
     @classmethod
     def of(cls, document: Document, word_count: int) -> Self:
@@ -51,6 +52,7 @@ class DocumentResponse(BaseModel):
             uploaded_at=document.uploaded_at,
             chapter_count=len(document.chapters),
             word_count=word_count,
+            classic=document.is_classic,
         )
 
 
@@ -105,14 +107,17 @@ def process_in_background(
         DocumentService(session, settings, dictionary).process(document_id)
 
 
-def owned_document(user: CurrentUser, documents: DocumentServiceDep, document_id: int) -> Document:
+def readable_document(
+    user: CurrentUser, documents: DocumentServiceDep, document_id: int
+) -> Document:
+    """The user's own book or a built-in classic."""
     document = documents.get_for(user.id, document_id)
     if document is None:  # someone else's document looks exactly like a missing one
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Document not found")
     return document
 
 
-OwnedDocument = Annotated[Document, Depends(owned_document)]
+ReadableDocument = Annotated[Document, Depends(readable_document)]
 
 
 @router.post("", status_code=status.HTTP_202_ACCEPTED)
@@ -142,14 +147,24 @@ def list_documents(user: CurrentUser, documents: DocumentServiceDep) -> list[Doc
     return [DocumentResponse.of(d, counts[d.id]) for d in owned]
 
 
+@router.get("/classics")
+def list_classics(user: CurrentUser, documents: DocumentServiceDep) -> list[DocumentResponse]:
+    """Built-in public-domain books anyone can read, ready to start."""
+    classics = [d for d in documents.list_classics() if d.status == DocumentStatus.READY]
+    counts = documents.word_counts(classics)
+    return [DocumentResponse.of(d, counts[d.id]) for d in classics]
+
+
 @router.get("/{document_id}")
-def get_document(document: OwnedDocument, documents: DocumentServiceDep) -> DocumentDetailResponse:
+def get_document(
+    document: ReadableDocument, documents: DocumentServiceDep
+) -> DocumentDetailResponse:
     return DocumentDetailResponse.of(document, documents.word_counts([document])[document.id])
 
 
 @router.get("/{document_id}/words")
 def list_words(
-    document: OwnedDocument,
+    document: ReadableDocument,
     session: Annotated[Session, Depends(get_session)],
     chapter: Annotated[int | None, Query(ge=0)] = None,
 ) -> list[WordResponse]:
@@ -174,7 +189,11 @@ def list_words(
 
 
 @router.delete("/{document_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_document(document: OwnedDocument, documents: DocumentServiceDep) -> None:
+def delete_document(
+    document: ReadableDocument, user: CurrentUser, documents: DocumentServiceDep
+) -> None:
+    if document.owner_user_id != user.id:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Built-in classics can't be deleted")
     documents.delete(document)
 
 
@@ -190,7 +209,7 @@ class ChapterReadinessResponse(BaseModel):
 
 @router.get("/{document_id}/readiness")
 def chapter_readiness(
-    document: OwnedDocument,
+    document: ReadableDocument,
     user: CurrentUser,
     session: Annotated[Session, Depends(get_session)],
     settings: SettingsDep,

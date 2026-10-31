@@ -5,10 +5,11 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.api.deps import CurrentUser, SettingsDep
-from app.api.documents import DocumentResponse, DocumentServiceDep, OwnedDocument
+from app.api.documents import DocumentResponse, DocumentServiceDep, ReadableDocument
 from app.db.models import CurrentReading
 from app.db.session import get_session
 from app.db.types import utcnow
+from app.services.library import LibraryService
 from app.services.readiness import ReadinessService
 from app.services.readings import ReadingError, ReadingService
 
@@ -78,7 +79,7 @@ def responses(
 
 
 def current_reading(
-    user: CurrentUser, document: OwnedDocument, readings: ReadingServiceDep
+    user: CurrentUser, document: ReadableDocument, readings: ReadingServiceDep
 ) -> CurrentReading:
     reading = readings.get(user.id, document.id)
     if reading is None:
@@ -95,7 +96,10 @@ def list_readings(
     readings: ReadingServiceDep,
     documents: DocumentServiceDep,
     readiness: ReadinessDep,
+    session: Annotated[Session, Depends(get_session)],
+    settings: SettingsDep,
 ) -> list[ReadingResponse]:
+    LibraryService(session, settings).start_default_if_new(user.id)  # new users get a classic
     return responses(readings.list_for(user.id), documents, readiness)
 
 

@@ -20,6 +20,7 @@ RUN useradd --create-home vocab && mkdir -p /data && chown vocab /data
 USER vocab
 EXPOSE 8000
 
-# Migrate, fetch WordNet into the data volume the first time, then serve. One process on
-# purpose: rate-limit counts live in memory.
-CMD ["sh", "-c", "alembic upgrade head && python -m app.dictionary.install && exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips '*'"]
+# Migrate, fetch WordNet into the data volume the first time, add the built-in classics in the
+# background (skipped once they're ready), then serve. One server process on purpose: rate-limit
+# counts live in memory.
+CMD ["sh", "-c", "alembic upgrade head && python -m app.dictionary.install && (python -m app.commands.seed_classics &) && exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips '*'"]

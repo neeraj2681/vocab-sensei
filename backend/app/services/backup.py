@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 from app.core.enums import DocumentStatus, QuestionType, WordStatus
 from app.db.models import CurrentReading, Document, Question, QuizAnswer, UserWord, Word
 from app.db.types import utcnow
+from app.repositories.documents import readable_by
 from app.repositories.readings import ReadingRepository
 from app.repositories.words import WordRepository
 
@@ -211,7 +212,7 @@ class BackupService:
             d.title: d
             for d in self._session.scalars(
                 select(Document).where(
-                    Document.owner_user_id == user_id, Document.status == DocumentStatus.READY
+                    readable_by(user_id), Document.status == DocumentStatus.READY
                 )
             )
         }
