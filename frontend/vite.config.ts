@@ -19,8 +19,8 @@ export default defineConfig({
         name: 'Vocab Sensei',
         short_name: 'Vocab Sensei',
         description: 'Learn the words of your next read before you read them.',
-        theme_color: '#0969da',
-        background_color: '#fafaf7',
+        theme_color: '#8a4b1f',
+        background_color: '#f4ecd8',
         display: 'standalone',
         start_url: '/',
         icons: [
