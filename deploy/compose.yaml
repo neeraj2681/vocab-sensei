@@ -1,0 +1,74 @@
+# Vocab Sensei for friends: `docker compose up -d` from this folder (see deploy/README.md).
+name: vocab-sensei
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: vocab
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in deploy/.env}
+      POSTGRES_DB: vocab_sensei
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vocab -d vocab_sensei"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: ../backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      VOCAB_DATABASE_URL: postgresql+psycopg://vocab:${POSTGRES_PASSWORD}@db:5432/vocab_sensei
+      VOCAB_DATA_DIR: /data
+      VOCAB_AUTH__COOKIE_SECURE: "true" # the public URL is HTTPS (Cloudflare)
+      VOCAB_RATE_LIMIT__TRUST_PROXY: "true" # visitors' addresses come from CF-Connecting-IP
+    volumes:
+      - appdata:/data # uploads + WordNet
+    healthcheck: # the first start downloads WordNet (~1 minute)
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://localhost:8000/api/health')"]
+      interval: 10s
+      timeout: 5s
+      start_period: 5m
+
+  web:
+    build: ../frontend
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+    ports:
+      - "127.0.0.1:8080:80" # http://localhost:8080 on this Mac only
+
+  # A fixed public URL on your own domain (needs a free Cloudflare account): `--profile tunnel`.
+  tunnel:
+    image: cloudflare/cloudflared:2026.10.7
+    restart: unless-stopped
+    profiles: [tunnel]
+    depends_on:
+      - web
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN:-} # from deploy/.env
+
+  # A random https://….trycloudflare.com URL, no account needed, new on every start; for trying
+  # things out: `--profile quick-tunnel`, then `docker compose logs quick-tunnel` shows the URL.
+  quick-tunnel:
+    image: cloudflare/cloudflared:2026.10.7
+    restart: unless-stopped
+    profiles: [quick-tunnel]
+    depends_on:
+      - web
+    command: tunnel --no-autoupdate --url http://web:80
+
+volumes:
+  pgdata:
+  appdata:

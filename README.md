@@ -23,6 +23,11 @@ cd frontend && npm ci && npm run dev                           # 3. app: http://
 
 Create an account in the app, open the verification email in Mailpit, then log in.
 
+## Run it for friends
+
+Docker Compose (PostgreSQL + API + Caddy) on your Mac, online through a free Cloudflare Tunnel:
+see [deploy/README.md](deploy/README.md).
+
 ## Stack
 Python (FastAPI, spaCy, wordfreq, WordNet) · SQLite → PostgreSQL · React + Vite + TypeScript. All free & open source.
 

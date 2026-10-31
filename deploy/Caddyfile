@@ -1,0 +1,15 @@
+# One address for everything: the React app, with /api forwarded to the backend.
+# HTTPS comes from Cloudflare in front, so Caddy itself serves plain HTTP inside Docker.
+:80 {
+	encode zstd gzip
+
+	handle /api/* {
+		reverse_proxy api:8000
+	}
+
+	handle {
+		root * /srv
+		try_files {path} /index.html  # client-side routes like /quiz load the app
+		file_server
+	}
+}
