@@ -44,6 +44,15 @@ class AuthSettings(BaseModel):
     reset_password_minutes: int = Field(default=60, gt=0)
 
 
+class RateLimitSettings(BaseModel):
+    """Limits per client address, in the `limits` notation ("10/minute", "5/hour;20/day")."""
+
+    enabled: bool = True
+    login: str = "10/minute;50/hour"
+    email: str = "5/hour"  # sign-up, resend verification, forgot password: each sends an email
+    trust_proxy: bool = False  # True behind Cloudflare Tunnel (reads CF-Connecting-IP)
+
+
 class EmailSettings(BaseModel):
     """SMTP settings. Defaults point at Mailpit, which catches emails locally."""
 
@@ -86,6 +95,7 @@ class Settings(BaseSettings):
     scoring: ScoringSettings = ScoringSettings()
     quiz: QuizSettings = QuizSettings()
     auth: AuthSettings = AuthSettings()
+    rate_limit: RateLimitSettings = RateLimitSettings()
     email: EmailSettings = EmailSettings()
     upload: UploadSettings = UploadSettings()
     extraction: ExtractionSettings = ExtractionSettings()

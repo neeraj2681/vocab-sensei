@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
+from app.api import rate_limit
 from app.api.deps import get_dictionary, get_email_sender
 from app.core import security
 from app.core.config import Settings, get_settings
@@ -49,6 +50,12 @@ class FakeDictionary:
 
     def synonyms(self, lemma: str) -> frozenset[str]:
         return self.synonym_sets.get(lemma, frozenset())
+
+
+@pytest.fixture(autouse=True)
+def fresh_rate_limits() -> None:
+    """Request counts are kept in memory for the whole process; each test starts from zero."""
+    rate_limit.reset()
 
 
 @pytest.fixture
