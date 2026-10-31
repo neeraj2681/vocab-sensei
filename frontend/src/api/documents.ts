@@ -13,6 +13,7 @@ export interface BookDocument {
   uploaded_at: string
   chapter_count: number
   word_count: number
+  classic?: boolean // a built-in book everyone can read
 }
 
 export interface Chapter {
@@ -55,6 +56,7 @@ export const isPending = (document: BookDocument) =>
 
 export const documentsApi = {
   list: () => apiGet<BookDocument[]>('/documents'),
+  classics: () => apiGet<BookDocument[]>('/documents/classics'),
   get: (id: number) => apiGet<BookDocumentDetail>(`/documents/${String(id)}`),
   words: (id: number, chapter: number) =>
     apiGet<BookWord[]>(`/documents/${String(id)}/words?chapter=${String(chapter)}`),

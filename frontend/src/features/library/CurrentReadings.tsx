@@ -31,7 +31,8 @@ export function CurrentReadings({ readings, onChange }: Props) {
       <h3 id="reading-heading">Currently reading</h3>
       {readings.length === 0 ? (
         <p className="muted">
-          Nothing yet. Choose “Start reading” on a book below; its words go into your quizzes.
+          Nothing yet. Start a classic below or upload your own book; its words go into your
+          quizzes.
         </p>
       ) : (
         <ol className="readings">
