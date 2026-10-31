@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Response, status
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 from app.api.deps import AuthServiceDep, CurrentUser, SettingsDep, get_session_token
+from app.api.rate_limit import EmailLimit, LoginLimit
 from app.services.auth import EmailNotVerifiedError, InvalidCredentialsError, InvalidTokenError
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -64,13 +65,13 @@ def invalid_token_as_400() -> Iterator[None]:
 
 
 @router.post("/register", status_code=status.HTTP_202_ACCEPTED)
-def register(body: RegisterRequest, auth: AuthServiceDep) -> MessageResponse:
+def register(body: RegisterRequest, auth: AuthServiceDep, _: EmailLimit) -> MessageResponse:
     auth.register(body.email, body.password, body.display_name)
     return CHECK_EMAIL
 
 
 @router.post("/resend-verification", status_code=status.HTTP_202_ACCEPTED)
-def resend_verification(body: EmailRequest, auth: AuthServiceDep) -> MessageResponse:
+def resend_verification(body: EmailRequest, auth: AuthServiceDep, _: EmailLimit) -> MessageResponse:
     auth.resend_verification(body.email)
     return CHECK_EMAIL
 
@@ -87,6 +88,7 @@ def login(
     response: Response,
     auth: AuthServiceDep,
     settings: SettingsDep,
+    _: LoginLimit,
     user_agent: Annotated[str | None, Header()] = None,
 ) -> UserResponse:
     try:
@@ -126,12 +128,12 @@ def me(user: CurrentUser) -> UserResponse:
 
 
 @router.post("/forgot-password", status_code=status.HTTP_202_ACCEPTED)
-def forgot_password(body: EmailRequest, auth: AuthServiceDep) -> MessageResponse:
+def forgot_password(body: EmailRequest, auth: AuthServiceDep, _: EmailLimit) -> MessageResponse:
     auth.forgot_password(body.email)
     return CHECK_EMAIL
 
 
 @router.post("/reset-password", status_code=status.HTTP_204_NO_CONTENT)
-def reset_password(body: ResetPasswordRequest, auth: AuthServiceDep) -> None:
+def reset_password(body: ResetPasswordRequest, auth: AuthServiceDep, _: LoginLimit) -> None:
     with invalid_token_as_400():
         auth.reset_password(body.token, body.new_password)

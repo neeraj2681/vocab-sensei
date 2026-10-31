@@ -98,7 +98,6 @@ start reading, set the chapter → optionally sort words → Quiz (endless, live
 
 ## ⚠️ Known issues / tech debt
 
-- No login rate limiting yet (needed before exposing the app on the internet).
 - Tests print a Starlette deprecation warning (`httpx` → `httpx2`); installing `httpx2` was blocked in-session.
 - Many words per chapter (Loomings: 188). Sorting helps; a stricter Zipf threshold (≈3.5) is worth trying.
 - Within a part of speech, WordNet's first sense isn't always the book's (*spleen*: organ vs anger) → LLM phase.
