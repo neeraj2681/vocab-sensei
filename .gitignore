@@ -17,6 +17,7 @@ data/
 # Env / OS
 .env
 deploy/.env
+deploy/backups/
 .DS_Store
 .mypy_cache/
 .coverage
