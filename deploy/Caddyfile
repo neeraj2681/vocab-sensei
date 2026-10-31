@@ -1,5 +1,14 @@
 # One address for everything: the React app, with /api forwarded to the backend.
-# HTTPS comes from Cloudflare in front, so Caddy itself serves plain HTTP inside Docker.
+# HTTPS comes from the tunnel in front (Tailscale Funnel or Cloudflare), so Caddy itself serves
+# plain HTTP inside Docker.
+{
+	servers {
+		# The tunnel reaches Caddy from this Mac / the Docker network. Trust its X-Forwarded-For,
+		# so the API sees each visitor's real address (rate limits are per visitor).
+		trusted_proxies static private_ranges
+	}
+}
+
 :80 {
 	encode zstd gzip
 

@@ -1,11 +1,11 @@
 # Running Vocab Sensei for friends
 
-The app runs on this Mac in Docker, and a free **Cloudflare Tunnel** gives it a public `https://` address
-without opening any ports on your router. Everything here is free and open source; it is online while the
+The app runs on this Mac in Docker, and a tunnel (free **Tailscale Funnel**, or Cloudflare) gives it a public
+`https://` address without opening any ports on your router. Everything here is free and open source; it is online while the
 Mac is awake.
 
 ```
-friends' browsers ──https──▶ Cloudflare ──tunnel──▶ cloudflared ─▶ web (Caddy: app + /api) ─▶ api ─▶ db (PostgreSQL)
+friends' browsers ──https──▶ Tailscale Funnel (or Cloudflare) ──tunnel──▶ web (Caddy: app + /api) ─▶ api ─▶ db (PostgreSQL)
 ```
 
 ## 1. Install Docker (once)
@@ -41,6 +41,18 @@ open http://localhost:8080         # the app, on this Mac only
 
 ## 4. Put it online
 
+**Fixed address for free (what this Mac uses): Tailscale Funnel.** Install the Tailscale app
+(`brew install --cask tailscale`), open it and log in, then publish the site:
+
+```bash
+tailscale funnel --bg 8080      # the first time it prints a link to enable Funnel; approve it, run again
+tailscale funnel status         # shows the public address, e.g. https://<mac-name>.<tailnet>.ts.net
+```
+
+Tailscale keeps this after reboots, and its certificate gives the site HTTPS. Set `VOCAB_EMAIL__APP_BASE_URL` in `.env` to that
+address and run `docker compose up -d --force-recreate api` so email links use it. To stop publishing:
+`tailscale funnel --https=443 off`.
+
 **Quick try (no account):** a random `https://….trycloudflare.com` address that changes on every restart.
 
 ```bash
@@ -48,16 +60,10 @@ docker compose --profile quick-tunnel up -d
 docker compose logs quick-tunnel | grep trycloudflare.com
 ```
 
-**Fixed address (recommended for friends):** needs a free Cloudflare account and a domain on Cloudflare.
-In Cloudflare **Zero Trust → Networks → Tunnels → Create a tunnel** (type *Cloudflared*), choose *Docker*, copy the
-token into `TUNNEL_TOKEN` in `.env`, and add a **public hostname** (e.g. `vocab.yourdomain.com`) pointing to
-service `http://web:80`. Then:
-
-```bash
-docker compose --profile tunnel up -d
-```
-
-Set `VOCAB_EMAIL__APP_BASE_URL` to that hostname and run `docker compose up -d` again so emails use it.
+**Your own domain:** a free Cloudflare account and a domain on Cloudflare. In Cloudflare
+**Zero Trust → Networks → Tunnels → Create a tunnel** (type *Cloudflared*), choose *Docker*, copy the token into
+`TUNNEL_TOKEN` in `.env`, add a **public hostname** (e.g. `vocab.yourdomain.com`) pointing to `http://web:80`, then
+`docker compose --profile tunnel up -d`.
 
 ## Everyday commands
 
