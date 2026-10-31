@@ -50,10 +50,10 @@ def downgrade() -> None:
     op.execute("DELETE FROM questions")
 
     op.create_table('quiz_sessions',
-    sa.Column('id', sa.INTEGER(), nullable=False),
-    sa.Column('user_id', sa.INTEGER(), nullable=False),
-    sa.Column('started_at', sa.DATETIME(), nullable=False),
-    sa.Column('finished_at', sa.DATETIME(), nullable=True),
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('user_id', sa.Integer(), nullable=False),
+    sa.Column('started_at', app.db.types.UTCDateTime(), nullable=False),
+    sa.Column('finished_at', app.db.types.UTCDateTime(), nullable=True),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], name=op.f('fk_quiz_sessions_user_id_users'), ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_quiz_sessions'))
     )
@@ -61,7 +61,7 @@ def downgrade() -> None:
         batch_op.create_index(batch_op.f('ix_quiz_sessions_user_id'), ['user_id'], unique=False)
 
     with op.batch_alter_table('quiz_answers', schema=None) as batch_op:
-        batch_op.add_column(sa.Column('session_id', sa.INTEGER(), nullable=False))
+        batch_op.add_column(sa.Column('session_id', sa.Integer(), nullable=False))
         batch_op.create_foreign_key(batch_op.f('fk_quiz_answers_session_id_quiz_sessions'), 'quiz_sessions', ['session_id'], ['id'], ondelete='CASCADE')
         batch_op.drop_constraint(batch_op.f('uq_quiz_answers_question_id'), type_='unique')
         batch_op.create_index(batch_op.f('ix_quiz_answers_session_id'), ['session_id'], unique=False)
