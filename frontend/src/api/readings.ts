@@ -6,6 +6,7 @@ export interface Reading {
   priority: number // 0 = quizzed first
   current_chapter_index: number
   current_chapter_title: string | null
+  current_chapter_readiness?: number | null // 0-100
 }
 
 export const readingsApi = {

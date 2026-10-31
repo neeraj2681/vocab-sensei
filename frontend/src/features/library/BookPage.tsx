@@ -1,12 +1,18 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { ApiError } from '../../api/client'
-import { documentsApi, type BookDocumentDetail, type BookWord } from '../../api/documents'
+import {
+  documentsApi,
+  type BookDocumentDetail,
+  type BookWord,
+  type ChapterReadiness,
+} from '../../api/documents'
 import { readingsApi, type Reading } from '../../api/readings'
 import { FormError } from '../../components/Form'
 import { useSubmit } from '../../components/useSubmit'
 import { SortLink } from '../sorting/SortLink'
 import { bookSummary, chapterLabel } from './labels'
+import { ReadinessBar } from './ReadinessBar'
 
 interface Book {
   detail: BookDocumentDetail
@@ -20,6 +26,7 @@ export function BookPage() {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [chosenChapter, setChosenChapter] = useState<number | null>(null)
   const [words, setWords] = useState<{ chapter: number; words: BookWord[] } | null>(null)
+  const [readiness, setReadiness] = useState<ChapterReadiness[] | null>(null)
   const { busy, error, run } = useSubmit()
 
   useEffect(() => {
@@ -61,6 +68,20 @@ export function BookPage() {
       current = false
     }
   }, [documentId, chapter, ready])
+
+  useEffect(() => {
+    if (!ready) return
+    let current = true
+    documentsApi
+      .readiness(documentId)
+      .then((loaded) => {
+        if (current) setReadiness(loaded)
+      })
+      .catch(() => undefined) // optional extra; the words still show
+    return () => {
+      current = false
+    }
+  }, [documentId, ready])
 
   if (loadError) {
     return (
@@ -125,6 +146,19 @@ export function BookPage() {
                 </button>
               ))}
           </div>
+          {readiness?.[chapter] && (
+            <div className="primer">
+              <ReadinessBar chapter={readiness[chapter]} />
+              {readiness[chapter].readiness < 100 && (
+                <Link
+                  className="primer__study"
+                  to={`/quiz?book=${String(documentId)}&chapter=${String(chapter)}`}
+                >
+                  Study this chapter →
+                </Link>
+              )}
+            </div>
+          )}
           <FormError message={error} />
           <WordTable words={shown} />
         </>

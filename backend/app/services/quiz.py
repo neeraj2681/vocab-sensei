@@ -33,6 +33,7 @@ from app.quiz.questions import (
     blank_out,
 )
 from app.quiz.selection import Pool, choose_pool, choose_question_type, streak
+from app.repositories.learning import LearningRepository
 from app.repositories.quiz import QuizRepository
 from app.scoring.rules import (
     WordProgress,
@@ -66,6 +67,14 @@ class AlreadyAnsweredError(QuizError):
 
 class InvalidChoiceError(QuizError):
     pass
+
+
+@dataclass(frozen=True)
+class Focus:
+    """Quiz only the words of one chapter ("Study this chapter")."""
+
+    document_id: int
+    chapter_index: int
 
 
 @dataclass(frozen=True)
@@ -124,26 +133,27 @@ class QuizService:
         }
         self._repo = QuizRepository(session)
         self._learning = LearningService(session)
+        self._learning_repo = LearningRepository(session)
 
     # Asking
 
-    def current_question(self, user_id: int, now: datetime) -> Question:
-        """The question on screen: the unanswered one, or a new one."""
+    def current_question(self, user_id: int, now: datetime, focus: Focus | None = None) -> Question:
+        """The question on screen: the unanswered one, or a new one (from `focus` if given)."""
         pending = self._repo.pending_question(user_id)
         if pending is not None:
             return pending
-        question = self._ask(user_id, now)
+        question = self._ask(user_id, now, focus)
         self._session.commit()
         return question
 
-    def _ask(self, user_id: int, now: datetime) -> Question:
+    def _ask(self, user_id: int, now: datetime, focus: Focus | None) -> Question:
         recent = self._repo.recently_answered_word_ids(user_id, self._quiz.spacing)
         unusable: set[int] = set()  # words we couldn't build a question for
         # First try words not asked recently; if there are none, allow repeats (they don't score).
         for allow_recent in (False, True):
             while True:
                 excluded = unusable if allow_recent else unusable | recent
-                word_id = self._pick_word(user_id, now, excluded)
+                word_id = self._pick_word(user_id, now, excluded, focus)
                 if word_id is None:
                     break
                 question = self._build(user_id, word_id)
@@ -152,28 +162,50 @@ class QuizService:
                     self._session.flush()
                     return question
                 unusable.add(word_id)
+        if focus is not None and not unusable:
+            raise NoWordsError("Chapter ready! Every word in it is learned or known")
         if unusable:
             raise NoWordsError(
                 "There aren't enough words yet to make four options; add another book"
             )
         raise NoWordsError("Start reading a book to get questions")
 
-    def _pick_word(self, user_id: int, now: datetime, exclude: set[int]) -> int | None:
+    def _pick_word(
+        self, user_id: int, now: datetime, exclude: set[int], focus: Focus | None
+    ) -> int | None:
         pools: dict[Pool, int] = {}
-        new = [
-            item.word.id
-            for item in self._learning.next_new_words(user_id, len(exclude) + 1)
-            if item.word.id not in exclude
-        ]
+        if focus is None:
+            new = [
+                item.word.id for item in self._learning.next_new_words(user_id, len(exclude) + 1)
+            ]
+            allowed: set[int] | None = None
+        else:
+            new = [
+                word.id
+                for _, word, _ in self._learning_repo.new_words_in_chapter(
+                    user_id, focus.document_id, focus.chapter_index, len(exclude) + 1
+                )
+            ]
+            allowed = self._learning_repo.chapter_word_ids(focus.document_id, focus.chapter_index)
+
+        def usable(word_id: int) -> bool:
+            return word_id not in exclude and (allowed is None or word_id in allowed)
+
+        new = [word_id for word_id in new if usable(word_id)]
         if new:
             pools[Pool.NEW] = new[0]
-        learning = self._repo.words_with_status(user_id, WordStatus.LEARNING, exclude)
+        learning = [
+            w
+            for w in self._repo.words_with_status(user_id, WordStatus.LEARNING, exclude)
+            if usable(w.word_id)
+        ]
         if learning:
             pools[Pool.LEARNING] = learning[0].word_id
         due = [
             w
             for w in self._repo.words_with_status(user_id, WordStatus.LEARNED, exclude)
-            if current_status(_progress(w), now, self._settings.scoring) is WordStatus.LEARNING
+            if usable(w.word_id)
+            and current_status(_progress(w), now, self._settings.scoring) is WordStatus.LEARNING
         ]
         if due:
             pools[Pool.REVIEW] = due[0].word_id

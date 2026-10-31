@@ -289,7 +289,7 @@ because git and the workflow files carry over.
 - [x] Export / backup (JSON: progress, answers, current reads; keyed by word and title) and merge-restore (`feat/backup`)
 
 ### Phase 2 — Better learning
-- [ ] Chapter primer & readiness %
+- [x] Chapter primer & readiness % (average progress) + "Study this chapter" focused quiz (`feat/chapter-primer`)
 - [x] Fill-in-the-blank questions using sentences from the book (`feat/question-types`)
 - [x] Reverse questions (definition → word); formats unlock by word score: 0–29 meaning, 30–69 + reverse, 70+ + fill-in
 - [ ] Adjustable difficulty threshold per user

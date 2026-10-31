@@ -1,3 +1,4 @@
+from dataclasses import asdict
 from datetime import datetime
 from typing import Annotated, Self
 
@@ -10,7 +11,9 @@ from app.core.config import Settings
 from app.core.enums import DocumentFormat, DocumentStatus, PartOfSpeech
 from app.db.models import Document
 from app.db.session import get_session, get_session_factory
+from app.db.types import utcnow
 from app.services.documents import DocumentService, FileTooLargeError, UploadError
+from app.services.readiness import ReadinessService
 from app.services.words import WordService, definitions_in_context
 
 router = APIRouter(prefix="/documents", tags=["documents"])
@@ -173,3 +176,28 @@ def list_words(
 @router.delete("/{document_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_document(document: OwnedDocument, documents: DocumentServiceDep) -> None:
     documents.delete(document)
+
+
+class ChapterReadinessResponse(BaseModel):
+    index: int
+    title: str | None
+    words: int
+    done: int  # learned or known
+    in_progress: int
+    new: int
+    readiness: int  # 0-100: the average progress of the chapter's words
+
+
+@router.get("/{document_id}/readiness")
+def chapter_readiness(
+    document: OwnedDocument,
+    user: CurrentUser,
+    session: Annotated[Session, Depends(get_session)],
+    settings: SettingsDep,
+) -> list[ChapterReadinessResponse]:
+    """How ready you are for each chapter."""
+    service = ReadinessService(session, settings.scoring)
+    return [
+        ChapterReadinessResponse(**asdict(c))
+        for c in service.for_document(user.id, document, utcnow())
+    ]
