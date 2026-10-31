@@ -286,7 +286,7 @@ because git and the workflow files carry over.
 - [x] Optional sorting of a book's words, one card at a time (Known / Unsure / New, K/U/N keys, undo) + "I know this" button (`feat/triage`)
 - [x] Daily goal (10 answers a day) + streak (API, in `feat/quiz-engine`)
 - [ ] Progress page under the profile menu: lifetime points graph since the first answer (`feat/progress-page`)
-- [ ] Export / backup (JSON) and import
+- [x] Export / backup (JSON: progress, answers, current reads; keyed by word and title) and merge-restore (`feat/backup`)
 
 ### Phase 2 — Better learning
 - [ ] Chapter primer & readiness %
