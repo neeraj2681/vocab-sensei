@@ -10,17 +10,18 @@ Living log of what's built and where to pick up. Update it at the end of every s
 
 ## ▶ Start here next session
 
-**Phase 3 (share with friends) is mostly done** as of 31 Oct 2026. The app runs in Docker on the user's Mac
-(Colima) and is reachable through a Cloudflare quick tunnel; see [../deploy/README.md](../deploy/README.md).
+**The user is testing the app for a few days** (from 31 Oct 2026). Ask how testing went and fix what they found
+before starting anything new. The friends' stack runs in Docker on the user's Mac (Colima, starts at login) with
+real email (Gmail SMTP), daily database backups and 8 built-in classics; it is reachable through a Cloudflare
+quick tunnel (see [../deploy/README.md](../deploy/README.md)).
 
-Remaining before inviting friends (user steps, then a quick check):
-1. **Gmail SMTP** in `deploy/.env` (app password); today emails go to Mailpit on the Mac, so friends can't verify.
-2. **Fixed address:** a Cloudflare account + domain → named tunnel (`TUNNEL_TOKEN`, `--profile tunnel`); the quick
-   tunnel's `trycloudflare.com` URL changes on every restart (then update `VOCAB_EMAIL__APP_BASE_URL`).
-
-**Phase 2 (better learning) is under way** (31 Oct 2026): new question types, mobile layout + PWA and the chapter
-primer are done (#33–#35). Still open in Phase 2: daily reminder notification, adjustable difficulty threshold,
-spaced repetition (FSRS) option, OCR for scanned PDFs. Ask which next, or switch to tuning.
+Open items:
+- **Fixed address (user step):** Cloudflare account + domain → named tunnel (`TUNNEL_TOKEN`, `--profile tunnel`).
+  The quick tunnel's `trycloudflare.com` URL changes whenever the tunnel restarts or Cloudflare drops it; then
+  update `VOCAB_EMAIL__APP_BASE_URL` in `deploy/.env` and recreate the api (`docker compose up -d --force-recreate api`).
+- **Mac must stay awake** while friends use it (user step: Battery → Options → prevent automatic sleeping).
+- **Next work after testing** (ask): Phase 2 leftovers (difficulty setting per user, FSRS option, OCR for scanned
+  PDFs), Phase 4 (recommendations, ready-made lists), Phase 5 (LLM-generated questions with a local model).
 
 **First steps in the session:**
 
@@ -28,6 +29,7 @@ spaced repetition (FSRS) option, OCR for scanned PDFs. Ask which next, or switch
 cd ~/vocab_sensei && git switch main && git pull
 colima start                               # if the Mac rebooted
 cd deploy && docker compose up -d --build  # the friends' stack (PostgreSQL) on http://localhost:8080
+docker compose logs quick-tunnel | grep trycloudflare   # the current public address
 ```
 
 For development, the old SQLite demo still works: `~/vocab_sensei-demo-data` (`e2e@example.com` /
@@ -82,8 +84,12 @@ Required CI checks on `main`: Pre-commit, Backend, Frontend, Backend on PostgreS
 | #33 | Reverse (meaning → word) and fill-in-the-blank (the book's sentence) questions, unlocked by word score: 0–29 meaning, 30–69 + reverse, 70+ + fill-in; the sentence's word form is stored (migration) |
 | #34 | Phone layout (tap targets, wrapping, scrolling tables) and installable PWA (vite-plugin-pwa; never caches /api); new app icon |
 | #35 | Chapter readiness (average word progress), shown on the book page and current reads; "Study this chapter" focused quiz |
+| #37, #38 | Daily reminder by push notification (Web Push, VAPID) or email at a chosen time, only if the day's goal isn't met; Settings page; own service worker |
+| #39 | Minimal sepia theme with a warm dark mode and a ☀/☾ toggle (system default, remembered) |
+| #40, #41 | 8 built-in Gutenberg classics (no owner, readable by all, seeded on start); new users start on Pride and Prejudice; Classics shelf |
+| #42 | Daily database backup (pg_dump, 7 days) in `deploy/backups/`, restore steps in the deploy guide |
 
-**Tests:** backend 290 (99% coverage, also run on PostgreSQL), frontend 73. CI: 5 required jobs.
+**Tests:** backend 331 (99% coverage, also run on PostgreSQL), frontend 87. CI: 5 required jobs.
 
 ### What works end to end today
 Sign up → verify → upload an EPUB / PDF / TXT → book ready in ~20 s with chapters and ~6,700 defined words →
@@ -113,7 +119,11 @@ start reading, set the chapter → optionally sort words → Quiz (endless, live
 | Sorting | Optional, one card at a time, from a button (book page / current reads): Known (never quizzed), Unsure (50), New (0); changeable until answered |
 | Progress | Profile menu → Progress page; graph of lifetime points after every answer |
 | Backup | JSON with progress only (no book files); restore merges |
-| Hosting | The user's Mac: Docker via Colima, Caddy, Cloudflare Tunnel (quick tunnel now; named tunnel planned) |
+| Hosting | The user's Mac: Docker via Colima (starts at login), Caddy, Cloudflare Tunnel (quick tunnel now; named tunnel planned); real email via Gmail SMTP app password |
+| Reminders | Push (per device) or email, at a chosen local time, only if the daily goal isn't met; at most once a day |
+| Look | Sepia light theme + warm dark theme, serif reading text, sans-serif controls |
+| Classics | Alice, Sherlock Holmes, Pride and Prejudice, Frankenstein, Dorian Gray, Dracula, Jane Eyre, Moby-Dick; new users auto-start Pride and Prejudice |
+| Backups | Nightly pg_dump kept 7 days (deploy/backups); users can also download their own progress |
 | Rate limits | Per client address, in memory (single API process): login 10/min + 50/h, emails 5/h |
 | PDFs | Text PDFs only; OCR in Phase 2 |
 | EPUB | No `ebooklib` (AGPL); zipfile + BeautifulSoup/lxml |
