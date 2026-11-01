@@ -6,8 +6,8 @@ import { renderApp } from '../../test/renderApp'
 const USER = { id: 1, email: 'reader@example.com', display_name: 'Reader', email_verified_at: 'x' }
 const loggedOut = { 'GET /api/auth/me': () => fail(401, 'Not logged in') }
 const home = {
-  'GET /api/health': () => json({ status: 'ok', database: 'ok' }),
-  'GET /api/documents': () => json([]),
+  'GET /api/quiz/stats?tz=UTC': () => json({ total: 0, today: 0, daily_goal: 20, streak: 0 }),
+  'GET /api/quiz/history': () => json([]),
   'GET /api/readings': () => json([]),
 }
 
@@ -42,7 +42,7 @@ describe('login', () => {
     await user.type(screen.getByLabelText('Password'), 'correct horse battery')
     await user.click(screen.getByRole('button', { name: 'Log in' }))
 
-    expect(await screen.findByRole('heading', { name: 'Welcome, Reader' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Hi, Reader' })).toBeInTheDocument()
     expect(api.calls('POST /api/auth/login')).toEqual([
       { email: 'reader@example.com', password: 'correct horse battery' },
     ])
@@ -102,8 +102,9 @@ describe('logout', () => {
     })
     const user = renderApp('/')
 
-    expect(await screen.findByRole('heading', { name: 'Welcome, Reader' })).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'Log out' }))
+    expect(await screen.findByRole('heading', { name: 'Hi, Reader' })).toBeInTheDocument()
+    await user.click(screen.getByRole('link', { name: 'Me' }))
+    await user.click(await screen.findByRole('button', { name: 'Log out' }))
 
     expect(await screen.findByRole('heading', { name: 'Log in' })).toBeInTheDocument()
     expect(api.calls('POST /api/auth/logout')).toHaveLength(1)

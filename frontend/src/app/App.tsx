@@ -1,5 +1,4 @@
-import { useRef } from 'react'
-import { BrowserRouter, Link, NavLink, Navigate, Route, Routes } from 'react-router'
+import { BrowserRouter, Link, Navigate, Route, Routes } from 'react-router'
 import { useAuth } from '../features/auth/AuthContext'
 import { AuthProvider } from '../features/auth/AuthProvider'
 import { ForgotPasswordPage } from '../features/auth/ForgotPasswordPage'
@@ -11,10 +10,14 @@ import { VerifyEmailPage } from '../features/auth/VerifyEmailPage'
 import { ThemeToggle } from '../components/ThemeToggle'
 import { BookPage } from '../features/library/BookPage'
 import { LibraryPage } from '../features/library/LibraryPage'
+import { MePage } from '../features/me/MePage'
 import { ProgressPage } from '../features/progress/ProgressPage'
 import { QuizPage } from '../features/quiz/QuizPage'
 import { SettingsPage } from '../features/settings/SettingsPage'
 import { SortPage } from '../features/sorting/SortPage'
+import { TodayPage } from '../features/today/TodayPage'
+import { WordsPage } from '../features/progress/WordsPage'
+import { TabBar } from './TabBar'
 
 function AppRoutes() {
   return (
@@ -23,7 +26,31 @@ function AppRoutes() {
         path="/"
         element={
           <RequireAuth>
+            <TodayPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/books"
+        element={
+          <RequireAuth>
             <LibraryPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/words"
+        element={
+          <RequireAuth>
+            <WordsPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/me"
+        element={
+          <RequireAuth>
+            <MePage />
           </RequireAuth>
         }
       />
@@ -78,7 +105,7 @@ function AppRoutes() {
 }
 
 function Header() {
-  const { user, logout } = useAuth()
+  const { user } = useAuth()
 
   return (
     <header className="app__header">
@@ -86,51 +113,11 @@ function Header() {
         <Link to="/">Vocab Sensei</Link>
       </h1>
       <p className="app__tagline">Learn the words of your next read before you read them.</p>
-      {user && (
-        <nav className="app__nav" aria-label="Main">
-          <NavLink to="/" end>
-            Library
-          </NavLink>
-          <NavLink to="/quiz">Quiz</NavLink>
-        </nav>
-      )}
+      {user && <TabBar />}
       <div className="app__corner">
         <ThemeToggle />
-        {user && <ProfileMenu name={user.display_name} email={user.email} onLogout={logout} />}
       </div>
     </header>
-  )
-}
-
-function ProfileMenu(props: { name: string; email: string; onLogout: () => Promise<void> }) {
-  const menu = useRef<HTMLDetailsElement>(null)
-  const close = () => {
-    menu.current?.removeAttribute('open')
-  }
-
-  return (
-    <details className="profile" ref={menu}>
-      <summary>{props.name}</summary>
-      <div className="profile__menu">
-        <p className="muted">{props.email}</p>
-        <Link to="/progress" onClick={close}>
-          Progress
-        </Link>
-        <Link to="/settings" onClick={close}>
-          Settings
-        </Link>
-        <button
-          type="button"
-          className="link-button"
-          onClick={() => {
-            close()
-            void props.onLogout()
-          }}
-        >
-          Log out
-        </button>
-      </div>
-    </details>
   )
 }
 

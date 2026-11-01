@@ -36,7 +36,11 @@ describe('progress page', () => {
     renderApp('/progress')
 
     expect(await screen.findByRole('heading', { name: 'Your progress' })).toBeInTheDocument()
-    const tile = (label: string) => screen.getByText(label).closest('.tile')
+    const tiles = screen.getByRole('heading', { name: 'Your progress' }).nextElementSibling
+    const tile = (label: string) =>
+      within(tiles as HTMLElement)
+        .getByText(label)
+        .closest('.tile')
     expect(tile('Score')).toHaveTextContent('15')
     expect(tile('Streak')).toHaveTextContent('🔥 2 days')
     expect(tile('Today')).toHaveTextContent('4 / 10')
@@ -92,7 +96,7 @@ describe('progress page', () => {
   })
 })
 
-describe('profile menu', () => {
+describe('Me tab', () => {
   it('leads to the progress page', async () => {
     progress(HISTORY, {
       'GET /api/documents': () => json([]),
@@ -101,18 +105,17 @@ describe('profile menu', () => {
     })
     const user = renderApp('/')
 
-    await user.click(await screen.findByText('Reader'))
-    await user.click(screen.getByRole('link', { name: 'Progress' }))
+    await user.click(await screen.findByRole('link', { name: 'Me' }))
+    await user.click(await screen.findByRole('link', { name: /Progress/ }))
 
     expect(await screen.findByRole('heading', { name: 'Your progress' })).toBeInTheDocument()
   })
 
   it('logs out', async () => {
     const api = progress(HISTORY, { 'POST /api/auth/logout': () => noContent() })
-    const user = renderApp('/progress')
+    const user = renderApp('/me')
 
-    await user.click(await screen.findByText('Reader'))
-    await user.click(screen.getByRole('button', { name: 'Log out' }))
+    await user.click(await screen.findByRole('button', { name: 'Log out' }))
 
     expect(await screen.findByRole('heading', { name: 'Log in' })).toBeInTheDocument()
     expect(api.calls('POST /api/auth/logout')).toHaveLength(1)
@@ -120,7 +123,7 @@ describe('profile menu', () => {
 
   it('lists learned words with a progress ring; learning ones on the other tab', async () => {
     progress()
-    const user = renderApp('/progress')
+    const user = renderApp('/words')
 
     const learnedTab = await screen.findByRole('button', { name: 'Learned · 1' })
     expect(learnedTab).toHaveAttribute('aria-pressed', 'true')
@@ -143,7 +146,7 @@ describe('profile menu', () => {
 
   it("shows a word's meaning when its row is tapped", async () => {
     progress()
-    const user = renderApp('/progress')
+    const user = renderApp('/words')
     const row = await screen.findByRole('button', { name: /lugubrious/ })
     expect(screen.queryByText('mournful')).not.toBeInTheDocument()
 
@@ -157,7 +160,7 @@ describe('profile menu', () => {
 
   it('filters words as you type', async () => {
     progress()
-    const user = renderApp('/progress')
+    const user = renderApp('/words')
     await user.click(await screen.findByRole('button', { name: 'Learning · 2' }))
 
     await user.type(screen.getByRole('searchbox', { name: 'Find a word' }), 'SPL')
@@ -170,7 +173,7 @@ describe('profile menu', () => {
 
   it('opens on the learning tab when nothing is learned yet', async () => {
     progress(HISTORY, { 'GET /api/quiz/words': () => json(WORDS.slice(1)) })
-    renderApp('/progress')
+    renderApp('/words')
 
     expect(await screen.findByRole('button', { name: 'Learning · 2' })).toHaveAttribute(
       'aria-pressed',

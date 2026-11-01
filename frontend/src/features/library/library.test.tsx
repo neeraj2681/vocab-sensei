@@ -64,7 +64,7 @@ describe('library', () => {
       [{ ...reading(MOBY, 0, 4), current_chapter_title: 'CHAPTER 1. Loomings.' }],
     )
 
-    renderApp('/')
+    renderApp('/books')
 
     const current = await screen.findByRole('region', { name: 'Currently reading' })
     expect(within(current).getByRole('link', { name: 'Moby-Dick' })).toHaveAttribute(
@@ -83,7 +83,7 @@ describe('library', () => {
   it('suggests starting a book when nothing is being read', async () => {
     home([MOBY])
 
-    renderApp('/')
+    renderApp('/books')
 
     expect(
       await screen.findByText(/Start a classic below or upload your own book/),
@@ -102,7 +102,7 @@ describe('library', () => {
         return json(books[0], 202)
       },
     })
-    const user = renderApp('/')
+    const user = renderApp('/books')
 
     const file = new File(['epub bytes'], 'moby.epub', { type: 'application/epub+zip' })
     expect(await screen.findByRole('button', { name: 'Upload' })).toBeDisabled()
@@ -117,7 +117,7 @@ describe('library', () => {
     home([], [], {
       'POST /api/documents': () => fail(413, 'Files can be at most 50 MB'),
     })
-    const user = renderApp('/')
+    const user = renderApp('/books')
 
     await user.upload(
       await screen.findByLabelText('Add a book (EPUB, PDF or TXT)'),
@@ -141,7 +141,7 @@ describe('library', () => {
       'GET /api/readings': () => json([]),
     })
 
-    renderApp('/')
+    renderApp('/books')
 
     expect(await screen.findByText('Reading the book…')).toBeInTheDocument()
     expect(
@@ -151,7 +151,7 @@ describe('library', () => {
 
   it('starts reading a book', async () => {
     const api = home([MOBY], [], { 'POST /api/readings': () => json(reading(MOBY, 0), 201) })
-    const user = renderApp('/')
+    const user = renderApp('/books')
 
     await user.click(await screen.findByRole('button', { name: 'Start reading' }))
 
@@ -164,7 +164,7 @@ describe('library', () => {
     const api = home([MOBY, EMMA, DUNE], [reading(MOBY, 0), reading(EMMA, 1), reading(DUNE, 2)], {
       'PUT /api/readings/order': () => json([]),
     })
-    const user = renderApp('/')
+    const user = renderApp('/books')
 
     await user.click(await screen.findByRole('button', { name: 'Move Moby-Dick down' }))
 
@@ -176,7 +176,7 @@ describe('library', () => {
 
   it('stops reading a book', async () => {
     const api = home([MOBY], [reading(MOBY, 0)], { 'DELETE /api/readings/1': () => noContent() })
-    const user = renderApp('/')
+    const user = renderApp('/books')
 
     await user.click(await screen.findByRole('button', { name: 'Stop reading' }))
 
@@ -188,7 +188,7 @@ describe('library', () => {
   it('deletes a book only after confirming', async () => {
     const confirm = vi.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValueOnce(true)
     const api = home([MOBY], [], { 'DELETE /api/documents/1': () => noContent() })
-    const user = renderApp('/')
+    const user = renderApp('/books')
     const remove = await screen.findByRole('button', { name: 'Delete Moby-Dick' })
 
     await user.click(remove)
