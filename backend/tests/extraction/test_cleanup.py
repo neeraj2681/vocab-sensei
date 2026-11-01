@@ -1,4 +1,4 @@
-from app.extraction.cleanup import strip_gutenberg_boilerplate
+from app.extraction.cleanup import remove_nul_characters, strip_gutenberg_boilerplate
 from app.extraction.types import ParsedChapter, ParsedDocument
 
 
@@ -48,3 +48,9 @@ def test_books_without_markers_are_unchanged() -> None:
     parsed = doc(("One", "Some text."), ("Two", "More text."))
 
     assert strip_gutenberg_boilerplate(parsed) == parsed
+
+
+def test_removes_nul_characters() -> None:
+    cleaned = remove_nul_characters(doc(("Part\x00 One", "All rights rese\x00rved.")))
+
+    assert cleaned.chapters == [ParsedChapter("Part One", "All rights reserved.")]
