@@ -1,53 +1,96 @@
-/* Theme: a warm sepia page, and a warm dark mode. Dark follows the system setting unless the
-   user picks one with the toggle (html[data-theme]). */
+/* Theme: fresh green, light and dark (dark follows the system unless the user picks one), plus the
+   original sepia reading look as a third choice. The picked theme is html[data-theme]. */
 :root {
-  --bg: #f4ecd8;
-  --surface: #fbf6e9;
-  --fg: #3b2f22;
-  --muted: #7a6650;
-  --border: #dccdb0;
-  --accent: #8a4b1f;
-  --on-accent: #fffaf0;
-  --ok: #2f6b2f;
-  --bad: #a0301f;
-  --serif: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
-  --sans: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --bg: #f3f8f2;
+  --surface: #ffffff;
+  --surface-2: #e7f2e8;
+  --fg: #17271d;
+  --muted: #5d7264;
+  --border: #d5e5d7;
+  --accent: #2f9e58;
+  --accent-deep: #1f7a42; /* the pressable edge under green buttons */
+  --accent-soft: #dcf1e2;
+  --on-accent: #ffffff;
+  --ok: #2f9e58;
+  --bad: #d9473f;
+  --bad-soft: #fbe3e1;
+  --flame: #f08a1c;
+  --display: 'Fredoka', ui-rounded, 'Segoe UI', system-ui, sans-serif;
+  --sans: 'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --serif: var(--display); /* headings and words; kept as a name for older rules */
   color-scheme: light;
-  font-family: var(--serif);
+  font-family: var(--sans);
   line-height: 1.55;
   color: var(--fg);
   background: var(--bg);
 }
 
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
-    --bg: #1d1914;
-    --surface: #26211a;
-    --fg: #e8dcc4;
-    --muted: #a8977c;
-    --border: #3d342a;
-    --accent: #d4a373;
-    --on-accent: #1d1914;
-    --ok: #8fbf73;
-    --bad: #e07a5f;
+  :root:not([data-theme='light']):not([data-theme='sepia']) {
+    --bg: #0e1611;
+    --surface: #16211a;
+    --surface-2: #1d2b22;
+    --fg: #e2efe5;
+    --muted: #93a99a;
+    --border: #2a3a2f;
+    --accent: #45c474;
+    --accent-deep: #2a8a4f;
+    --accent-soft: #1d3a27;
+    --on-accent: #08130c;
+    --ok: #45c474;
+    --bad: #f0675f;
+    --bad-soft: #3a1f1d;
+    --flame: #ffa53d;
     color-scheme: dark;
   }
 }
 
 :root[data-theme='dark'] {
-  --bg: #1d1914;
-  --surface: #26211a;
-  --fg: #e8dcc4;
-  --muted: #a8977c;
-  --border: #3d342a;
-  --accent: #d4a373;
-  --on-accent: #1d1914;
-  --ok: #8fbf73;
-  --bad: #e07a5f;
+  --bg: #0e1611;
+  --surface: #16211a;
+  --surface-2: #1d2b22;
+  --fg: #e2efe5;
+  --muted: #93a99a;
+  --border: #2a3a2f;
+  --accent: #45c474;
+  --accent-deep: #2a8a4f;
+  --accent-soft: #1d3a27;
+  --on-accent: #08130c;
+  --ok: #45c474;
+  --bad: #f0675f;
+  --bad-soft: #3a1f1d;
+  --flame: #ffa53d;
   color-scheme: dark;
 }
 
-/* Reading text is serif; controls and small labels are sans-serif. */
+:root[data-theme='sepia'] {
+  --bg: #f4ecd8;
+  --surface: #fbf6e9;
+  --surface-2: #efe4cb;
+  --fg: #3b2f22;
+  --muted: #7a6650;
+  --border: #dccdb0;
+  --accent: #5e8a3a;
+  --accent-deep: #456a28;
+  --accent-soft: #e6ebcf;
+  --on-accent: #fffaf0;
+  --ok: #4f7a2f;
+  --bad: #a0301f;
+  --bad-soft: #f3dccf;
+  --flame: #c8641b;
+  --serif: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
+  color-scheme: light;
+}
+
+h1,
+h2,
+h3,
+.quiz__word {
+  font-family: var(--display);
+  text-wrap: balance;
+}
+
+/* Controls and small labels use the body font, even inside headings. */
 button,
 input,
 select,
@@ -196,17 +239,32 @@ a {
   color: var(--fg);
 }
 
-button[type='submit'] {
+button[type='submit'],
+button.primary {
   font: inherit;
-  padding: 0.5rem 1rem;
+  font-family: var(--display);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 0.6rem 1.25rem;
   border: 0;
-  border-radius: 6px;
+  border-radius: 14px;
   background: var(--accent);
   color: var(--on-accent);
+  box-shadow: 0 4px 0 var(--accent-deep);
   cursor: pointer;
+  transition:
+    transform 0.06s,
+    box-shadow 0.06s;
 }
 
-button[type='submit']:disabled {
+button[type='submit']:active:not(:disabled),
+button.primary:active:not(:disabled) {
+  transform: translateY(4px);
+  box-shadow: 0 0 0 var(--accent-deep);
+}
+
+button[type='submit']:disabled,
+button.primary:disabled {
   opacity: 0.6;
   cursor: progress;
 }
@@ -336,15 +394,6 @@ button {
 .app__nav a.active {
   font-weight: 600;
   text-decoration: none;
-}
-
-button.primary {
-  padding: 0.5rem 1rem;
-  border: 0;
-  border-radius: 6px;
-  background: var(--accent);
-  color: var(--on-accent);
-  cursor: pointer;
 }
 
 /* Quiz */
@@ -498,6 +547,11 @@ button.primary {
   margin-right: 0;
 }
 
+.icon {
+  display: inline-block;
+  vertical-align: middle;
+}
+
 .speak {
   display: inline-flex;
   flex: none;
@@ -509,9 +563,10 @@ button.primary {
   padding: 0;
   -webkit-appearance: none;
   appearance: none;
-  border: 1px solid var(--border);
-  border-radius: 50%;
+  border: 2px solid var(--border);
+  border-radius: 12px;
   background: var(--surface);
+  box-shadow: 0 3px 0 var(--border);
   color: var(--accent);
   vertical-align: middle;
   cursor: pointer;
@@ -522,31 +577,18 @@ button.primary {
   border-color: var(--accent);
 }
 
-.speak svg {
-  width: 1.2rem;
-  height: 1.2rem;
-  fill: currentColor;
-}
-
-.speak .speak__wave {
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2;
-  stroke-linecap: round;
-}
-
-.speak--on .speak__wave {
-  animation: speak-pulse 0.8s ease-in-out infinite alternate;
+.speak--on .icon {
+  animation: speak-pulse 0.5s ease-in-out infinite alternate;
 }
 
 @keyframes speak-pulse {
   to {
-    opacity: 0.3;
+    transform: scale(0.85);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .speak--on .speak__wave {
+  .speak--on .icon {
     animation: none;
   }
 }
@@ -579,12 +621,18 @@ button.primary {
   gap: 0.75rem;
   align-items: baseline;
   text-align: left;
-  padding: 0.75rem 1rem;
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  padding: 0.85rem 1rem;
+  border: 2px solid var(--border);
+  border-radius: 16px;
   background: var(--surface);
   color: var(--fg);
+  box-shadow: 0 3px 0 var(--border);
   cursor: pointer;
+}
+
+.option:active:not(:disabled) {
+  transform: translateY(3px);
+  box-shadow: none;
 }
 
 .option:hover:not(:disabled) {
@@ -602,12 +650,14 @@ button.primary {
 
 .option--correct {
   border-color: var(--ok);
-  outline: 2px solid var(--ok);
+  background: var(--accent-soft);
+  box-shadow: 0 3px 0 var(--ok);
 }
 
 .option--wrong {
   border-color: var(--bad);
-  outline: 2px solid var(--bad);
+  background: var(--bad-soft);
+  box-shadow: 0 3px 0 var(--bad);
 }
 
 .option--dim {
@@ -1142,9 +1192,7 @@ button[type='submit'].danger__confirm {
   color: var(--muted);
 }
 
-/* Buttons are controls: sans-serif, even where a rule above inherits the reading font. */
-button[type='submit'],
-button.primary,
+/* Links styled as buttons stay in the body font. */
 .link-button {
   font-family: var(--sans);
 }

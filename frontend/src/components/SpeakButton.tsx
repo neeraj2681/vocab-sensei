@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Icon } from './Icon'
 
 const canSpeak = () =>
   typeof window !== 'undefined' &&
@@ -39,10 +40,7 @@ export function SpeakButton({ word }: { word: string }) {
         speech.speak(utterance)
       }}
     >
-      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-        <path d="M4 9v6h4l5 4V5L8 9H4z" />
-        <path className="speak__wave" d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" />
-      </svg>
+      <Icon name="speaker_high_volume" size={22} />
     </button>
   )
 }

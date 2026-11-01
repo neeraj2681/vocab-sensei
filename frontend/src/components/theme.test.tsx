@@ -19,15 +19,17 @@ afterEach(() => {
 })
 
 describe('theme toggle', () => {
-  it('switches between light and dark and remembers the choice', async () => {
+  it('cycles light, dark and sepia and remembers the choice', async () => {
     fakeApi({ 'GET /api/auth/me': () => fail(401, 'Not logged in') })
     const user = renderApp('/login')
 
-    await user.click(await screen.findByRole('button', { name: 'Switch to dark mode' }))
+    await user.click(await screen.findByRole('button', { name: 'Switch to dark theme' }))
 
     expect(document.documentElement.dataset.theme).toBe('dark')
     expect(stored.get('vs-theme')).toBe('dark')
-    await user.click(screen.getByRole('button', { name: 'Switch to light mode' }))
+    await user.click(screen.getByRole('button', { name: 'Switch to sepia theme' }))
+    expect(document.documentElement.dataset.theme).toBe('sepia')
+    await user.click(screen.getByRole('button', { name: 'Switch to light theme' }))
     expect(document.documentElement.dataset.theme).toBe('light')
   })
 
@@ -37,8 +39,8 @@ describe('theme toggle', () => {
 
     renderApp('/login')
 
-    expect(await screen.findByRole('button', { name: 'Switch to light mode' })).toHaveTextContent(
-      '☀',
+    expect(await screen.findByRole('button', { name: 'Switch to sepia theme' })).toHaveTextContent(
+      '☾',
     )
   })
 })
