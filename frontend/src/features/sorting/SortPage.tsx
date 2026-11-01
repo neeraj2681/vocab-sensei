@@ -4,6 +4,7 @@ import { ApiError } from '../../api/client'
 import { documentsApi } from '../../api/documents'
 import { sortingApi, type SortChoice, type UnsortedWord } from '../../api/sorting'
 import { chapterLabel } from '../library/labels'
+import { SpeakButton } from '../../components/SpeakButton'
 
 const REFILL_BELOW = 3 // fetch more cards when this few are left
 
@@ -118,7 +119,10 @@ export function SortPage() {
       {card ? (
         <div className="sort__card">
           <p className="muted">{chapterLabel(card.chapter_index, card.chapter_title)}</p>
-          <h3 className="quiz__word">{card.lemma}</h3>
+          <div className="said-word">
+            <h3 className="quiz__word">{card.lemma}</h3>
+            <SpeakButton word={card.lemma} />
+          </div>
           {card.definition && (
             <p>
               {card.pos && <span className="muted">{card.pos} · </span>}

@@ -5,6 +5,7 @@ import { documentsApi, type ChapterReadiness } from '../../api/documents'
 import { quizApi, type AnswerResult, type QuizQuestion, type QuizStats } from '../../api/quiz'
 import { chapterLabel } from '../library/labels'
 import { type Pop, ScoreBar } from './ScoreBar'
+import { SpeakButton } from '../../components/SpeakButton'
 
 const RECENT_ANSWERS = 20 // how many answers the sparkline shows
 
@@ -240,7 +241,12 @@ function Prompt({ question }: { question: QuizQuestion }) {
   return (
     <>
       <p className="muted quiz__prompt">{INSTRUCTIONS[question.type]}</p>
-      {question.type === 'definition_mcq' && <h2 className="quiz__word">{question.prompt}</h2>}
+      {question.type === 'definition_mcq' && (
+        <div className="said-word">
+          <h2 className="quiz__word">{question.prompt}</h2>
+          <SpeakButton word={question.prompt} />
+        </div>
+      )}
       {question.type === 'reverse' && <h2 className="quiz__meaning">{question.prompt}</h2>}
       {question.type === 'fill_in_blank' && (
         <blockquote className="quiz__sentence">{question.prompt}</blockquote>
@@ -271,6 +277,7 @@ function Feedback({
         ) : (
           <>
             <strong>{result.word}</strong>
+            <SpeakButton word={result.word} />
             {result.meaning && <span className="muted"> · {result.meaning}</span>}
           </>
         )}

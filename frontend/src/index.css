@@ -100,6 +100,9 @@ h3 {
 }
 
 .theme-toggle {
+  padding: 0;
+  -webkit-appearance: none;
+  appearance: none;
   border: 1px solid var(--border);
   border-radius: 999px;
   background: var(--surface);
@@ -484,6 +487,85 @@ button.primary {
   margin: 0.25rem 0 1rem;
 }
 
+/* A word with its speaker button beside it */
+.said-word {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.said-word .quiz__word {
+  margin-right: 0;
+}
+
+.speak {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  -webkit-appearance: none;
+  appearance: none;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--accent);
+  vertical-align: middle;
+  cursor: pointer;
+}
+
+.speak:hover,
+.speak--on {
+  border-color: var(--accent);
+}
+
+.speak svg {
+  width: 1.2rem;
+  height: 1.2rem;
+  fill: currentColor;
+}
+
+.speak .speak__wave {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.speak--on .speak__wave {
+  animation: speak-pulse 0.8s ease-in-out infinite alternate;
+}
+
+@keyframes speak-pulse {
+  to {
+    opacity: 0.3;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .speak--on .speak__wave {
+    animation: none;
+  }
+}
+
+/* Smaller where it sits inside a line of text */
+.words .speak,
+.up-next .speak,
+.feedback .speak,
+.word-list .speak {
+  width: 1.9rem;
+  height: 1.9rem;
+}
+
+.words .speak,
+.up-next .speak,
+.feedback .speak {
+  margin: 0 0.25rem 0 0.4rem;
+}
+
 .options {
   list-style: none;
   padding: 0;
@@ -662,6 +744,15 @@ button.primary {
 
 .word-tools input {
   flex: 1 1 10rem;
+  min-width: 0;
+  padding: 0.45rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--fg);
+  font: inherit;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .word-tabs {
@@ -691,7 +782,20 @@ button.primary {
 }
 
 .word-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 0.5rem;
   border-bottom: 1px solid var(--border);
+}
+
+.word-list .word-row {
+  flex: 1;
+  min-width: 0;
+}
+
+.word-list .word-row__meaning {
+  flex-basis: 100%;
 }
 
 .word-row {
@@ -859,6 +963,17 @@ button[type='submit'].danger__confirm {
   .app__nav a,
   .profile summary {
     min-height: 44px;
+  }
+
+  /* Round buttons stay round at that size */
+  .theme-toggle,
+  .speak,
+  .words .speak,
+  .up-next .speak,
+  .feedback .speak,
+  .word-list .speak {
+    width: 44px;
+    height: 44px;
   }
 
   .app__nav a,

@@ -13,6 +13,7 @@ import { useSubmit } from '../../components/useSubmit'
 import { SortLink } from '../sorting/SortLink'
 import { bookSummary, chapterLabel } from './labels'
 import { ReadinessBar } from './ReadinessBar'
+import { SpeakButton } from '../../components/SpeakButton'
 
 interface Book {
   detail: BookDocumentDetail
@@ -193,7 +194,10 @@ function WordTable({ words }: { words: BookWord[] | null }) {
           const meaning = word.definitions.at(0)
           return (
             <tr key={word.lemma}>
-              <th scope="row">{word.lemma}</th>
+              <th scope="row">
+                {word.lemma}
+                <SpeakButton word={word.lemma} />
+              </th>
               <td>
                 {meaning ? (
                   <>

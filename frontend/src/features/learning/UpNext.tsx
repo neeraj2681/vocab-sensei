@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { learningApi, type LearningWord } from '../../api/learning'
 import type { Reading } from '../../api/readings'
+import { SpeakButton } from '../../components/SpeakButton'
 
 export const UP_NEXT_COUNT = 10
 
@@ -53,6 +54,7 @@ export function UpNext({ readings }: { readings: Reading[] }) {
           {words.map((word) => (
             <li key={word.lemma}>
               <strong>{word.lemma}</strong>
+              <SpeakButton word={word.lemma} />
               {word.definitions[0] && <span> · {word.definitions[0].text}</span>}{' '}
               <Link className="muted" to={`/books/${String(word.document_id)}`}>
                 {word.document_title}
