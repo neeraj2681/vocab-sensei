@@ -130,9 +130,7 @@ class ReminderService:
     def send_test(self, user: User, now: datetime) -> bool:
         """Sends one reminder now, whatever the time and goal. True if anything went out."""
         view = self.view(user.id)
-        stats = quiz_stats(
-            self._quiz, self._settings.quiz.daily_goal, user.id, now, zone(view.timezone)
-        )
+        stats = quiz_stats(self._quiz, user, now, zone(view.timezone))
         return self._send(user, view.channel, stats)
 
     def send_due(self, now: datetime) -> int:
@@ -148,7 +146,7 @@ class ReminderService:
             if reminder.last_sent_on == local.date() or local.time() < time(hour, minute):
                 continue
             reminder.last_sent_on = local.date()  # checked today, sent or not
-            stats = quiz_stats(self._quiz, self._settings.quiz.daily_goal, user.id, now, tz)
+            stats = quiz_stats(self._quiz, user, now, tz)
             if stats.today < stats.daily_goal and self._send(user, reminder.channel, stats):
                 sent += 1
             self._session.commit()

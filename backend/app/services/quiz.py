@@ -23,7 +23,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import Settings
 from app.core.enums import QuestionType, WordStatus
-from app.db.models import Question, QuizAnswer, UserWord, Word
+from app.db.models import Question, QuizAnswer, User, UserWord, Word
 from app.dictionary.types import Dictionary
 from app.quiz.questions import (
     Candidate,
@@ -36,7 +36,7 @@ from app.quiz.questions import (
     Target,
     blank_out,
 )
-from app.quiz.selection import Pool, choose_pool, choose_question_type, streak
+from app.quiz.selection import DailyGoal, Pool, choose_pool, choose_question_type, streak
 from app.repositories.learning import LearningRepository
 from app.repositories.quiz import QuizRepository
 from app.scoring.rules import (
@@ -120,17 +120,24 @@ class PractisedWord:
     learned: bool
 
 
-def quiz_stats(repo: QuizRepository, goal: int, user_id: int, now: datetime, tz: ZoneInfo) -> Stats:
+def daily_goal(user: User, tz: ZoneInfo) -> DailyGoal:
+    """The user's goal; the day they last changed it starts in their time zone."""
+    since = user.daily_goal_since.astimezone(tz).date() if user.daily_goal_since else None
+    return DailyGoal(user.daily_goal, user.previous_daily_goal, since)
+
+
+def quiz_stats(repo: QuizRepository, user: User, now: datetime, tz: ZoneInfo) -> Stats:
     """Lifetime points, today's answers and the streak, with days in the user's time zone."""
     today = now.astimezone(tz).date()
     since = datetime.combine(today - timedelta(days=_STREAK_DAYS), datetime.min.time(), tz)
     per_day: Counter[date] = Counter(
-        a.answered_at.astimezone(tz).date() for a in repo.answers(user_id, since)
+        a.answered_at.astimezone(tz).date() for a in repo.answers(user.id, since)
     )
+    goal = daily_goal(user, tz)
     return Stats(
-        total=repo.total_points(user_id),
+        total=repo.total_points(user.id),
         today=per_day[today],
-        daily_goal=goal,
+        daily_goal=goal.on(today),
         streak=streak(per_day, today, goal),
     )
 
@@ -413,7 +420,24 @@ class QuizService:
     # Progress
 
     def stats(self, user_id: int, now: datetime, tz: ZoneInfo) -> Stats:
-        return quiz_stats(self._repo, self._quiz.daily_goal, user_id, now, tz)
+        return quiz_stats(self._repo, self._user(user_id), now, tz)
+
+    def set_daily_goal(self, user_id: int, goal: int, now: datetime) -> None:
+        """Changes the goal from today on; earlier days keep the goal they had (see DailyGoal)."""
+        user = self._user(user_id)
+        if goal == user.daily_goal:
+            return
+        # Changed again the same day: earlier days keep the goal from before the first change.
+        if user.daily_goal_since is None or user.daily_goal_since.date() < now.date():
+            user.previous_daily_goal = user.daily_goal
+        user.daily_goal, user.daily_goal_since = goal, now
+        self._session.commit()
+
+    def _user(self, user_id: int) -> User:
+        user = self._session.get(User, user_id)
+        if user is None:
+            raise LookupError(f"no user {user_id}")
+        return user
 
     def practised_words(self, user_id: int, now: datetime) -> list[PractisedWord]:
         """Learned words first, then the rest by progress."""

@@ -20,6 +20,9 @@ class User(Base):
     password_hash: Mapped[str] = mapped_column(String(255))  # Argon2; never the password itself
     display_name: Mapped[str] = mapped_column(String(100))
     is_active: Mapped[bool] = mapped_column(default=True)
+    daily_goal: Mapped[int] = mapped_column(default=20, server_default="20")  # answers a day
+    previous_daily_goal: Mapped[int | None]  # what days before daily_goal_since are judged by
+    daily_goal_since: Mapped[datetime | None] = mapped_column(UTCDateTime)
     email_verified_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, onupdate=utcnow)

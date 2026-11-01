@@ -423,6 +423,38 @@ class TestStats:
 
         assert result["stats"]["today"] == 1
 
+    def test_the_daily_goal_is_each_users_own(
+        self, user_client: TestClient, session: Session, clock: Clock
+    ) -> None:
+        for _ in range(10):
+            answer(user_client, session)
+
+        response = user_client.put("/api/quiz/goal?tz=UTC", json={"daily_goal": 20})
+
+        assert response.status_code == 200, response.text
+        assert (response.json()["today"], response.json()["daily_goal"]) == (10, 20)
+        assert response.json()["streak"] == 0  # today now needs 20
+        assert user_client.get("/api/quiz/stats?tz=UTC").json()["daily_goal"] == 20
+        lowered = user_client.put("/api/quiz/goal?tz=UTC", json={"daily_goal": 5}).json()
+        assert (lowered["daily_goal"], lowered["streak"]) == (5, 1)
+
+    def test_raising_the_goal_keeps_the_streak_already_earned(
+        self, user_client: TestClient, session: Session, clock: Clock
+    ) -> None:
+        for days in (2, 1):  # the goal is 10 so far
+            clock.now = NOW - timedelta(days=days)
+            for _ in range(10):
+                answer(user_client, session)
+        clock.now = NOW
+
+        stats = user_client.put("/api/quiz/goal?tz=UTC", json={"daily_goal": 30}).json()
+
+        assert (stats["daily_goal"], stats["streak"]) == (30, 2)  # yesterday's 10 still counts
+
+    @pytest.mark.parametrize("goal", [0, 201])
+    def test_goals_must_be_sensible(self, user_client: TestClient, goal: int) -> None:
+        assert user_client.put("/api/quiz/goal", json={"daily_goal": goal}).status_code == 422
+
     def test_history_has_the_running_total_after_every_answer(
         self, user_client: TestClient, session: Session, clock: Clock
     ) -> None:

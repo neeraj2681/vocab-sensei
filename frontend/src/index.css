@@ -1078,6 +1078,44 @@ button[type='submit'].danger__confirm {
 
 /* Settings */
 
+.goal-choices {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+  max-width: 28rem;
+}
+
+.goal-choices button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  padding: 0.5rem 0.25rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--fg);
+  cursor: pointer;
+}
+
+.goal-choices button strong {
+  font-size: 1.2rem;
+}
+
+.goal-choices button span {
+  font-size: 0.8em;
+}
+
+.goal-choices button[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.goal-choices button[aria-pressed='true'] span {
+  color: inherit;
+}
+
 .settings {
   max-width: 36rem;
 }

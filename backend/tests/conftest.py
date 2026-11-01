@@ -148,6 +148,7 @@ def make_user(session: Session, email: str = "reader@example.com") -> User:
         password_hash=security.hash_password(TEST_PASSWORD),
         display_name="Reader",
         email_verified_at=utcnow(),
+        daily_goal=10,  # tests count to the original goal
     )
     session.add(user)
     session.commit()
