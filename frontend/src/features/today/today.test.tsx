@@ -87,6 +87,30 @@ describe('today', () => {
   })
 })
 
+describe('this week', () => {
+  it("flames the days the server says met that day's goal, like the streak", async () => {
+    const week = [
+      '2026-10-26',
+      '2026-10-27',
+      '2026-10-28',
+      '2026-10-29',
+      '2026-10-30',
+      '2026-10-31',
+      '2026-11-01',
+    ].map((date, i) => ({ date, answers: i === 5 ? 11 : 0, met: i === 5 }))
+    today([READING], {
+      'GET /api/quiz/stats?tz=UTC': () =>
+        json({ total: 270, today: 12, daily_goal: 50, streak: 1, week }),
+    })
+    renderApp('/')
+
+    // 11 answers on Saturday met the goal of 10 it had then, though today's goal is 50.
+    expect(await screen.findByLabelText('Saturday: goal met')).toBeInTheDocument()
+    expect(screen.getByLabelText('Sunday: goal not met')).toBeInTheDocument()
+    expect(screen.getAllByLabelText(/goal not met/)).toHaveLength(6)
+  })
+})
+
 describe('me', () => {
   it('picks a theme', async () => {
     today()

@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import date, datetime
 from typing import Annotated, Self
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -88,16 +88,27 @@ class QuestionResponse(BaseModel):
         )
 
 
+class DayResponse(BaseModel):
+    date: date
+    answers: int
+    met: bool  # judged by that day's goal, like the streak
+
+
 class StatsResponse(BaseModel):
     total: int
     today: int
     daily_goal: int
     streak: int
+    week: list[DayResponse]  # the last seven days, today last
 
     @classmethod
     def of(cls, stats: Stats) -> Self:
         return cls(
-            total=stats.total, today=stats.today, daily_goal=stats.daily_goal, streak=stats.streak
+            total=stats.total,
+            today=stats.today,
+            daily_goal=stats.daily_goal,
+            streak=stats.streak,
+            week=[DayResponse(date=d.date, answers=d.answers, met=d.met) for d in stats.week],
         )
 
 

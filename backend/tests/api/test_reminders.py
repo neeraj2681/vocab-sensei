@@ -243,11 +243,11 @@ def test_a_test_reminder_needs_a_device_for_push(
     ("stats", "text"),
     [
         (
-            Stats(total=0, today=3, daily_goal=10, streak=4),
+            Stats(total=0, today=3, daily_goal=10, streak=4, week=[]),
             "3/10 today: 7 more answers keep your 🔥 4-day streak.",
         ),
         (
-            Stats(total=0, today=0, daily_goal=10, streak=0),
+            Stats(total=0, today=0, daily_goal=10, streak=0, week=[]),
             "0/10 today: 10 more answers reach today's goal.",
         ),
     ],
