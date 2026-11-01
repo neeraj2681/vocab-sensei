@@ -5,15 +5,45 @@ import { documentsApi, type ChapterReadiness } from '../../api/documents'
 import { quizApi, type AnswerResult, type QuizQuestion, type QuizStats } from '../../api/quiz'
 import { chapterLabel } from '../library/labels'
 import { type Pop, ScoreBar } from './ScoreBar'
+import { Burst } from '../../components/Burst'
+import { Icon } from '../../components/Icon'
 import { SpeakButton } from '../../components/SpeakButton'
 
 const RECENT_ANSWERS = 20 // how many answers the sparkline shows
+export const SESSION_LENGTH = 10 // answers in a session, then a summary
+const STREAK_MILESTONES = [7, 30, 100, 365]
+
+interface Session {
+  answered: number
+  right: number
+  points: number
+  combo: number // right answers in a row
+  todayAtStart: number | null // answers already given today when the session began
+}
+
+const newSession = (todayAtStart: number | null): Session => ({
+  answered: 0,
+  right: 0,
+  points: 0,
+  combo: 0,
+  todayAtStart,
+})
+
+/** A short buzz for right, a double one for wrong, on phones that can (Android). */
+function buzz(correct: boolean) {
+  try {
+    navigator.vibrate(correct ? 30 : [60, 40, 60])
+  } catch {
+    // no vibration here (iPhone, desktop): the colours carry the result
+  }
+}
 
 type Phase =
   | { kind: 'loading' }
   | { kind: 'asking'; question: QuizQuestion }
   | { kind: 'answered'; question: QuizQuestion; chosen: number; result: AnswerResult }
   | { kind: 'error'; message: string; noWords: boolean }
+  | { kind: 'summary' }
 
 function errorPhase(err: unknown): Phase {
   if (err instanceof ApiError) {
@@ -26,7 +56,8 @@ function errorPhase(err: unknown): Phase {
   }
 }
 
-/** The never-ending quiz: answer, see why, next. The score at the top updates live. */
+/** Practice in sessions of ten: answer, see why, continue; a summary after each session. The
+quiz itself never runs out, so "Keep going" simply starts the next session. */
 export function QuizPage() {
   const [phase, setPhase] = useState<Phase>({ kind: 'loading' })
   const [stats, setStats] = useState<QuizStats | null>(null)
@@ -34,6 +65,7 @@ export function QuizPage() {
   const [pop, setPop] = useState<Pop | null>(null)
   const [busy, setBusy] = useState(false)
   const [answerError, setAnswerError] = useState<string | null>(null) // the question stays on screen
+  const [session, setSession] = useState<Session>(newSession(null))
   const [questionVersion, setQuestionVersion] = useState(0) // bump to fetch the next question
   // "Study this chapter": /quiz?book=1&chapter=4 asks only that chapter's words.
   const [params] = useSearchParams()
@@ -49,6 +81,7 @@ export function QuizPage() {
         if (!current) return
         setStats(loaded)
         setRecent([loaded.total])
+        setSession((s) => (s.todayAtStart === null ? { ...s, todayAtStart: loaded.today } : s))
       })
       .catch(() => undefined) // the question request reports connection problems
     return () => {
@@ -81,6 +114,14 @@ export function QuizPage() {
     try {
       const result = await quizApi.answer(question.id, index)
       setPhase({ kind: 'answered', question, chosen: index, result })
+      buzz(result.correct)
+      setSession((s) => ({
+        ...s,
+        answered: s.answered + 1,
+        right: s.right + (result.correct ? 1 : 0),
+        points: s.points + result.points,
+        combo: result.correct ? s.combo + 1 : 0,
+      }))
       setStats(result.stats)
       setRecent((values) => [...values, result.stats.total].slice(-(RECENT_ANSWERS + 1)))
       setPop((previous) => ({
@@ -111,6 +152,16 @@ export function QuizPage() {
 
   function next() {
     setAnswerError(null)
+    if (phase.kind === 'answered' && session.answered >= SESSION_LENGTH) {
+      setPhase({ kind: 'summary' })
+      return
+    }
+    setPhase({ kind: 'loading' })
+    setQuestionVersion((v) => v + 1)
+  }
+
+  function keepGoing() {
+    setSession(newSession(stats?.today ?? null))
     setPhase({ kind: 'loading' })
     setQuestionVersion((v) => v + 1)
   }
@@ -138,7 +189,11 @@ export function QuizPage() {
 
   return (
     <section className="quiz">
+      <SessionBar session={session} />
       {stats && <ScoreBar stats={stats} pop={pop} recent={recent} />}
+      {phase.kind === 'summary' && stats && (
+        <SessionSummary session={session} stats={stats} onKeepGoing={keepGoing} />
+      )}
       {focused && (
         <FocusBanner documentId={focusBook} chapter={focusChapter} refresh={pop?.id ?? 0} />
       )}
@@ -151,7 +206,7 @@ export function QuizPage() {
               {focused ? (
                 <Link to="/quiz">Back to the normal quiz</Link>
               ) : (
-                <Link to="/">Go to your books</Link>
+                <Link to="/books">Go to your books</Link>
               )}
             </p>
           ) : (
@@ -266,8 +321,10 @@ function Feedback({
 }) {
   return (
     <div className={`feedback feedback--${result.correct ? 'right' : 'wrong'}`}>
+      {result.correct && result.word_status === 'learned' && <Burst />}
       <p role="status" className="feedback__verdict">
-        {result.correct ? '✓ Right!' : '✗ Not quite.'}{' '}
+        <Icon name={result.correct ? 'check_mark_button' : 'cross_mark'} size={28} />{' '}
+        {result.correct ? 'Right!' : 'Not quite.'}{' '}
         {question.type === 'definition_mcq' ? (
           !result.correct && (
             <>
@@ -281,7 +338,12 @@ function Feedback({
             {result.meaning && <span className="muted"> · {result.meaning}</span>}
           </>
         )}
-        {result.correct && result.word_status === 'learned' && ' 🎉 Word learned!'}
+        {result.correct && result.word_status === 'learned' && (
+          <>
+            {' '}
+            <Icon name="party_popper" size={24} /> Word learned!
+          </>
+        )}
       </p>
       {!result.counted && (
         <p className="muted">This word came back too soon to score; it’s practice.</p>
@@ -289,9 +351,94 @@ function Feedback({
       {result.context_sentence && (
         <blockquote className="feedback__sentence">{result.context_sentence}</blockquote>
       )}
-      <button type="button" className="primary" onClick={onNext} autoFocus>
-        Next →
+      <button
+        type="button"
+        className={result.correct ? 'primary' : 'primary primary--wrong'}
+        onClick={onNext}
+        autoFocus
+      >
+        Continue
       </button>
+    </div>
+  )
+}
+
+/** ✕ to leave, how far into the session you are, and your run of right answers. */
+function SessionBar({ session }: { session: Session }) {
+  const done = Math.min(session.answered, SESSION_LENGTH)
+  return (
+    <div className="session-bar">
+      <Link className="session-bar__quit" to="/" aria-label="End session">
+        ✕
+      </Link>
+      <div
+        className="session-bar__progress"
+        role="progressbar"
+        aria-label="Session progress"
+        aria-valuemin={0}
+        aria-valuemax={SESSION_LENGTH}
+        aria-valuenow={done}
+      >
+        <span style={{ width: `${String((done / SESSION_LENGTH) * 100)}%` }} />
+      </div>
+      <span className="stat-pill" title="Right answers in a row">
+        <Icon name="sparkles" size={20} /> {session.combo}
+      </span>
+    </div>
+  )
+}
+
+/** The end of a session: what it earned, and keep going or stop for today. */
+function SessionSummary({
+  session,
+  stats,
+  onKeepGoing,
+}: {
+  session: Session
+  stats: QuizStats
+  onKeepGoing: () => void
+}) {
+  const goalMet = stats.today >= stats.daily_goal
+  const metThisSession =
+    goalMet && session.todayAtStart !== null && session.todayAtStart < stats.daily_goal
+  const milestone = metThisSession && STREAK_MILESTONES.includes(stats.streak)
+  const accuracy = session.answered ? Math.round((session.right / session.answered) * 100) : 0
+  const points = session.points >= 0 ? `+${String(session.points)}` : `−${String(-session.points)}`
+
+  return (
+    <div className="summary">
+      <Burst />
+      <Icon name="trophy" size={112} />
+      <h2>Session complete!</h2>
+      <p className="muted">
+        {milestone
+          ? `${String(stats.streak)}-day streak! Keep it burning.`
+          : goalMet
+            ? `Daily goal reached. Your streak is ${String(stats.streak)} ${stats.streak === 1 ? 'day' : 'days'}.`
+            : `${String(stats.daily_goal - stats.today)} more answers reach today's goal.`}
+      </p>
+      <dl className="summary__stats">
+        <div>
+          <dt>Points</dt>
+          <dd>{points}</dd>
+        </div>
+        <div>
+          <dt>Right</dt>
+          <dd>{accuracy}%</dd>
+        </div>
+        <div>
+          <dt>Streak</dt>
+          <dd>
+            <Icon name="fire" size={22} /> {stats.streak}
+          </dd>
+        </div>
+      </dl>
+      <button type="button" className="primary" onClick={onKeepGoing}>
+        Keep going
+      </button>
+      <Link className="button-link secondary" to="/">
+        Done for today
+      </Link>
     </div>
   )
 }

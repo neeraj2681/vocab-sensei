@@ -1,4 +1,5 @@
 import type { QuizStats } from '../../api/quiz'
+import { Icon } from '../../components/Icon'
 import { Sparkline } from './Sparkline'
 
 export interface Pop {
@@ -43,7 +44,9 @@ export function ScoreBar({ stats, pop, recent }: Props) {
       </div>
       <Sparkline values={recent} />
       <div className="scorebar__daily">
-        <span title="Days in a row with your daily goal met">🔥 {stats.streak}-day streak</span>
+        <span title="Days in a row with your daily goal met">
+          <Icon name="fire" size={18} /> {stats.streak}-day streak
+        </span>
         <span className={goalMet ? 'scorebar__goal scorebar__goal--met' : 'scorebar__goal'}>
           Today {stats.today}/{stats.daily_goal}
           {goalMet && ' ✓'}

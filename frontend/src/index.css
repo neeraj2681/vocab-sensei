@@ -1232,6 +1232,182 @@ a.primary:active {
   justify-self: start;
 }
 
+/* Sessions */
+
+.session-bar {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.session-bar__quit {
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 12px;
+  color: var(--muted);
+  font-size: 1.3rem;
+  text-decoration: none;
+}
+
+.session-bar__progress {
+  height: 16px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+
+.session-bar__progress > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+  box-shadow:
+    inset 0 -4px 0 rgba(0, 0, 0, 0.12),
+    inset 0 3px 0 rgba(255, 255, 255, 0.3);
+  transition: width 0.35s ease;
+}
+
+/* The feedback panel slides up from the bottom and stays in reach of the thumb. */
+.feedback {
+  position: sticky;
+  bottom: env(safe-area-inset-bottom);
+  z-index: 5;
+  margin-top: 1rem;
+  padding: 1rem;
+  border-radius: 20px;
+  animation: rise 0.25s ease-out;
+}
+
+.feedback--right {
+  background: var(--accent-soft);
+}
+
+.feedback--wrong {
+  background: var(--bad-soft);
+}
+
+.feedback__verdict {
+  font-family: var(--display);
+  font-size: 1.15rem;
+}
+
+.feedback .primary {
+  width: 100%;
+  min-height: 3rem;
+}
+
+button.primary--wrong {
+  background: var(--bad);
+  color: #fff;
+  box-shadow: 0 4px 0 color-mix(in srgb, var(--bad) 70%, black);
+}
+
+@keyframes rise {
+  from {
+    transform: translateY(40px);
+    opacity: 0;
+  }
+}
+
+a.secondary {
+  padding: 0.7rem 1.25rem;
+  border: 2px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: 0 4px 0 var(--border);
+  color: var(--accent);
+  font-family: var(--display);
+  font-weight: 600;
+}
+
+.summary {
+  display: grid;
+  justify-items: center;
+  gap: 0.75rem;
+  max-width: 26rem;
+  margin: 1rem auto;
+  text-align: center;
+}
+
+.summary h2,
+.summary p {
+  margin: 0;
+}
+
+.summary > .primary,
+.summary > .secondary {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 3rem;
+}
+
+.summary__stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  width: 100%;
+  margin: 0.5rem 0;
+}
+
+.summary__stats div {
+  padding: 0.6rem;
+  border: 2px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+}
+
+.summary__stats dt {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.summary__stats dd {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 1.5rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Confetti for a learned word or a finished session */
+.burst {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.burst span {
+  position: absolute;
+  top: 45%;
+  left: 50%;
+  width: 10px;
+  height: 14px;
+  border-radius: 3px;
+  animation: fly 0.9s ease-out forwards;
+}
+
+@keyframes fly {
+  to {
+    transform: translate(var(--x), var(--y)) rotate(var(--r));
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .burst {
+    display: none;
+  }
+
+  .feedback {
+    animation: none;
+  }
+}
+
 /* Phones */
 
 @media (max-width: 640px) {

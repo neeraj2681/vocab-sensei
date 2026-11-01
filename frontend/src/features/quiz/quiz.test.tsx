@@ -1,5 +1,5 @@
 import { screen, waitFor, within } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { AnswerResult, QuizQuestion, QuizStats } from '../../api/quiz'
 import { fail, fakeApi, json, noContent, type Routes } from '../../test/fakeApi'
 import { renderApp } from '../../test/renderApp'
@@ -54,7 +54,7 @@ describe('quiz', () => {
 
     expect(await screen.findByRole('heading', { name: 'drizzly' })).toBeInTheDocument()
     expect(await screen.findByTestId('score')).toHaveTextContent('120')
-    expect(screen.getByText('🔥 4-day streak')).toBeInTheDocument()
+    expect(screen.getByText('4-day streak')).toBeInTheDocument()
     expect(screen.getByText('Today 3/10')).toBeInTheDocument()
     expect(
       screen.getAllByRole('button', { name: /wet with light rain|mournful|bag|optimistic/ }),
@@ -70,7 +70,7 @@ describe('quiz', () => {
 
     await user.click(await screen.findByRole('button', { name: /wet with light rain/ }))
 
-    expect(await screen.findByRole('status')).toHaveTextContent('✓ Right!')
+    expect(await screen.findByRole('status')).toHaveTextContent('Right!')
     expect(screen.getByTestId('score')).toHaveTextContent('125')
     expect(screen.getByText('+5')).toHaveClass('pop--up')
     expect(screen.getByText('It was a damp, drizzly November in my soul.')).toBeInTheDocument()
@@ -98,7 +98,7 @@ describe('quiz', () => {
     await user.click(await screen.findByRole('button', { name: /a small bag/ }))
 
     const verdict = await screen.findByRole('status')
-    expect(verdict).toHaveTextContent('✗ Not quite. It means: wet with light rain')
+    expect(verdict).toHaveTextContent('Not quite. It means: wet with light rain')
     expect(screen.getByTestId('score')).toHaveTextContent('110')
     expect(screen.getByText('−10')).toHaveClass('pop--down')
     expect(screen.getByRole('button', { name: /a small bag/ })).toHaveClass('option--wrong')
@@ -112,7 +112,7 @@ describe('quiz', () => {
     const user = renderApp('/quiz')
 
     await user.click(await screen.findByRole('button', { name: /wet with light rain/ }))
-    await user.click(await screen.findByRole('button', { name: 'Next →' }))
+    await user.click(await screen.findByRole('button', { name: 'Continue' }))
 
     expect(await screen.findByRole('heading', { name: 'lugubrious' })).toBeInTheDocument()
     expect(screen.queryByRole('status')).not.toBeInTheDocument()
@@ -196,7 +196,7 @@ describe('quiz', () => {
     expect(alert).toHaveTextContent('Start reading a book to get questions')
     expect(within(alert).getByRole('link', { name: 'Go to your books' })).toHaveAttribute(
       'href',
-      '/',
+      '/books',
     )
   })
 
@@ -235,7 +235,7 @@ describe('question types', () => {
     await user.click(screen.getByRole('button', { name: /lugubrious/ }))
 
     expect(await screen.findByRole('status')).toHaveTextContent(
-      '✗ Not quite. drizzly · wet with light rain',
+      'Not quite. drizzly · wet with light rain',
     )
   })
 
@@ -256,7 +256,7 @@ describe('question types', () => {
     expect(screen.getByText('Which word fills the gap in the book’s sentence?')).toBeInTheDocument()
     await user.keyboard('1')
 
-    expect(await screen.findByRole('status')).toHaveTextContent('✓ Right! drizzly')
+    expect(await screen.findByRole('status')).toHaveTextContent('Right! drizzly')
   })
 })
 
@@ -278,7 +278,75 @@ describe('answer errors', () => {
 
     await user.click(screen.getByRole('button', { name: /wet with light rain/ }))
 
-    expect(await screen.findByRole('status')).toHaveTextContent('✓ Right!')
+    expect(await screen.findByRole('status')).toHaveTextContent('Right!')
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+})
+
+describe('sessions', () => {
+  function tenQuestions(extra: Routes = {}) {
+    const items = Array.from({ length: 12 }, (_, i) => question(i + 1, `word${String(i + 1)}`))
+    const answers: Routes = {}
+    let today = STATS.today
+    for (const item of items) {
+      answers[ANSWER_URL(item.id)] = () => {
+        today += 1
+        return json(result({ stats: { ...STATS, total: 125, today } }))
+      }
+    }
+    return quiz({ 'GET /api/quiz/question': questions(...items), ...answers, ...extra })
+  }
+
+  async function answerRight(user: ReturnType<typeof renderApp>) {
+    await user.click(await screen.findByRole('button', { name: /wet with light rain/ }))
+    await user.click(await screen.findByRole('button', { name: 'Continue' }))
+  }
+
+  it('shows how far into the session you are, without the tabs', async () => {
+    tenQuestions()
+    const user = renderApp('/quiz')
+
+    const progress = await screen.findByRole('progressbar', { name: 'Session progress' })
+    expect(progress).toHaveAttribute('aria-valuenow', '0')
+    expect(screen.queryByRole('navigation', { name: 'Main' })).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'End session' })).toHaveAttribute('href', '/')
+
+    await answerRight(user)
+
+    expect(progress).toHaveAttribute('aria-valuenow', '1')
+  })
+
+  it('sums up after ten answers, then keeps going', async () => {
+    tenQuestions()
+    const user = renderApp('/quiz')
+
+    for (let i = 0; i < 10; i++) await answerRight(user)
+
+    expect(await screen.findByRole('heading', { name: 'Session complete!' })).toBeInTheDocument()
+    expect(screen.getByText('Daily goal reached. Your streak is 4 days.')).toBeInTheDocument()
+    expect(screen.getByText('+50')).toBeInTheDocument()
+    expect(screen.getByText('100%')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Done for today' })).toHaveAttribute('href', '/')
+
+    await user.click(screen.getByRole('button', { name: 'Keep going' }))
+
+    expect(await screen.findByRole('heading', { name: 'word11' })).toBeInTheDocument()
+    expect(screen.getByRole('progressbar', { name: 'Session progress' })).toHaveAttribute(
+      'aria-valuenow',
+      '0',
+    )
+  })
+
+  it('buzzes on phones that can: short for right, double for wrong', async () => {
+    const vibrate = vi.fn()
+    Object.defineProperty(navigator, 'vibrate', { value: vibrate, configurable: true })
+    tenQuestions({ [ANSWER_URL(2)]: () => json(result({ correct: false, points: -10 })) })
+    const user = renderApp('/quiz')
+
+    await answerRight(user)
+    await user.click(await screen.findByRole('button', { name: /mournful/ }))
+
+    expect(vibrate.mock.calls).toEqual([[30], [[60, 40, 60]]])
+    Reflect.deleteProperty(navigator, 'vibrate')
   })
 })
