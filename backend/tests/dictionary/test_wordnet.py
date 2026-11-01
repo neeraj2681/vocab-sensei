@@ -1,5 +1,6 @@
 """WordNetDictionary against a tiny hand-written lexicon, so tests need no download."""
 
+import threading
 from pathlib import Path
 
 import pytest
@@ -8,7 +9,7 @@ import wn
 from app.core.config import Settings
 from app.dictionary import install as install_command
 from app.dictionary.types import DictionaryUnavailableError, Sense
-from app.dictionary.wordnet import WordNetDictionary, install
+from app.dictionary.wordnet import WordNetDictionary, install, use_data_dir
 
 LEXICON = "test:1"
 
@@ -71,7 +72,7 @@ def data_dir(tmp_path_factory: pytest.TempPathFactory) -> Path:
     directory = tmp_path_factory.mktemp("wordnet")
     source = directory / "test.xml"
     source.write_text(LMF)
-    wn.config.data_directory = directory
+    use_data_dir(directory)  # like the app: wn's connection must work from any thread
     wn.add(source, progress_handler=None)
     return directory
 
@@ -148,3 +149,25 @@ def test_install_command_uses_the_configured_lexicon(
     install_command.main()
 
     assert calls == [(tmp_path / "data" / "wordnet", "oewn:2025")]
+
+
+def test_lookups_work_from_other_threads(dictionary: WordNetDictionary) -> None:
+    """Books are processed on background worker threads, not the thread that opened wn's database
+    (this failed in production with "SQLite objects created in a thread can only be used in that
+    same thread")."""
+    results: list[object] = []
+
+    def look_up() -> None:
+        try:
+            results.append(dictionary.senses("spleen")[0].definition)
+            results.append(dictionary.synonyms("drizzly"))
+        except Exception as exc:  # report it to the main thread
+            results.append(exc)
+
+    workers = [threading.Thread(target=look_up) for _ in range(4)]
+    for worker in workers:
+        worker.start()
+    for worker in workers:
+        worker.join()
+
+    assert results == ["an organ near the stomach", frozenset({"damp"})] * 4
