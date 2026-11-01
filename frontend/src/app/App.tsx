@@ -1,4 +1,4 @@
-import { BrowserRouter, Link, Navigate, Route, Routes } from 'react-router'
+import { BrowserRouter, Link, Navigate, Route, Routes, useLocation } from 'react-router'
 import { useAuth } from '../features/auth/AuthContext'
 import { AuthProvider } from '../features/auth/AuthProvider'
 import { ForgotPasswordPage } from '../features/auth/ForgotPasswordPage'
@@ -106,6 +106,7 @@ function AppRoutes() {
 
 function Header() {
   const { user } = useAuth()
+  const { pathname } = useLocation()
 
   return (
     <header className="app__header">
@@ -113,7 +114,8 @@ function Header() {
         <Link to="/">Vocab Sensei</Link>
       </h1>
       <p className="app__tagline">Learn the words of your next read before you read them.</p>
-      {user && <TabBar />}
+      {/* A session has its own ✕ to leave, so it shows no tabs. */}
+      {user && pathname !== '/quiz' && <TabBar />}
       <div className="app__corner">
         <ThemeToggle />
       </div>
