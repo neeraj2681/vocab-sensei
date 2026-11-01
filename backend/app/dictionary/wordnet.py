@@ -2,6 +2,10 @@
 
 `wn` keeps its data in a SQLite file under `data_dir`; install a lexicon once with
 `python -m app.dictionary.install`. Lookups don't lemmatise: callers pass lemmas (spaCy made them).
+
+`wn` opens one SQLite connection per process and reuses it. Books are processed on background
+worker threads, so the connection must be usable from any thread (`allow_multithreading`), and
+lookups are serialised with a lock so two uploads never use it at the same moment.
 """
 
 from pathlib import Path
@@ -22,11 +26,14 @@ _POS_NAMES = {
 
 # `wn.config` is process-wide, so every WordNetDictionary must agree on the data directory.
 _config_lock = Lock()
+# The one shared SQLite connection; each lookup holds this while it reads.
+_lookup_lock = Lock()
 
 
 def use_data_dir(data_dir: Path) -> None:
     with _config_lock:
         data_dir.mkdir(parents=True, exist_ok=True)
+        wn.config.allow_multithreading = True  # before wn opens its connection
         wn.config.data_directory = data_dir
 
 
@@ -51,6 +58,10 @@ class WordNetDictionary:
         self._senses_per_pos = senses_per_pos
 
     def senses(self, lemma: str) -> list[Sense]:
+        with _lookup_lock:
+            return self._senses(lemma)
+
+    def _senses(self, lemma: str) -> list[Sense]:
         found: list[Sense] = []
         per_pos: dict[str, int] = {}
         seen: set[str] = set()
@@ -72,6 +83,10 @@ class WordNetDictionary:
         return found
 
     def synonyms(self, lemma: str) -> frozenset[str]:
+        with _lookup_lock:
+            return self._synonyms(lemma)
+
+    def _synonyms(self, lemma: str) -> frozenset[str]:
         return frozenset(
             other
             for word in self._wordnet.words(lemma)
