@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { quizApi, type PractisedWord } from '../../api/quiz'
+import { SpeakButton } from '../../components/SpeakButton'
 
 type Tab = 'learned' | 'learning'
 
@@ -81,6 +82,7 @@ export function WordsPanel() {
                   <span className="word-row__word">{word.word}</span>
                   {word.book && <span className="word-row__book muted">{word.book}</span>}
                 </button>
+                <SpeakButton word={word.word} />
                 {expanded && (
                   <p className="word-row__meaning">{word.meaning ?? 'No meaning found.'}</p>
                 )}
