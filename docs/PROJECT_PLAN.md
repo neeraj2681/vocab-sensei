@@ -108,8 +108,9 @@ Extract text per chapter ──► tokenize + lemmatize ──► filter (stopwo
   sooner, but then the answer is practice and scores nothing. A missed word simply returns later.
 - Each next word comes from one of three pools, picked at random 6 : 3 : 1 (configurable):
   - new: next words from the learning list frontier
-  - learning: words in progress, least recently reviewed first
-  - review: learned words whose decayed score fell below 100
+  - learning: words in progress, least recently reviewed first; paused (progress kept) while none of
+    the user's current reads uses them
+  - review: learned words whose decayed score fell below 100, from any book (even a stopped one)
 - Show the context sentence from the book after answering (reinforces usage).
 
 ### 5.4 Scoring rules (as specified, all configurable)

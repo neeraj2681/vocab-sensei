@@ -6,6 +6,10 @@ score at the top (+5 / -10 every time; only the total never goes below 0). Both 
 logged; the lifetime score is the sum of the points. A word isn't asked again within
 `spacing` questions; if the user has fewer words than that, it may come back sooner, but then the
 answer is practice and doesn't score.
+
+Words in progress are only asked while one of the user's current reads uses them: stopping a book
+pauses its words (progress kept) until it's read again. Learned words still come back for review
+from any book, so stopping a book doesn't mean forgetting its words.
 """
 
 from collections import Counter
@@ -220,7 +224,10 @@ class QuizService:
             pools[Pool.NEW] = new[0]
         learning = [
             w
-            for w in self._repo.words_with_status(user_id, WordStatus.LEARNING, exclude)
+            # Paused while none of the user's current reads uses them; progress is kept.
+            for w in self._repo.words_with_status(
+                user_id, WordStatus.LEARNING, exclude, in_current_reads=True
+            )
             if usable(w.word_id)
         ]
         if learning:
