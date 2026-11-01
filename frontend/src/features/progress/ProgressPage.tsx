@@ -5,6 +5,7 @@ import { BackupPanel } from './BackupPanel'
 import { DeleteAccountPanel } from './DeleteAccountPanel'
 import { formatWhen } from './format'
 import { ScoreChart } from './ScoreChart'
+import { WordsPanel } from './WordsPanel'
 
 const TABLE_ROWS = 50 // the table view shows the most recent answers
 
@@ -85,6 +86,7 @@ export function ProgressPage() {
           )}
         </div>
       )}
+      {history.length > 0 && <WordsPanel />}
       <BackupPanel />
       <DeleteAccountPanel />
     </section>

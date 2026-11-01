@@ -497,3 +497,54 @@ def question_type(client: TestClient, session: Session) -> str:
     kind: str = question(client)["type"]
     answer(client, session)
     return kind
+
+
+def test_words_lists_answered_words_with_their_progress(
+    user_client: TestClient, session: Session, book: Document, clock: Clock
+) -> None:
+    for _ in range(3):
+        answer(user_client, session, right=True)
+
+    response = user_client.get("/api/quiz/words")
+
+    assert response.status_code == 200, response.text
+    words = response.json()
+    assert len(words) == 3
+    assert {(w["progress"], w["learned"], w["book"]) for w in words} == {(5, False, "Moby-Dick")}
+    assert all(w["meaning"] == f"meaning of {w['word']}" for w in words)
+
+
+def test_words_puts_learned_first_and_leaves_out_unanswered_and_known(
+    user_client: TestClient, session: Session, book: Document, clock: Clock
+) -> None:
+    user = reader(session)
+    reviewed = NOW - timedelta(days=1)
+
+    def progress(lemma: str, score: int, status: WordStatus, **extra: Any) -> None:
+        word = session.scalars(select(Word).where(Word.lemma == lemma)).one()
+        session.add(UserWord(user_id=user.id, word_id=word.id, score=score, status=status, **extra))
+
+    progress("word00", 40, WordStatus.LEARNING, last_reviewed_at=reviewed)
+    progress("word01", 105, WordStatus.LEARNED, learned_at=reviewed, last_reviewed_at=reviewed)
+    progress(  # learned three weeks ago: decayed to 85, so back to learning
+        "word02",
+        100,
+        WordStatus.LEARNED,
+        learned_at=NOW - timedelta(weeks=3),
+        last_reviewed_at=NOW - timedelta(weeks=3),
+    )
+    progress("word03", 30, WordStatus.LEARNING)  # "unsure" on triage, never answered
+    progress("word04", 0, WordStatus.KNOWN, last_reviewed_at=reviewed)  # "I know this"
+    session.commit()
+
+    words = user_client.get("/api/quiz/words").json()
+
+    assert [(w["word"], w["progress"], w["learned"]) for w in words] == [
+        ("word01", 100, True),
+        ("word02", 85, False),
+        ("word00", 40, False),
+    ]
+
+
+def test_words_is_empty_before_any_answer(user_client: TestClient, book: Document) -> None:
+    assert user_client.get("/api/quiz/words").json() == []

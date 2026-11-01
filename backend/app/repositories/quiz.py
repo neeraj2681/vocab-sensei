@@ -2,7 +2,7 @@ from collections.abc import Collection
 from datetime import datetime
 
 from sqlalchemy import func, select
-from sqlalchemy.orm import Session, aliased
+from sqlalchemy.orm import Session, aliased, selectinload
 
 from app.core.enums import WordStatus
 from app.db.models import (
@@ -96,6 +96,20 @@ class QuizRepository:
                 .order_by(UserWord.last_reviewed_at.is_not(None), UserWord.last_reviewed_at)
             )
         )
+
+    def practised_words(self, user_id: int) -> list[tuple[UserWord, Word]]:
+        """Words the user has answered at least once and is learning or has learned."""
+        rows = self._session.execute(
+            select(UserWord, Word)
+            .join(Word, Word.id == UserWord.word_id)
+            .options(selectinload(Word.definitions))
+            .where(
+                UserWord.user_id == user_id,
+                UserWord.status.in_((WordStatus.LEARNING, WordStatus.LEARNED)),
+                UserWord.last_reviewed_at.is_not(None),
+            )
+        )
+        return [(row[0], row[1]) for row in rows]
 
     # Building questions
 

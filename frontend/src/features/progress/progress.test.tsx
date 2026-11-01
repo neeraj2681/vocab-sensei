@@ -1,6 +1,6 @@
 import { screen, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import type { HistoryPoint, QuizStats } from '../../api/quiz'
+import type { HistoryPoint, PractisedWord, QuizStats } from '../../api/quiz'
 import { fail, fakeApi, json, noContent, type Routes } from '../../test/fakeApi'
 import { renderApp } from '../../test/renderApp'
 
@@ -13,11 +13,18 @@ const HISTORY: HistoryPoint[] = [
   { number: 4, total: 15, correct: true, answered_at: '2026-10-30T09:01:00Z' },
 ]
 
+const WORDS: PractisedWord[] = [
+  { word: 'lugubrious', book: 'Moby-Dick', meaning: 'mournful', progress: 100, learned: true },
+  { word: 'spleen', book: 'Moby-Dick', meaning: 'bad temper', progress: 85, learned: false },
+  { word: 'hypos', book: null, meaning: null, progress: 5, learned: false },
+]
+
 function progress(history: HistoryPoint[] = HISTORY, extra: Routes = {}) {
   return fakeApi({
     'GET /api/auth/me': () => json(USER),
     'GET /api/quiz/stats?tz=UTC': () => json(STATS),
     'GET /api/quiz/history': () => json(history),
+    'GET /api/quiz/words': () => json(WORDS),
     ...extra,
   })
 }
@@ -109,5 +116,69 @@ describe('profile menu', () => {
 
     expect(await screen.findByRole('heading', { name: 'Log in' })).toBeInTheDocument()
     expect(api.calls('POST /api/auth/logout')).toHaveLength(1)
+  })
+
+  it('lists learned words with a progress ring; learning ones on the other tab', async () => {
+    progress()
+    const user = renderApp('/progress')
+
+    const learnedTab = await screen.findByRole('button', { name: 'Learned · 1' })
+    expect(learnedTab).toHaveAttribute('aria-pressed', 'true')
+    const list = screen.getByRole('list')
+    expect(within(list).getAllByRole('listitem')).toHaveLength(1)
+    expect(within(list).getByRole('img', { name: '100% learned' })).toBeInTheDocument()
+    expect(list).toHaveTextContent('lugubrious')
+    expect(list).toHaveTextContent('Moby-Dick')
+
+    await user.click(screen.getByRole('button', { name: 'Learning · 2' }))
+
+    const rows = within(screen.getByRole('list')).getAllByRole('listitem')
+    expect(rows.map((row) => row.textContent)).toEqual(['85%spleenMoby-Dick', '5%hypos'])
+    expect(
+      within(screen.getByRole('button', { name: /spleen/ })).getByRole('img', {
+        name: '85% learned',
+      }),
+    ).toBeInTheDocument()
+  })
+
+  it("shows a word's meaning when its row is tapped", async () => {
+    progress()
+    const user = renderApp('/progress')
+    const row = await screen.findByRole('button', { name: /lugubrious/ })
+    expect(screen.queryByText('mournful')).not.toBeInTheDocument()
+
+    await user.click(row)
+
+    expect(row).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByText('mournful')).toBeInTheDocument()
+    await user.click(row)
+    expect(screen.queryByText('mournful')).not.toBeInTheDocument()
+  })
+
+  it('filters words as you type', async () => {
+    progress()
+    const user = renderApp('/progress')
+    await user.click(await screen.findByRole('button', { name: 'Learning · 2' }))
+
+    await user.type(screen.getByRole('searchbox', { name: 'Find a word' }), 'SPL')
+
+    expect(within(screen.getByRole('list')).getAllByRole('listitem')).toHaveLength(1)
+    expect(screen.getByRole('list')).toHaveTextContent('spleen')
+    await user.type(screen.getByRole('searchbox'), 'x')
+    expect(screen.getByText('No words match.')).toBeInTheDocument()
+  })
+
+  it('opens on the learning tab when nothing is learned yet', async () => {
+    progress(HISTORY, { 'GET /api/quiz/words': () => json(WORDS.slice(1)) })
+    renderApp('/progress')
+
+    expect(await screen.findByRole('button', { name: 'Learning · 2' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    expect(screen.getByRole('button', { name: 'Learned · 0' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    )
   })
 })

@@ -39,6 +39,14 @@ export interface HistoryPoint {
   answered_at: string
 }
 
+export interface PractisedWord {
+  word: string
+  book: string | null // the book the quiz takes the word from
+  meaning: string | null
+  progress: number // 0-100: how far the word is towards "learned"
+  learned: boolean
+}
+
 /** The browser's time zone decides when "today" starts for the daily goal. */
 export const timeZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone
 
@@ -64,4 +72,5 @@ export const quizApi = {
   know: (id: number) => apiPost(`/quiz/questions/${String(id)}/know`),
   stats: () => apiGet<QuizStats>(`/quiz/stats?${tz()}`),
   history: () => apiGet<HistoryPoint[]>('/quiz/history'),
+  words: () => apiGet<PractisedWord[]>('/quiz/words'),
 }

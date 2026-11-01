@@ -19,7 +19,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import Settings
 from app.core.enums import QuestionType, WordStatus
-from app.db.models import Question, QuizAnswer, UserWord
+from app.db.models import Question, QuizAnswer, UserWord, Word
 from app.dictionary.types import Dictionary
 from app.quiz.questions import (
     Candidate,
@@ -105,6 +105,15 @@ class HistoryPoint:
     total: int  # lifetime points after this answer
     correct: bool
     answered_at: datetime
+
+
+@dataclass(frozen=True)
+class PractisedWord:
+    lemma: str
+    book: str | None  # the book the quiz takes the word from
+    meaning: str | None  # in that book's sense
+    progress: int  # 0-100: how far the word's score is towards "learned"
+    learned: bool
 
 
 def quiz_stats(repo: QuizRepository, goal: int, user_id: int, now: datetime, tz: ZoneInfo) -> Stats:
@@ -352,9 +361,12 @@ class QuizService:
         word = self._repo.word(word_id)
         if word is None:
             return "", None
-        found = self._repo.occurrence(user_id, word_id)
+        return word.lemma, self._meaning_and_book(user_id, word)[0]
+
+    def _meaning_and_book(self, user_id: int, word: Word) -> tuple[str | None, str | None]:
+        found = self._repo.occurrence(user_id, word.id)
         definitions = definitions_in_context(word, found[0].pos if found else None)
-        return word.lemma, definitions[0].text if definitions else None
+        return (definitions[0].text if definitions else None), (found[1].title if found else None)
 
     def know(self, user_id: int, question_id: int, now: datetime) -> None:
         """The "I know this" button: the word is never asked again; a new question replaces it."""
@@ -395,6 +407,25 @@ class QuizService:
 
     def stats(self, user_id: int, now: datetime, tz: ZoneInfo) -> Stats:
         return quiz_stats(self._repo, self._quiz.daily_goal, user_id, now, tz)
+
+    def practised_words(self, user_id: int, now: datetime) -> list[PractisedWord]:
+        """Learned words first, then the rest by progress."""
+        rules = self._settings.scoring
+        words = []
+        for user_word, word in self._repo.practised_words(user_id):
+            progress = _progress(user_word)
+            meaning, book = self._meaning_and_book(user_id, word)
+            score = effective_score(progress, now, rules)
+            words.append(
+                PractisedWord(
+                    lemma=word.lemma,
+                    book=book,
+                    meaning=meaning,
+                    progress=min(100, score * 100 // rules.learned_threshold),
+                    learned=current_status(progress, now, rules) is WordStatus.LEARNED,
+                )
+            )
+        return sorted(words, key=lambda w: (not w.learned, -w.progress, w.lemma))
 
     def history(self, user_id: int) -> list[HistoryPoint]:
         points: list[HistoryPoint] = []

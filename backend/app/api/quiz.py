@@ -20,6 +20,7 @@ from app.services.quiz import (
     Focus,
     InvalidChoiceError,
     NoWordsError,
+    PractisedWord,
     QuestionNotFoundError,
     QuizService,
     Stats,
@@ -116,6 +117,24 @@ class AnswerResponse(BaseModel):
     word_status: WordStatus
     context_sentence: str | None  # the sentence from the book, shown after answering
     stats: StatsResponse
+
+
+class PractisedWordResponse(BaseModel):
+    word: str
+    book: str | None
+    meaning: str | None
+    progress: int  # 0-100
+    learned: bool
+
+    @classmethod
+    def of(cls, word: PractisedWord) -> Self:
+        return cls(
+            word=word.lemma,
+            book=word.book,
+            meaning=word.meaning,
+            progress=word.progress,
+            learned=word.learned,
+        )
 
 
 class HistoryPointResponse(BaseModel):
@@ -217,3 +236,9 @@ def history(user: CurrentUser, quiz: QuizServiceDep) -> list[HistoryPointRespons
         )
         for p in quiz.history(user.id)
     ]
+
+
+@router.get("/words")
+def words(user: CurrentUser, quiz: QuizServiceDep, now: Now) -> list[PractisedWordResponse]:
+    """Words the user has answered, with their progress towards "learned" (progress page)."""
+    return [PractisedWordResponse.of(w) for w in quiz.practised_words(user.id, now)]
