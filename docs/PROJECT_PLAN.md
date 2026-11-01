@@ -83,7 +83,11 @@ Extract text per chapter ──► tokenize + lemmatize ──► filter (stopwo
 - Each current read tracks **current chapter** (user updates it, or "I finished chapter N" button).
 - `learning_list` is derived (not hand-maintained): words from current reads, ordered by
   `book priority → chapter (starting at current chapter) → first position in chapter`, excluding learned/known words.
-  **Decided:** chapters before the current one are left out; books share new-word slots n : n−1 : … : 1 by priority.
+  **Decided:** books share new-word slots n : n−1 : … : 1 by priority. Within a book, 1 in 4 new words (and sorting
+  cards) comes from chapters before the current one, in reading order (was: left out, changed 2026-11-01).
+- **Every chapter a word appears in** is stored (`chapter_words`: first use per chapter, with that chapter's sentence).
+  A word counts for the next chapter the reader meets it in, not only where the book first used it; a chapter's
+  readiness and "Study this chapter" cover every word the chapter uses.
 - **Chapter primer** view: "Before you read Chapter 4, these 23 words are new to you" + readiness %.
 
 ### 5.3 Daily quiz

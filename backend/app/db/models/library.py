@@ -104,3 +104,27 @@ class DocumentWord(Base):
     context_sentence: Mapped[str | None] = mapped_column(Text)
     context_form: Mapped[str | None] = mapped_column(String(100))  # the word as written there
     pos: Mapped[PartOfSpeech | None] = mapped_column(str_enum(PartOfSpeech))  # most common use
+
+
+class ChapterWord(Base):
+    """Where a book uses a word, chapter by chapter: its first use in each chapter it appears in.
+
+    `DocumentWord` keeps the book-level facts (first appearance, count, most common part of
+    speech); these rows let a word that reappears later count for those chapters too.
+    """
+
+    __tablename__ = "chapter_words"
+
+    chapter_id: Mapped[int] = mapped_column(
+        ForeignKey("chapters.id", ondelete="CASCADE"), primary_key=True
+    )
+    word_id: Mapped[int] = mapped_column(
+        ForeignKey("words.id", ondelete="CASCADE"), primary_key=True, index=True
+    )
+    document_id: Mapped[int] = mapped_column(
+        ForeignKey("documents.id", ondelete="CASCADE"), index=True
+    )
+    first_position: Mapped[int]  # token offset inside the chapter
+    context_sentence: Mapped[str | None] = mapped_column(Text)
+    context_form: Mapped[str | None] = mapped_column(String(100))  # the word as written there
+    pos: Mapped[PartOfSpeech | None] = mapped_column(str_enum(PartOfSpeech))  # the book's, as above

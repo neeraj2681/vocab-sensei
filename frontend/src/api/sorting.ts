@@ -10,10 +10,11 @@ export interface UnsortedWord {
   context_sentence: string | null
   chapter_index: number
   chapter_title: string | null
+  earlier: boolean // from a chapter before the one being read
 }
 
 export interface SortBatch {
-  remaining: number // unsorted words from `from_chapter` on, including `words`
+  remaining: number // unsorted words in the whole book, including `words`
   from_chapter: number
   words: UnsortedWord[]
 }

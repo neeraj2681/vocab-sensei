@@ -44,6 +44,7 @@ def test_unsorted_words_come_in_reading_order(
         "context_sentence": "A sentence with word00.",
         "chapter_index": 0,
         "chapter_title": "Loomings",
+        "earlier": False,
     }
     assert [w["lemma"] for w in result["words"]] == ["word00", "word01", "word02"]
 
@@ -53,10 +54,15 @@ def test_starts_at_the_chapter_being_read(
 ) -> None:
     user_client.patch(f"/api/readings/{two_chapter_book.id}", json={"current_chapter_index": 1})
 
-    result = batch(user_client, two_chapter_book, limit=1)
+    result = batch(user_client, two_chapter_book, limit=4)
 
-    assert (result["remaining"], result["from_chapter"]) == (10, 1)
-    assert result["words"][0]["lemma"] == "word10"
+    assert (result["remaining"], result["from_chapter"]) == (20, 1)  # the whole book
+    assert [(w["lemma"], w["earlier"]) for w in result["words"]] == [
+        ("word10", False),
+        ("word11", False),
+        ("word00", True),  # 1 in 4 cards from the chapter before
+        ("word12", False),
+    ]
 
 
 @pytest.mark.parametrize(

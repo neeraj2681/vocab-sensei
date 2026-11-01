@@ -118,7 +118,10 @@ export function SortPage() {
       </p>
       {card ? (
         <div className="sort__card">
-          <p className="muted">{chapterLabel(card.chapter_index, card.chapter_title)}</p>
+          <p className="muted">
+            {card.earlier && 'Earlier · '}
+            {chapterLabel(card.chapter_index, card.chapter_title)}
+          </p>
           <div className="said-word">
             <h3 className="quiz__word">{card.lemma}</h3>
             <SpeakButton word={card.lemma} />

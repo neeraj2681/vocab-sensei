@@ -13,6 +13,7 @@ from app.api.quiz import get_now
 from app.core.enums import DocumentFormat, DocumentStatus, PartOfSpeech, QuestionType, WordStatus
 from app.db.models import (
     Chapter,
+    ChapterWord,
     CurrentReading,
     Definition,
     Document,
@@ -58,6 +59,20 @@ def add_word(session: Session, lemma: str, pos: str = "noun", zipf: float = 3.0)
     return word
 
 
+def add_book_word(
+    session: Session, document: Document, word: Word, chapter: Chapter, position: int
+) -> None:
+    """The word in the book (first appearance) and in that chapter, as processing stores them."""
+    sentence, form = f"A sentence with {word.lemma}.", word.lemma
+    for row in (
+        DocumentWord(document_id=document.id, chapter_id=chapter.id, occurrences=1),
+        ChapterWord(document_id=document.id, chapter_id=chapter.id),
+    ):
+        row.word_id, row.first_position, row.pos = word.id, position, PartOfSpeech.NOUN
+        row.context_sentence, row.context_form = sentence, form
+        session.add(row)
+
+
 def add_book(session: Session, user: User, lemmas: list[str], *, reading: bool = True) -> Document:
     """A ready book whose first chapter uses `lemmas` in order, optionally being read."""
     document = Document(
@@ -75,17 +90,7 @@ def add_book(session: Session, user: User, lemmas: list[str], *, reading: bool =
         word = session.scalars(select(Word).where(Word.lemma == lemma)).first() or add_word(
             session, lemma
         )
-        session.add(
-            DocumentWord(
-                document_id=document.id,
-                word_id=word.id,
-                chapter_id=document.chapters[0].id,
-                first_position=position,
-                context_sentence=f"A sentence with {lemma}.",
-                context_form=lemma,
-                pos=PartOfSpeech.NOUN,
-            )
-        )
+        add_book_word(session, document, word, document.chapters[0], position)
     if reading:
         session.add(CurrentReading(user_id=user.id, document_id=document.id))
     session.commit()
@@ -552,7 +557,7 @@ class TestQuestionTypes:
         self, user_client: TestClient, session: Session, forced: Callable[[QuestionType], None]
     ) -> None:
         forced(QuestionType.FILL_IN_BLANK)
-        session.execute(text("UPDATE document_words SET context_form = NULL"))
+        session.execute(text("UPDATE chapter_words SET context_form = NULL"))
         session.commit()
 
         assert question(user_client)["type"] == "definition_mcq"

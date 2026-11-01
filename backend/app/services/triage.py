@@ -10,7 +10,8 @@ from dataclasses import dataclass
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings
-from app.db.models import Chapter, CurrentReading, Document, DocumentWord, UserWord, Word
+from app.db.models import Chapter, ChapterWord, CurrentReading, Document, UserWord, Word
+from app.quiz.learning_list import ahead_then_earlier
 from app.repositories.learning import LearningRepository
 from app.scoring.rules import Triage, initial_progress
 
@@ -30,13 +31,14 @@ class AlreadyQuizzedError(TriageError):
 @dataclass(frozen=True)
 class UnsortedWord:
     word: Word
-    occurrence: DocumentWord
+    occurrence: ChapterWord
     chapter: Chapter
+    earlier: bool = False  # from a chapter before the one being read
 
 
 @dataclass(frozen=True)
 class SortBatch:
-    remaining: int  # unsorted words from the starting chapter on, including this batch
+    remaining: int  # unsorted words in the whole book, including this batch
     from_chapter: int
     words: list[UnsortedWord]
 
@@ -50,13 +52,18 @@ class TriageService:
     def next_batch(
         self, user_id: int, document: Document, reading: CurrentReading | None, limit: int
     ) -> SortBatch:
-        """Unsorted words in reading order, from the chapter being read (or the first)."""
+        """Unsorted words in reading order from the chapter being read (or the first), with
+        1 in 4 from the chapters before it."""
         start = reading.current_chapter_index if reading else 0
-        rows = self._repo.unsorted_words(user_id, document.id, start, limit)
+
+        def words(earlier: bool) -> list[UnsortedWord]:
+            rows = self._repo.unsorted_words(user_id, document.id, start, limit, earlier=earlier)
+            return [UnsortedWord(w, cw, c, earlier) for cw, w, c in rows]
+
         return SortBatch(
-            remaining=self._repo.unsorted_count(user_id, document.id, start),
+            remaining=self._repo.unsorted_count(user_id, document.id),
             from_chapter=start,
-            words=[UnsortedWord(word=w, occurrence=dw, chapter=c) for dw, w, c in rows],
+            words=ahead_then_earlier(words(False), words(True), limit, lambda u: u.word.id),
         )
 
     def sort(self, user_id: int, word_id: int, choice: Triage) -> UserWord:

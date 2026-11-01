@@ -10,6 +10,7 @@ export interface LearningWord {
   document_title: string
   chapter_index: number
   chapter_title: string | null
+  earlier: boolean // from a chapter before the one being read
 }
 
 export const learningApi = {

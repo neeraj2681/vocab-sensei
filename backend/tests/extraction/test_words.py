@@ -93,3 +93,18 @@ def test_remembers_the_form_used_in_the_sentence() -> None:
     ]
 
     assert word.context_form == "perambulating"
+
+
+def test_records_the_first_use_in_every_chapter_the_word_appears_in() -> None:
+    words = extract(
+        "The lugubrious sailor sighed. Another lugubrious song followed.",
+        "Nothing rare happens in this chapter.",
+        "A lugubrious wind howled.",
+    )
+
+    (lugubrious,) = [w for w in words if w.lemma == "lugubrious"]
+    assert [(a.chapter_index, a.context_sentence) for a in lugubrious.appearances] == [
+        (0, "The lugubrious sailor sighed."),
+        (2, "A lugubrious wind howled."),
+    ]
+    assert lugubrious.appearances[1].first_position == 1

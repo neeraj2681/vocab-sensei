@@ -5,9 +5,10 @@ import pytest
 from fastapi.testclient import TestClient
 from pypdf import PdfWriter
 from sqlalchemy import text
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, sessionmaker
 
 from app.api.deps import get_dictionary
+from app.commands import reindex_chapters
 from app.core.config import Settings
 from app.dictionary.types import DictionaryUnavailableError, Sense
 from tests.conftest import FakeDictionary, log_in, make_user
@@ -226,8 +227,12 @@ def test_words_can_be_filtered_by_chapter(user_client: TestClient, tmp_path: Pat
     chapter_two = user_client.get(f"/api/documents/{created['id']}/words?chapter=1").json()
 
     assert {w["chapter_index"] for w in chapter_two} == {1}
-    assert "perfunctory" in [w["lemma"] for w in chapter_two]
-    assert "lugubrious" not in [w["lemma"] for w in chapter_two]  # first seen in chapter 0
+    by_lemma = {w["lemma"]: w for w in chapter_two}
+    assert "perfunctory" in by_lemma
+    # First seen in chapter 0, but chapter 1 uses it too: listed, with chapter 1's sentence.
+    assert by_lemma["lugubrious"]["context_sentence"] == (
+        "The perfunctory nod was obsequious and lugubrious."
+    )
 
 
 def test_books_share_word_rows(user_client: TestClient, tmp_path: Path, session: Session) -> None:
@@ -326,3 +331,39 @@ def test_missing_dictionary_fails_the_document_with_a_reason(
 
     assert detail["status"] == "failed"
     assert detail["error"] == "The dictionary isn't installed on the server yet"
+
+
+def test_a_chapter_counts_every_word_it_uses(user_client: TestClient, tmp_path: Path) -> None:
+    created = upload(user_client, epub_bytes(tmp_path))
+
+    chapter_two = user_client.get(f"/api/documents/{created['id']}/words?chapter=1").json()
+    readiness = user_client.get(f"/api/documents/{created['id']}/readiness").json()
+
+    assert "lugubrious" in [w["lemma"] for w in chapter_two]  # first seen in chapter 0
+    assert readiness[1]["words"] == len(chapter_two)
+
+
+def test_reindexing_records_later_chapters_of_books_processed_before(
+    user_client: TestClient,
+    tmp_path: Path,
+    session_factory: sessionmaker[Session],
+    settings: Settings,
+) -> None:
+    created = upload(user_client, epub_bytes(tmp_path))
+    with session_factory() as session:  # as the migration left older books: first uses only
+        session.execute(text("DELETE FROM chapter_words"))
+        session.execute(
+            text(
+                "INSERT INTO chapter_words (chapter_id, word_id, document_id, first_position,"
+                " context_sentence, context_form, pos) SELECT chapter_id, word_id, document_id,"
+                " first_position, context_sentence, context_form, pos FROM document_words"
+            )
+        )
+        session.commit()
+    url = f"/api/documents/{created['id']}/words?chapter=1"
+    assert "lugubrious" not in [w["lemma"] for w in user_client.get(url).json()]
+
+    assert reindex_chapters.reindex(session_factory, settings) == (1, 0)
+
+    assert "lugubrious" in [w["lemma"] for w in user_client.get(url).json()]
+    assert reindex_chapters.reindex(session_factory, settings) == (1, 0)  # safe to run again

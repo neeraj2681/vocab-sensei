@@ -7,10 +7,10 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from app.commands import seed_classics
 from app.core.config import Settings
-from app.core.enums import DocumentFormat, DocumentStatus, PartOfSpeech
-from app.db.models import Chapter, Document, DocumentWord, Word
+from app.core.enums import DocumentFormat, DocumentStatus
+from app.db.models import Chapter, Document, Word
 from app.services.library import CLASSICS
-from tests.api.test_quiz import LEMMAS, add_word, answer
+from tests.api.test_quiz import LEMMAS, add_book_word, add_word, answer
 from tests.conftest import FakeDictionary
 from tests.extraction.epub_builder import Chapter as EpubChapter
 from tests.extraction.epub_builder import EpubSpec, build_epub
@@ -36,17 +36,7 @@ def add_classic(
         word = session.scalars(select(Word).where(Word.lemma == lemma)).first() or add_word(
             session, lemma
         )
-        session.add(
-            DocumentWord(
-                document_id=document.id,
-                word_id=word.id,
-                chapter_id=document.chapters[0].id,
-                first_position=position,
-                context_sentence=f"A sentence with {lemma}.",
-                context_form=lemma,
-                pos=PartOfSpeech.NOUN,
-            )
-        )
+        add_book_word(session, document, word, document.chapters[0], position)
     session.commit()
     return document
 

@@ -6,6 +6,8 @@ from sqlalchemy.orm import Session, aliased, selectinload
 
 from app.core.enums import WordStatus
 from app.db.models import (
+    Chapter,
+    ChapterWord,
     CurrentReading,
     Definition,
     Document,
@@ -127,17 +129,26 @@ class QuizRepository:
     def word(self, word_id: int) -> Word | None:
         return self._session.get(Word, word_id)
 
-    def occurrence(self, user_id: int, word_id: int) -> tuple[DocumentWord, Document] | None:
-        """Where the user's books use the word, preferring their current reads by priority."""
+    def occurrence(self, user_id: int, word_id: int) -> tuple[ChapterWord, Document] | None:
+        """Where the user's books use the word: their current reads first, by priority, and in a
+        book, the next chapter the reader meets it in (else its first appearance)."""
+        current = func.coalesce(CurrentReading.current_chapter_index, 0)
         row = self._session.execute(
-            select(DocumentWord, Document)
-            .join(Document, Document.id == DocumentWord.document_id)
+            select(ChapterWord, Document)
+            .join(Document, Document.id == ChapterWord.document_id)
+            .join(Chapter, Chapter.id == ChapterWord.chapter_id)
             .outerjoin(
                 CurrentReading,
                 (CurrentReading.document_id == Document.id) & (CurrentReading.user_id == user_id),
             )
-            .where(readable_by(user_id), DocumentWord.word_id == word_id)
-            .order_by(CurrentReading.priority.is_(None), CurrentReading.priority, Document.id)
+            .where(readable_by(user_id), ChapterWord.word_id == word_id)
+            .order_by(
+                CurrentReading.priority.is_(None),
+                CurrentReading.priority,
+                Document.id,
+                Chapter.index < current,  # chapters ahead of the reader first
+                Chapter.index,
+            )
             .limit(1)
         ).first()
         return (row[0], row[1]) if row else None

@@ -168,21 +168,21 @@ def list_words(
     session: Annotated[Session, Depends(get_session)],
     chapter: Annotated[int | None, Query(ge=0)] = None,
 ) -> list[WordResponse]:
-    """Learnable words in reading order (where each first appears), optionally for one chapter."""
+    """Learnable words in reading order (each where it first appears), or all words of a chapter."""
     return [
         WordResponse(
             lemma=word.lemma,
             zipf=word.zipf_frequency,
             chapter_index=chapter_index,
             occurrences=occurrence.occurrences,
-            context_sentence=occurrence.context_sentence,
+            context_sentence=sentence,
             pos=occurrence.pos,
             definitions=[
                 DefinitionResponse.model_validate(d)
                 for d in definitions_in_context(word, occurrence.pos)
             ],
         )
-        for occurrence, word, chapter_index in WordService(session).words_for_document(
+        for occurrence, word, chapter_index, sentence in WordService(session).words_for_document(
             document, chapter
         )
     ]
