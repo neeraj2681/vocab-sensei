@@ -82,11 +82,19 @@ class Focus:
 
 
 @dataclass(frozen=True)
+class Day:
+    date: date
+    answers: int
+    met: bool  # judged by the goal the user had that day, like the streak
+
+
+@dataclass(frozen=True)
 class Stats:
     total: int  # lifetime points
     today: int  # answers given today, in the user's time zone
     daily_goal: int
     streak: int  # days in a row with at least `daily_goal` answers
+    week: list[Day]  # the last seven days, oldest first, today last
 
 
 @dataclass(frozen=True)
@@ -142,11 +150,13 @@ def quiz_stats(repo: QuizRepository, user: User, now: datetime, tz: ZoneInfo) ->
         a.answered_at.astimezone(tz).date() for a in repo.answers(user.id, since)
     )
     goal = daily_goal(user, tz)
+    days = [today - timedelta(days=back) for back in range(6, -1, -1)]
     return Stats(
         total=repo.total_points(user.id),
         today=per_day[today],
         daily_goal=goal.on(today),
         streak=streak(per_day, today, goal),
+        week=[Day(day, per_day[day], per_day[day] >= goal.on(day)) for day in days],
     )
 
 

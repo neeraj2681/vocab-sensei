@@ -187,7 +187,13 @@ class TestAnswering:
         assert result["word_score"] == 5
         assert result["word_status"] == "learning"
         assert result["context_sentence"] == "A sentence with word00."
-        assert result["stats"] == {"total": 5, "today": 1, "daily_goal": 10, "streak": 0}
+        assert result["stats"] == {
+            "total": 5,
+            "today": 1,
+            "daily_goal": 10,
+            "streak": 0,
+            "week": result["stats"]["week"],
+        }
 
     def test_a_wrong_answer_always_takes_ten_from_the_total(
         self, user_client: TestClient, session: Session
@@ -455,6 +461,13 @@ class TestStats:
         stats = user_client.put("/api/quiz/goal?tz=UTC", json={"daily_goal": 30}).json()
 
         assert (stats["daily_goal"], stats["streak"]) == (30, 2)  # yesterday's 10 still counts
+        # The week agrees with the streak: earlier days are judged by the goal they had.
+        assert [(d["date"], d["answers"], d["met"]) for d in stats["week"][-3:]] == [
+            ((NOW - timedelta(days=2)).date().isoformat(), 10, True),
+            ((NOW - timedelta(days=1)).date().isoformat(), 10, True),
+            (NOW.date().isoformat(), 0, False),
+        ]
+        assert len(stats["week"]) == 7
 
     @pytest.mark.parametrize("goal", [0, 201])
     def test_goals_must_be_sensible(self, user_client: TestClient, goal: int) -> None:

@@ -16,6 +16,13 @@ export interface QuizStats {
   today: number // answers today
   daily_goal: number
   streak: number // days in a row that reached the goal
+  week?: Day[] // the last seven days, today last; each judged by that day's goal
+}
+
+export interface Day {
+  date: string // YYYY-MM-DD in the user's time zone
+  answers: number
+  met: boolean
 }
 
 export interface AnswerResult {
