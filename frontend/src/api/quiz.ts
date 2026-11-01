@@ -43,6 +43,7 @@ export interface PractisedWord {
   word: string
   book: string | null // the book the quiz takes the word from
   meaning: string | null
+  sentence: string | null // where the book uses it
   progress: number // 0-100: how far the word is towards "learned"
   learned: boolean
 }

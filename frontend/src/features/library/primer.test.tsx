@@ -137,3 +137,43 @@ describe('studying a chapter', () => {
     )
   })
 })
+
+describe('chapter path', () => {
+  it('shows each chapter as a ring filled by its readiness; tapping one picks it', async () => {
+    bookPage([reading(1)])
+    const user = renderApp('/books/1')
+
+    const first = await screen.findByRole('button', { name: 'Chapter 1, ETYMOLOGY., 100% ready' })
+    const current = screen.getByRole('button', {
+      name: 'Chapter 2, CHAPTER 1. Loomings., 61% ready',
+    })
+    expect(current).toHaveAttribute('aria-pressed', 'true') // the chapter being read
+    expect(current).toHaveClass('path__node--current')
+
+    await user.click(first)
+
+    expect(first).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByLabelText('Chapter')).toHaveValue('0')
+  })
+
+  it('shows chapters around the current one in a long book, and all on request', async () => {
+    const many: ChapterReadiness[] = Array.from({ length: 30 }, (_, i) => ({
+      index: i,
+      title: `Chapter ${String(i + 1)}`,
+      words: 10,
+      done: 0,
+      in_progress: 0,
+      new: 10,
+      readiness: 0,
+    }))
+    bookPage([reading(1)], { 'GET /api/documents/1/readiness': () => json(many) })
+    const user = renderApp('/books/1')
+
+    await screen.findByRole('button', { name: /^Chapter 1, / })
+    expect(screen.getAllByRole('button', { name: /% ready$/ })).toHaveLength(9) // 0-8
+
+    await user.click(screen.getByRole('button', { name: 'Show all 30 chapters' }))
+
+    expect(screen.getAllByRole('button', { name: /% ready$/ })).toHaveLength(30)
+  })
+})

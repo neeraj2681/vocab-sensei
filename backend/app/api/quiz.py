@@ -127,6 +127,7 @@ class PractisedWordResponse(BaseModel):
     word: str
     book: str | None
     meaning: str | None
+    sentence: str | None  # where the book uses it
     progress: int  # 0-100
     learned: bool
 
@@ -136,6 +137,7 @@ class PractisedWordResponse(BaseModel):
             word=word.lemma,
             book=word.book,
             meaning=word.meaning,
+            sentence=word.sentence,
             progress=word.progress,
             learned=word.learned,
         )

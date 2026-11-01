@@ -14,9 +14,23 @@ const HISTORY: HistoryPoint[] = [
 ]
 
 const WORDS: PractisedWord[] = [
-  { word: 'lugubrious', book: 'Moby-Dick', meaning: 'mournful', progress: 100, learned: true },
-  { word: 'spleen', book: 'Moby-Dick', meaning: 'bad temper', progress: 85, learned: false },
-  { word: 'hypos', book: null, meaning: null, progress: 5, learned: false },
+  {
+    word: 'lugubrious',
+    book: 'Moby-Dick',
+    meaning: 'mournful',
+    sentence: 'A lugubrious tune.',
+    progress: 100,
+    learned: true,
+  },
+  {
+    word: 'spleen',
+    book: 'Moby-Dick',
+    meaning: 'bad temper',
+    sentence: null,
+    progress: 85,
+    learned: false,
+  },
+  { word: 'hypos', book: null, meaning: null, sentence: null, progress: 5, learned: false },
 ]
 
 function progress(history: HistoryPoint[] = HISTORY, extra: Routes = {}) {
@@ -144,18 +158,18 @@ describe('Me tab', () => {
     ).toBeInTheDocument()
   })
 
-  it("shows a word's meaning when its row is tapped", async () => {
+  it('opens a card with the meaning and the book sentence when a word is tapped', async () => {
     progress()
     const user = renderApp('/words')
-    const row = await screen.findByRole('button', { name: /lugubrious/ })
-    expect(screen.queryByText('mournful')).not.toBeInTheDocument()
+    await user.click(await screen.findByRole('button', { name: /lugubrious/ }))
 
-    await user.click(row)
+    const card = screen.getByRole('dialog', { name: 'lugubrious' })
+    expect(card).toHaveTextContent('mournful')
+    expect(card).toHaveTextContent('A lugubrious tune.')
+    expect(card).toHaveTextContent('Learned · from Moby-Dick')
 
-    expect(row).toHaveAttribute('aria-expanded', 'true')
-    expect(screen.getByText('mournful')).toBeInTheDocument()
-    await user.click(row)
-    expect(screen.queryByText('mournful')).not.toBeInTheDocument()
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
   it('filters words as you type', async () => {

@@ -804,10 +804,6 @@ button {
   min-width: 0;
 }
 
-.word-list .word-row__meaning {
-  flex-basis: 100%;
-}
-
 .word-row {
   display: flex;
   align-items: center;
@@ -832,10 +828,6 @@ button {
   font-size: 0.85em;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.word-row__meaning {
-  margin: 0 0 0.75rem calc(2.75rem + 0.75rem);
 }
 
 .progress-ring {
@@ -1406,6 +1398,140 @@ a.secondary {
   .feedback {
     animation: none;
   }
+}
+
+/* Chapter path */
+
+.path {
+  display: grid;
+  justify-items: center;
+  gap: 0.5rem;
+  margin: 1rem 0;
+}
+
+.path__nodes {
+  display: grid;
+  justify-items: center;
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* A gentle zigzag */
+.path__nodes li:nth-child(4n + 2) {
+  transform: translateX(3.5rem);
+}
+
+.path__nodes li:nth-child(4n + 4) {
+  transform: translateX(-3.5rem);
+}
+
+.path__node {
+  display: grid;
+  justify-items: center;
+  gap: 0.25rem;
+  border: 0;
+  background: none;
+  color: var(--fg);
+  cursor: pointer;
+}
+
+.path__disc {
+  position: relative;
+  width: 4.75rem;
+  height: 4.75rem;
+}
+
+.path__disc svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.path__disc circle {
+  fill: none;
+  stroke-width: 7;
+}
+
+.path__track {
+  stroke: var(--surface-2);
+}
+
+.path__done {
+  stroke: var(--accent);
+  stroke-linecap: round;
+}
+
+.path__face {
+  position: absolute;
+  inset: 0.6rem;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--border);
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: 0 4px 0 var(--border);
+}
+
+.path__node--current .path__face {
+  border-color: var(--accent-deep);
+  background: var(--accent);
+  box-shadow: 0 4px 0 var(--accent-deep);
+}
+
+.path__node--selected .path__caption {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.path__node:active .path__face {
+  transform: translateY(3px);
+  box-shadow: none;
+}
+
+.path__caption {
+  max-width: 9rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.path__more {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+/* Word card */
+
+.word-card__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(10, 20, 14, 0.5);
+}
+
+.word-card {
+  display: grid;
+  gap: 0.5rem;
+  width: min(26rem, 100%);
+  box-sizing: border-box;
+  padding: 1.25rem;
+  border-radius: 24px;
+  background: var(--surface);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.word-card .quiz__word,
+.word-card p {
+  margin: 0;
+}
+
+.word-card .primary {
+  margin-top: 0.5rem;
 }
 
 /* Phones */

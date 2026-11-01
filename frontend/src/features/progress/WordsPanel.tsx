@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { quizApi, type PractisedWord } from '../../api/quiz'
 import { SpeakButton } from '../../components/SpeakButton'
+import { WordCard } from './WordCard'
 
 type Tab = 'learned' | 'learning'
 
@@ -41,6 +42,7 @@ export function WordsPanel() {
   const learning = words.filter((w) => !w.learned)
   const shownTab = tab ?? (learned.length ? 'learned' : 'learning')
   const query = filter.trim().toLowerCase()
+  const opened = words.find((w) => w.word === open)
   const shown = (shownTab === 'learned' ? learned : learning).filter((w) =>
     w.word.toLowerCase().includes(query),
   )
@@ -72,30 +74,32 @@ export function WordsPanel() {
         </p>
       ) : (
         <ul className="word-list">
-          {shown.map((word) => {
-            const expanded = open === word.word
-            return (
-              <li key={word.word}>
-                <button
-                  type="button"
-                  className="word-row"
-                  aria-expanded={expanded}
-                  onClick={() => {
-                    setOpen(expanded ? null : word.word)
-                  }}
-                >
-                  <ProgressRing percent={word.progress} />
-                  <span className="word-row__word">{word.word}</span>
-                  {word.book && <span className="word-row__book muted">{word.book}</span>}
-                </button>
-                <SpeakButton word={word.word} />
-                {expanded && (
-                  <p className="word-row__meaning">{word.meaning ?? 'No meaning found.'}</p>
-                )}
-              </li>
-            )
-          })}
+          {shown.map((word) => (
+            <li key={word.word}>
+              <button
+                type="button"
+                className="word-row"
+                aria-haspopup="dialog"
+                onClick={() => {
+                  setOpen(word.word)
+                }}
+              >
+                <ProgressRing percent={word.progress} />
+                <span className="word-row__word">{word.word}</span>
+                {word.book && <span className="word-row__book muted">{word.book}</span>}
+              </button>
+              <SpeakButton word={word.word} />
+            </li>
+          ))}
         </ul>
+      )}
+      {opened && (
+        <WordCard
+          word={opened}
+          onClose={() => {
+            setOpen(null)
+          }}
+        />
       )}
     </div>
   )

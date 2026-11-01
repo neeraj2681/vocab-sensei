@@ -594,6 +594,7 @@ def test_words_lists_answered_words_with_their_progress(
     assert len(words) == 3
     assert {(w["progress"], w["learned"], w["book"]) for w in words} == {(5, False, "Moby-Dick")}
     assert all(w["meaning"] == f"meaning of {w['word']}" for w in words)
+    assert all(w["sentence"] == f"A sentence with {w['word']}." for w in words)
 
 
 def test_words_puts_learned_first_and_leaves_out_unanswered_and_known(
