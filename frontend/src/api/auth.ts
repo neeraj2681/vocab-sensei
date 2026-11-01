@@ -5,6 +5,7 @@ export interface User {
   email: string
   display_name: string
   email_verified_at: string | null
+  onboarded_at?: string | null // null: show the first-run tour
 }
 
 interface Message {
@@ -23,4 +24,5 @@ export const authApi = {
   resetPassword: (token: string, new_password: string) =>
     apiPost('/auth/reset-password', { token, new_password }),
   deleteAccount: (password: string) => apiDelete('/auth/me', { password }),
+  finishOnboarding: () => apiPost('/auth/me/onboarded'),
 }

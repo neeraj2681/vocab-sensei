@@ -232,3 +232,18 @@ def test_deleting_an_account_needs_the_password(client: TestClient, session: Ses
 
 def test_deleting_an_account_needs_a_login(client: TestClient) -> None:
     assert client.request("DELETE", "/api/auth/me", json={"password": PASSWORD}).status_code == 401
+
+
+def test_new_users_see_the_tour_once(user_client: TestClient) -> None:
+    assert user_client.get("/api/auth/me").json()["onboarded_at"] is None
+
+    assert user_client.post("/api/auth/me/onboarded").status_code == 204
+    first = user_client.get("/api/auth/me").json()["onboarded_at"]
+    assert first is not None
+
+    user_client.post("/api/auth/me/onboarded")  # finishing again changes nothing
+    assert user_client.get("/api/auth/me").json()["onboarded_at"] == first
+
+
+def test_finishing_the_tour_requires_login(client: TestClient) -> None:
+    assert client.post("/api/auth/me/onboarded").status_code == 401

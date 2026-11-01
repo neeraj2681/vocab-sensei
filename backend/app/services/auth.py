@@ -151,6 +151,12 @@ class AuthService:
 
     # --- account deletion ---------------------------------------------------------------------
 
+    def finish_onboarding(self, user: User) -> None:
+        """The first-run tour is done (or skipped); it isn't shown again."""
+        if user.onboarded_at is None:
+            user.onboarded_at = self._now()
+            self._session.commit()
+
     def delete_account(self, user: User, password: str) -> None:
         """Deletes the user with all their books, uploads, progress and sessions.
 

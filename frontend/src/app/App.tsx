@@ -16,6 +16,7 @@ import { QuizPage } from '../features/quiz/QuizPage'
 import { SettingsPage } from '../features/settings/SettingsPage'
 import { SortPage } from '../features/sorting/SortPage'
 import { TodayPage } from '../features/today/TodayPage'
+import { WelcomePage } from '../features/welcome/WelcomePage'
 import { WordsPage } from '../features/progress/WordsPage'
 import { TabBar } from './TabBar'
 
@@ -43,6 +44,14 @@ function AppRoutes() {
         element={
           <RequireAuth>
             <WordsPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/welcome"
+        element={
+          <RequireAuth>
+            <WelcomePage />
           </RequireAuth>
         }
       />
@@ -114,8 +123,8 @@ function Header() {
         <Link to="/">Vocab Sensei</Link>
       </h1>
       <p className="app__tagline">Learn the words of your next read before you read them.</p>
-      {/* A session has its own ✕ to leave, so it shows no tabs. */}
-      {user && pathname !== '/quiz' && <TabBar />}
+      {/* A session has its own ✕ to leave and the tour its own buttons, so neither shows tabs. */}
+      {user && !['/quiz', '/welcome'].includes(pathname) && <TabBar />}
       <div className="app__corner">
         <ThemeToggle />
       </div>

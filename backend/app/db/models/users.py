@@ -23,6 +23,9 @@ class User(Base):
     daily_goal: Mapped[int] = mapped_column(default=20, server_default="20")  # answers a day
     previous_daily_goal: Mapped[int | None]  # what days before daily_goal_since are judged by
     daily_goal_since: Mapped[datetime | None] = mapped_column(UTCDateTime)
+    onboarded_at: Mapped[datetime | None] = mapped_column(
+        UTCDateTime
+    )  # finished the first-run tour
     email_verified_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, onupdate=utcnow)

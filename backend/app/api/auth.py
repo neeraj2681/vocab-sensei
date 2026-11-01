@@ -49,6 +49,7 @@ class UserResponse(BaseModel):
     email: str
     display_name: str
     email_verified_at: datetime | None
+    onboarded_at: datetime | None  # None: show the first-run tour
 
 
 class MessageResponse(BaseModel):
@@ -129,6 +130,12 @@ def logout(
 @router.get("/me")
 def me(user: CurrentUser) -> UserResponse:
     return UserResponse.model_validate(user)
+
+
+@router.post("/me/onboarded", status_code=status.HTTP_204_NO_CONTENT)
+def finish_onboarding(user: CurrentUser, auth: AuthServiceDep) -> None:
+    """Marks the first-run tour as done (or skipped), so it isn't shown again."""
+    auth.finish_onboarding(user)
 
 
 @router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)

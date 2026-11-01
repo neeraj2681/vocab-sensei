@@ -1,13 +1,6 @@
 import { useEffect, useState } from 'react'
 import { quizApi } from '../../api/quiz'
-
-// About 15 seconds an answer, from real quiz sessions.
-const GOALS = [
-  { answers: 10, minutes: '2½' },
-  { answers: 20, minutes: '5' },
-  { answers: 30, minutes: '7½' },
-  { answers: 50, minutes: '12' },
-]
+import { GOALS } from './goals'
 
 /** Answers a day: the streak, the "Today" counter and reminders follow it. */
 export function GoalPanel() {
