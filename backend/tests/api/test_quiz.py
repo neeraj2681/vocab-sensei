@@ -338,6 +338,51 @@ def test_learned_words_come_back_for_review_once_their_score_decays(
     assert result["word_score"] == 90
 
 
+def only_word_in_progress(session: Session, lemma: str) -> None:
+    """Every word of the reader's books is known except `lemma`, which is at 40."""
+    user = reader(session)
+    for word in session.scalars(select(Word)):
+        if lemma == word.lemma:
+            status, score = WordStatus.LEARNING, 40
+        else:
+            status, score = WordStatus.KNOWN, 0
+        session.add(
+            UserWord(
+                user_id=user.id,
+                word_id=word.id,
+                score=score,
+                status=status,
+                last_reviewed_at=NOW - timedelta(days=1),
+            )
+        )
+    session.commit()
+
+
+def test_words_in_progress_pause_while_their_book_is_not_being_read(
+    user_client: TestClient, session: Session, clock: Clock
+) -> None:
+    moby = add_book(session, reader(session), LEMMAS, reading=False)
+    only_word_in_progress(session, "word03")
+
+    paused = user_client.get("/api/quiz/question")
+
+    assert paused.status_code == 409  # word03 is paused, nothing else to ask
+    session.add(CurrentReading(user_id=reader(session).id, document_id=moby.id))
+    session.commit()
+    assert answer(user_client, session)["word"] == "word03"  # back once the book is read again
+
+
+def test_words_in_progress_stay_if_another_current_read_uses_them(
+    user_client: TestClient, session: Session, clock: Clock
+) -> None:
+    add_book(session, reader(session), LEMMAS, reading=False)  # stopped
+    add_book(session, reader(session), ["word03"], reading=True)  # also uses word03
+    only_word_in_progress(session, "word03")
+
+    assert answer(user_client, session)["word"] == "word03"
+    assert user_client.get("/api/quiz/words").json()[0]["progress"] == 45  # progress kept
+
+
 @pytest.mark.usefixtures("book")
 class TestStats:
     def test_streak_counts_days_that_met_the_goal(

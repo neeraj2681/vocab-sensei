@@ -1,7 +1,7 @@
 from collections.abc import Collection
 from datetime import datetime
 
-from sqlalchemy import func, select
+from sqlalchemy import exists, func, select
 from sqlalchemy.orm import Session, aliased, selectinload
 
 from app.core.enums import WordStatus
@@ -82,18 +82,29 @@ class QuizRepository:
         return self._session.get(UserWord, (user_id, word_id))
 
     def words_with_status(
-        self, user_id: int, status: WordStatus, exclude: Collection[int]
+        self,
+        user_id: int,
+        status: WordStatus,
+        exclude: Collection[int],
+        *,
+        in_current_reads: bool = False,
     ) -> list[UserWord]:
-        """Least recently reviewed first."""
+        """Least recently reviewed first; optionally only words a current read of the user uses."""
+        query = select(UserWord).where(
+            UserWord.user_id == user_id,
+            UserWord.status == status,
+            UserWord.word_id.not_in(exclude),
+        )
+        if in_current_reads:
+            query = query.where(
+                exists()
+                .where(DocumentWord.word_id == UserWord.word_id)
+                .where(CurrentReading.document_id == DocumentWord.document_id)
+                .where(CurrentReading.user_id == user_id)
+            )
         return list(
             self._session.scalars(
-                select(UserWord)
-                .where(
-                    UserWord.user_id == user_id,
-                    UserWord.status == status,
-                    UserWord.word_id.not_in(exclude),
-                )
-                .order_by(UserWord.last_reviewed_at.is_not(None), UserWord.last_reviewed_at)
+                query.order_by(UserWord.last_reviewed_at.is_not(None), UserWord.last_reviewed_at)
             )
         )
 
