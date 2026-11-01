@@ -76,6 +76,7 @@ class AuthService:
                 email=email,
                 password_hash=security.hash_password(password),
                 display_name=display_name.strip(),
+                daily_goal=self._settings.quiz.daily_goal,
             )
         )
         email_to_send = self._verification_email(user)

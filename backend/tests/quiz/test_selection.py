@@ -3,7 +3,7 @@ from datetime import date
 from random import Random
 
 from app.core.enums import QuestionType
-from app.quiz.selection import Pool, choose_pool, choose_question_type, streak
+from app.quiz.selection import DailyGoal, Pool, choose_pool, choose_question_type, streak
 
 WEIGHTS = {Pool.NEW: 6, Pool.LEARNING: 3, Pool.REVIEW: 1}
 TODAY = date(2026, 10, 30)
@@ -41,6 +41,9 @@ def test_no_pools() -> None:
     assert choose_pool([], WEIGHTS, Random(1)) is None
 
 
+TEN = DailyGoal(10)
+
+
 def day(offset: int) -> date:
     return date.fromordinal(TODAY.toordinal() - offset)
 
@@ -48,19 +51,27 @@ def day(offset: int) -> date:
 def test_streak_counts_days_in_a_row_that_met_the_goal() -> None:
     answers = {day(0): 12, day(1): 10, day(2): 30, day(3): 4, day(4): 10}
 
-    assert streak(answers, TODAY, goal=10) == 3  # day 3 broke it
+    assert streak(answers, TODAY, goal=TEN) == 3  # day 3 broke it
 
 
 def test_today_counts_once_its_goal_is_met() -> None:
     answers = {day(0): 3, day(1): 10, day(2): 10}
 
-    assert streak(answers, TODAY, goal=10) == 2  # yesterday's streak is still alive
-    assert streak({**answers, day(0): 10}, TODAY, goal=10) == 3
+    assert streak(answers, TODAY, goal=TEN) == 2  # yesterday's streak is still alive
+    assert streak({**answers, day(0): 10}, TODAY, goal=TEN) == 3
 
 
 def test_a_missed_day_resets_the_streak() -> None:
-    assert streak({day(2): 10, day(3): 10}, TODAY, goal=10) == 0
-    assert streak({}, TODAY, goal=10) == 0
+    assert streak({day(2): 10, day(3): 10}, TODAY, goal=TEN) == 0
+    assert streak({}, TODAY, goal=TEN) == 0
+
+
+def test_raising_the_goal_keeps_the_streak_already_earned() -> None:
+    raised_today = DailyGoal(20, earlier=10, since=day(0))
+    answers = {day(0): 20, day(1): 10, day(2): 12}
+
+    assert streak(answers, TODAY, goal=raised_today) == 3  # earlier days judged by 10
+    assert streak({**answers, day(0): 15}, TODAY, goal=raised_today) == 2  # today needs 20
 
 
 def kinds_for(score: int, can_fill: bool = True) -> set[QuestionType]:

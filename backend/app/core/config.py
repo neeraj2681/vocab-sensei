@@ -26,7 +26,7 @@ class QuizSettings(BaseModel):
 
     options_per_question: int = Field(default=4, ge=2)
     spacing: int = Field(default=10, ge=0)  # a word isn't asked again within this many questions
-    daily_goal: int = Field(default=10, gt=0)  # answers per day that keep the streak going
+    daily_goal: int = Field(default=20, gt=0)  # new accounts' answers a day (about 5 minutes)
     # How often the next word is new / in progress / a learned word due for review (6:3:1).
     new_weight: int = Field(default=6, ge=0)
     learning_weight: int = Field(default=3, ge=0)

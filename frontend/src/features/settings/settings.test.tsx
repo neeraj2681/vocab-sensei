@@ -28,6 +28,7 @@ function settingsPage(settings: ReminderSettings = SETTINGS, extra: Routes = {})
   return fakeApi({
     'GET /api/auth/me': () => json(USER),
     'GET /api/reminders': () => json(current),
+    'GET /api/quiz/stats?tz=UTC': () => json({ total: 0, today: 4, daily_goal: 20, streak: 0 }),
     'PUT /api/reminders': (body) => {
       current = { ...current, ...(body as Partial<ReminderSettings>) }
       return json(current)
@@ -142,5 +143,26 @@ describe('daily reminder settings', () => {
     await user.click(screen.getByRole('link', { name: 'Settings' }))
 
     expect(await screen.findByRole('heading', { name: 'Settings' })).toBeInTheDocument()
+  })
+
+  it('changes the daily goal, showing about how long each takes', async () => {
+    let sent: unknown = null
+    settingsPage(SETTINGS, {
+      'PUT /api/quiz/goal?tz=UTC': (body) => {
+        sent = body
+        return json({ total: 0, today: 4, daily_goal: 30, streak: 0 })
+      },
+    })
+    renderApp('/settings')
+
+    const twenty = await screen.findByRole('button', { name: /20.*5 min/ })
+    expect(twenty).toHaveAttribute('aria-pressed', 'true')
+
+    fireEvent.click(screen.getByRole('button', { name: /30.*7½ min/ }))
+
+    expect(await screen.findByRole('status')).toHaveTextContent('Saved: 30 answers a day')
+    expect(sent).toEqual({ daily_goal: 30 })
+    expect(screen.getByRole('button', { name: /30/ })).toHaveAttribute('aria-pressed', 'true')
+    expect(twenty).toHaveAttribute('aria-pressed', 'false')
   })
 })

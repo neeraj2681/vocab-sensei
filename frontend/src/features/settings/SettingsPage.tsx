@@ -3,6 +3,7 @@ import { remindersApi, type ReminderSettings } from '../../api/reminders'
 import { FormError } from '../../components/Form'
 import { useSubmit } from '../../components/useSubmit'
 import { timeZone } from '../../api/quiz'
+import { GoalPanel } from './GoalPanel'
 import { pushSupported, subscribeThisDevice, thisDeviceSubscribed } from './push'
 
 export function SettingsPage() {
@@ -86,6 +87,7 @@ export function SettingsPage() {
   return (
     <section className="settings">
       <h2>Settings</h2>
+      <GoalPanel />
       <section aria-labelledby="reminder-heading" className="panel">
         <h3 id="reminder-heading">Daily reminder</h3>
         <p className="muted">

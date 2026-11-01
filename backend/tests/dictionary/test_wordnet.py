@@ -158,9 +158,10 @@ def test_lookups_work_from_other_threads(dictionary: WordNetDictionary) -> None:
     results: list[object] = []
 
     def look_up() -> None:
-        try:
-            results.append(dictionary.senses("spleen")[0].definition)
-            results.append(dictionary.synonyms("drizzly"))
+        try:  # one append per thread, so interleaving threads can't reorder the results
+            results.append(
+                (dictionary.senses("spleen")[0].definition, dictionary.synonyms("drizzly"))
+            )
         except Exception as exc:  # report it to the main thread
             results.append(exc)
 
@@ -170,4 +171,4 @@ def test_lookups_work_from_other_threads(dictionary: WordNetDictionary) -> None:
     for worker in workers:
         worker.join()
 
-    assert results == ["an organ near the stomach", frozenset({"damp"})] * 4
+    assert results == [("an organ near the stomach", frozenset({"damp"}))] * 4

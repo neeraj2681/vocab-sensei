@@ -4,7 +4,7 @@ from typing import Annotated, Self
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.api.deps import CurrentUser, DictionaryLoader, SettingsDep, get_dictionary
@@ -99,6 +99,10 @@ class StatsResponse(BaseModel):
         return cls(
             total=stats.total, today=stats.today, daily_goal=stats.daily_goal, streak=stats.streak
         )
+
+
+class GoalRequest(BaseModel):
+    daily_goal: int = Field(ge=1, le=200)
 
 
 class AnswerRequest(BaseModel):
@@ -224,6 +228,15 @@ def know(question_id: int, user: CurrentUser, quiz: QuizServiceDep, now: Now) ->
 
 @router.get("/stats")
 def stats(user: CurrentUser, quiz: QuizServiceDep, now: Now, tz: TimeZone) -> StatsResponse:
+    return StatsResponse.of(quiz.stats(user.id, now, tz))
+
+
+@router.put("/goal")
+def set_goal(
+    body: GoalRequest, user: CurrentUser, quiz: QuizServiceDep, now: Now, tz: TimeZone
+) -> StatsResponse:
+    """Changes the daily goal from today on; returns the stats with the new goal."""
+    quiz.set_daily_goal(user.id, body.daily_goal, now)
     return StatsResponse.of(quiz.stats(user.id, now, tz))
 
 

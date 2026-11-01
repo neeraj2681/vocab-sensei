@@ -1,4 +1,4 @@
-import { apiGet, apiPost } from './client'
+import { apiGet, apiPost, apiPut } from './client'
 
 export type QuestionType = 'definition_mcq' | 'reverse' | 'fill_in_blank'
 
@@ -71,6 +71,8 @@ export const quizApi = {
     }),
   know: (id: number) => apiPost(`/quiz/questions/${String(id)}/know`),
   stats: () => apiGet<QuizStats>(`/quiz/stats?${tz()}`),
+  setGoal: (dailyGoal: number) =>
+    apiPut<QuizStats>(`/quiz/goal?${tz()}`, { daily_goal: dailyGoal }),
   history: () => apiGet<HistoryPoint[]>('/quiz/history'),
   words: () => apiGet<PractisedWord[]>('/quiz/words'),
 }
