@@ -843,7 +843,8 @@ button[type='submit'].danger__confirm {
   }
 
   .app__tagline {
-    display: none;
+    margin: 0 0 0.75rem;
+    font-size: 0.95rem;
   }
 
   .app__nav {
