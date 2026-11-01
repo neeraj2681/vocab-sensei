@@ -20,6 +20,20 @@ describe('login', () => {
     expect(await screen.findByRole('heading', { name: 'Log in' })).toBeInTheDocument()
   })
 
+  it('tells new visitors what the app is, on the login and sign-up pages', async () => {
+    fakeApi(loggedOut)
+    const user = renderApp('/login')
+    const intro = 'How it works'
+
+    expect(await screen.findByRole('heading', { name: intro })).toBeInTheDocument()
+    expect(screen.getByText(/Take the daily quiz/)).toBeInTheDocument()
+
+    await user.click(screen.getByRole('link', { name: 'Create an account' }))
+
+    expect(await screen.findByRole('heading', { name: 'Create an account' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: intro })).toBeInTheDocument()
+  })
+
   it('logs in and shows the home page', async () => {
     const api = fakeApi({ ...loggedOut, ...home, 'POST /api/auth/login': () => json(USER) })
     const user = renderApp('/')
