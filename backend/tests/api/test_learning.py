@@ -5,7 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.enums import WordStatus
-from app.db.models import User, UserWord, Word
+from app.db.models import Document, User, UserWord, Word
 from tests.api.test_documents import upload
 from tests.extraction.epub_builder import Chapter, EpubSpec, build_epub
 
@@ -68,7 +68,41 @@ def test_starts_at_the_current_chapter(user_client: TestClient, tmp_path: Path) 
     document_id = add_book(user_client, tmp_path, "a", BOOK_A)
     user_client.patch(f"/api/readings/{document_id}", json={"current_chapter_index": 1})
 
-    assert next_lemmas(user_client) == ["perfunctory", "obsequious"]  # chapter 0 is left out
+    words = user_client.get("/api/learning/next?count=10").json()
+
+    # Chapter 0's words come too, but after the chapters ahead (1 in 4 at most).
+    assert [(w["lemma"], w["earlier"]) for w in words] == [
+        ("perfunctory", False),
+        ("obsequious", False),
+        ("lugubrious", True),
+    ]
+
+
+def test_one_in_four_new_words_comes_from_earlier_chapters(
+    user_client: TestClient, two_chapter_book: Document
+) -> None:
+    user_client.patch(f"/api/readings/{two_chapter_book.id}", json={"current_chapter_index": 1})
+
+    words = user_client.get("/api/learning/next?count=8").json()
+
+    assert [w["lemma"] for w in words] == [
+        "word10", "word11", "word00", "word12", "word13", "word14", "word01", "word15",
+    ]  # fmt: skip
+    assert [w["earlier"] for w in words].count(True) == 2
+
+
+def test_a_word_used_again_later_counts_for_the_later_chapter(
+    user_client: TestClient, tmp_path: Path
+) -> None:
+    sentences = ["The tune was lugubrious.", "The talk was perfunctory.", "A lugubrious wind blew."]
+    document_id = add_book(user_client, tmp_path, "a", sentences)
+    user_client.patch(f"/api/readings/{document_id}", json={"current_chapter_index": 1})
+
+    words = {w["lemma"]: w for w in user_client.get("/api/learning/next?count=10").json()}
+
+    # Met again in chapter 2: an upcoming word, with chapter 2's sentence.
+    assert (words["lugubrious"]["chapter_index"], words["lugubrious"]["earlier"]) == (2, False)
+    assert words["lugubrious"]["context_sentence"] == "A lugubrious wind blew."
 
 
 def test_skips_words_already_started_learned_or_known(

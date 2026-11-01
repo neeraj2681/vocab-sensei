@@ -19,7 +19,7 @@ from app.db.models import Chapter, Document
 from app.dictionary.types import Dictionary, DictionaryUnavailableError
 from app.extraction.cleanup import strip_gutenberg_boilerplate
 from app.extraction.registry import get_parser
-from app.extraction.types import ParseError
+from app.extraction.types import ParsedDocument, ParseError
 from app.extraction.words import WordExtractor
 from app.repositories.documents import DocumentRepository
 from app.services.words import WordService
@@ -80,8 +80,7 @@ class DocumentService:
         self._session.commit()
 
         try:
-            parsed = get_parser(document.format).parse(self._path(document))
-            parsed = strip_gutenberg_boilerplate(parsed)
+            parsed = self._parse(document)
             if not parsed.chapters:
                 raise ParseError("no readable text left after removing boilerplate")
             words = WordExtractor(self._settings.extraction).extract(parsed.chapters)
@@ -105,6 +104,25 @@ class DocumentService:
         except Exception:
             logger.exception("processing document %s failed", document_id)
             self._fail(document, "Something went wrong while reading this file")
+
+    def reindex_chapters(self, document_id: int) -> bool:
+        """Re-reads a ready book to record every chapter its words appear in (for books processed
+        before that was stored). Its word list and everyone's progress are untouched."""
+        document = self._documents.get(document_id)
+        if document is None or document.status != DocumentStatus.READY:
+            return False
+        try:
+            parsed = self._parse(document)
+        except (ParseError, OSError):
+            logger.exception("couldn't re-read document %s", document_id)
+            return False
+        if len(parsed.chapters) != len(document.chapters):  # the parser changed since; skip it
+            logger.warning("document %s now parses into different chapters", document_id)
+            return False
+        words = WordExtractor(self._settings.extraction).extract(parsed.chapters)
+        WordService(self._session).reindex_chapters(document, words)
+        self._session.commit()
+        return True
 
     def list_for(self, owner_user_id: int) -> list[Document]:
         return self._documents.list_owned(owner_user_id)
@@ -148,6 +166,9 @@ class DocumentService:
         if written == 0:
             path.unlink(missing_ok=True)
             raise UnsupportedFileError("The file is empty")
+
+    def _parse(self, document: Document) -> ParsedDocument:
+        return strip_gutenberg_boilerplate(get_parser(document.format).parse(self._path(document)))
 
     def _path(self, document: Document) -> Path:
         return self._settings.data_dir / document.file_path

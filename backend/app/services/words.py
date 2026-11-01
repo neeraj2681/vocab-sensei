@@ -3,9 +3,9 @@
 from sqlalchemy.orm import Session
 
 from app.core.enums import PartOfSpeech
-from app.db.models import Definition, Document, DocumentWord, Word
+from app.db.models import ChapterWord, Definition, Document, DocumentWord, Word
 from app.dictionary.types import Dictionary
-from app.extraction.words import ExtractedWord
+from app.extraction.words import Appearance, ExtractedWord
 from app.repositories.words import WordRepository
 
 
@@ -50,14 +50,51 @@ class WordService:
                 for w in defined
             ),
         )
+        self.save_chapter_words(document, [(known[w.lemma].id, w) for w in defined])
+
+    def reindex_chapters(self, document: Document, extracted: list[ExtractedWord]) -> None:
+        """Records every chapter the book's existing words appear in; adds no new words."""
+        ids = self._words.word_ids(document.id)
+        self.save_chapter_words(document, [(ids[w.lemma], w) for w in extracted if w.lemma in ids])
+
+    def save_chapter_words(
+        self, document: Document, words: list[tuple[int, ExtractedWord]]
+    ) -> None:
+        """Replaces where each (word id, extracted word) appears chapter by chapter."""
+        chapter_ids = {chapter.index: chapter.id for chapter in document.chapters}
+
+        def row(word_id: int, item: ExtractedWord, appearance: Appearance) -> ChapterWord:
+            return ChapterWord(
+                chapter_id=chapter_ids[appearance.chapter_index],
+                word_id=word_id,
+                document_id=document.id,
+                first_position=appearance.first_position,
+                context_sentence=appearance.context_sentence,
+                context_form=appearance.context_form,
+                pos=item.pos,
+            )
+
+        self._words.replace_chapter_words(
+            document.id,
+            (row(word_id, item, a) for word_id, item in words for a in _appearances(item)),
+        )
 
     def words_for_document(
         self, document: Document, chapter_index: int | None = None
-    ) -> list[tuple[DocumentWord, Word, int]]:
-        """(occurrence, word, chapter index) in reading order."""
+    ) -> list[tuple[DocumentWord, Word, int, str | None]]:
+        """(book row, word, chapter index, sentence) in reading order.
+
+        For one chapter: every word it uses, even ones first seen earlier, with this chapter's
+        sentence. For the whole book: each word once, where it first appears.
+        """
+        if chapter_index is None:
+            return [
+                (dw, w, chapter.index, dw.context_sentence)
+                for dw, w, chapter in self._words.document_words(document.id)
+            ]
         return [
-            (dw, w, chapter.index)
-            for dw, w, chapter in self._words.document_words(document.id, chapter_index)
+            (dw, w, chapter_index, cw.context_sentence)
+            for dw, cw, w in self._words.chapter_words(document.id, chapter_index)
         ]
 
 
@@ -71,3 +108,12 @@ def _definitions(lemma: str, dictionary: Dictionary) -> list[Definition]:
         Definition(pos=s.pos, text=s.definition, source=dictionary.source, sense_rank=s.rank)
         for s in dictionary.senses(lemma)
     ]
+
+
+def _appearances(item: ExtractedWord) -> tuple[Appearance, ...]:
+    """Every chapter a word appears in; just its first appearance if nothing more was recorded."""
+    return item.appearances or (
+        Appearance(
+            item.chapter_index, item.first_position, item.context_sentence, item.context_form
+        ),
+    )

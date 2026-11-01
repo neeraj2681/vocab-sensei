@@ -4,9 +4,9 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from app.core.enums import DocumentFormat, DocumentStatus, PartOfSpeech
-from app.db.models import Chapter, CurrentReading, Document, DocumentWord
-from tests.api.test_quiz import LEMMAS, add_word, reader
+from app.core.enums import DocumentFormat, DocumentStatus
+from app.db.models import Chapter, CurrentReading, Document
+from tests.api.test_quiz import LEMMAS, add_book_word, add_word, reader
 
 # Two chapters: word00-word09 in the first, word10-word19 in the second.
 CHAPTER_OF = {lemma: 0 if i < 10 else 1 for i, lemma in enumerate(LEMMAS)}
@@ -29,16 +29,7 @@ def two_chapter_book(user_client: TestClient, session: Session) -> Document:
     session.flush()
     for position, lemma in enumerate(LEMMAS):
         word = add_word(session, lemma)
-        session.add(
-            DocumentWord(
-                document_id=document.id,
-                word_id=word.id,
-                chapter_id=document.chapters[CHAPTER_OF[lemma]].id,
-                first_position=position,
-                context_sentence=f"A sentence with {lemma}.",
-                pos=PartOfSpeech.NOUN,
-            )
-        )
+        add_book_word(session, document, word, document.chapters[CHAPTER_OF[lemma]], position)
     session.add(CurrentReading(user_id=user.id, document_id=document.id))
     session.commit()
     return document

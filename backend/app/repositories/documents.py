@@ -3,6 +3,7 @@ from collections.abc import Sequence
 from sqlalchemy import ColumnElement, func, or_, select
 from sqlalchemy.orm import Session
 
+from app.core.enums import DocumentStatus
 from app.db.models import Document, DocumentWord
 
 
@@ -44,6 +45,15 @@ class DocumentRepository:
                 select(Document)
                 .where(Document.owner_user_id == owner_user_id)
                 .order_by(Document.uploaded_at.desc(), Document.id.desc())
+            )
+        )
+
+    def ready_ids(self) -> list[int]:
+        return list(
+            self._session.scalars(
+                select(Document.id)
+                .where(Document.status == DocumentStatus.READY)
+                .order_by(Document.id)
             )
         )
 

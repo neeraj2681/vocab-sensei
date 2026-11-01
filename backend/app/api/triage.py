@@ -33,6 +33,7 @@ class UnsortedWordResponse(BaseModel):
     context_sentence: str | None
     chapter_index: int
     chapter_title: str | None
+    earlier: bool  # from a chapter before the one being read
 
 
 class SortBatchResponse(BaseModel):
@@ -59,7 +60,7 @@ def next_to_sort(
     session: Annotated[Session, Depends(get_session)],
     limit: Annotated[int, Query(ge=0, le=100)] = 20,
 ) -> SortBatchResponse:
-    """The book's next unsorted words, starting at the chapter you're reading."""
+    """The book's next unsorted words from the chapter you're reading, 1 in 4 from earlier ones."""
     reading = ReadingService(session).get(user.id, document.id)
     batch = triage.next_batch(user.id, document, reading, limit)
     words = []
@@ -74,6 +75,7 @@ def next_to_sort(
                 context_sentence=item.occurrence.context_sentence,
                 chapter_index=item.chapter.index,
                 chapter_title=item.chapter.title,
+                earlier=item.earlier,
             )
         )
     return SortBatchResponse(

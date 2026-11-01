@@ -21,7 +21,7 @@ const BOOK: BookDocument = {
 }
 const DETAIL: BookDocumentDetail = { ...BOOK, chapters: [{ index: 0, title: 'Loomings' }] }
 
-const card = (id: number, lemma: string): UnsortedWord => ({
+const card = (id: number, lemma: string, earlier = false): UnsortedWord => ({
   word_id: id,
   lemma,
   pos: 'noun',
@@ -29,6 +29,7 @@ const card = (id: number, lemma: string): UnsortedWord => ({
   context_sentence: `A sentence with ${lemma}.`,
   chapter_index: 0,
   chapter_title: 'Loomings',
+  earlier,
 })
 
 const CARDS = [card(11, 'spleen'), card(12, 'purse'), card(13, 'grim')]
@@ -60,6 +61,13 @@ describe('sorting words', () => {
     expect(screen.getByText('meaning of spleen')).toBeInTheDocument()
     expect(screen.getByText('A sentence with spleen.')).toBeInTheDocument()
     expect(screen.getByText('0 sorted · 3 left')).toBeInTheDocument()
+  })
+
+  it('labels cards from chapters before the one being read', async () => {
+    sortApi([{ remaining: 1, from_chapter: 1, words: [card(11, 'spleen', true)] }])
+    renderApp('/books/1/sort')
+
+    expect(await screen.findByText('Earlier · Loomings')).toBeInTheDocument()
   })
 
   it('a click sorts the word and brings the next card', async () => {

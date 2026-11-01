@@ -23,6 +23,7 @@ class LearningWordResponse(BaseModel):
     document_title: str
     chapter_index: int
     chapter_title: str | None
+    earlier: bool  # from a chapter before the one being read
 
 
 @router.get("/next")
@@ -45,6 +46,7 @@ def next_words(
             document_title=item.document.title,
             chapter_index=item.chapter.index,
             chapter_title=item.chapter.title,
+            earlier=item.earlier,
         )
         for item in LearningService(session).next_new_words(user.id, count)
     ]

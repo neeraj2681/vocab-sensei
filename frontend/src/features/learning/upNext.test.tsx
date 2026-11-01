@@ -37,6 +37,7 @@ const word = (lemma: string, definition: string): LearningWord => ({
   document_title: 'Moby-Dick',
   chapter_index: 4,
   chapter_title: 'CHAPTER 1. Loomings.',
+  earlier: false,
 })
 
 function home(readings: Reading[], next: Routes[string]) {

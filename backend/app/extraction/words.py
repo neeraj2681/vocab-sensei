@@ -30,6 +30,16 @@ _CONTENT_POS = {
 
 
 @dataclass(frozen=True)
+class Appearance:
+    """A word's first use in one chapter."""
+
+    chapter_index: int
+    first_position: int  # token offset inside the chapter
+    context_sentence: str
+    context_form: str
+
+
+@dataclass(frozen=True)
 class ExtractedWord:
     lemma: str
     zipf: float
@@ -39,6 +49,7 @@ class ExtractedWord:
     context_sentence: str  # the sentence of the first appearance
     context_form: str  # the word as written in that sentence ("regulating" for "regulate")
     pos: PartOfSpeech  # how the book uses the word most often ("damp": adjective, not noun)
+    appearances: tuple[Appearance, ...] = ()  # every chapter it's used in, in reading order
 
 
 @cache
@@ -62,6 +73,7 @@ class WordExtractor:
     def extract(self, chapters: Sequence[ParsedChapter]) -> list[ExtractedWord]:
         first_seen: dict[str, ExtractedWord] = {}
         uses: dict[str, Counter[PartOfSpeech]] = {}
+        appearances: dict[str, dict[int, Appearance]] = {}
 
         for chapter_index, chapter in enumerate(chapters):
             for position, token in self._tokens(chapter.text):
@@ -70,6 +82,11 @@ class WordExtractor:
                     continue
                 pos = _CONTENT_POS[token.pos_]
                 uses.setdefault(lemma, Counter())[pos] += 1
+                seen_in = appearances.setdefault(lemma, {})
+                if chapter_index not in seen_in:
+                    seen_in[chapter_index] = Appearance(
+                        chapter_index, position, self._context(token), token.text
+                    )
                 if lemma not in first_seen:
                     first_seen[lemma] = ExtractedWord(
                         lemma=lemma,
@@ -77,14 +94,19 @@ class WordExtractor:
                         chapter_index=chapter_index,
                         first_position=position,
                         occurrences=0,
-                        context_sentence=self._context(token),
+                        context_sentence=seen_in[chapter_index].context_sentence,
                         context_form=token.text,
                         pos=pos,
                     )
 
         words = [
             # most_common keeps first-seen order on ties, so a tie goes to the first use
-            replace(w, occurrences=uses[w.lemma].total(), pos=uses[w.lemma].most_common(1)[0][0])
+            replace(
+                w,
+                occurrences=uses[w.lemma].total(),
+                pos=uses[w.lemma].most_common(1)[0][0],
+                appearances=tuple(appearances[w.lemma].values()),  # dicts keep insertion order
+            )
             for w in first_seen.values()
         ]
         return sorted(words, key=lambda w: (w.chapter_index, w.first_position))
