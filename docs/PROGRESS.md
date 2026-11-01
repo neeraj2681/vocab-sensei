@@ -10,16 +10,19 @@ Living log of what's built and where to pick up. Update it at the end of every s
 
 ## ▶ Start here next session
 
-**The user is testing the app for a few days** (from 31 Oct 2026). Ask how testing went and fix what they found
-before starting anything new. The friends' stack runs in Docker on the user's Mac (Colima, starts at login) with
-real email (Gmail SMTP), daily database backups and 8 built-in classics; it is reachable through a Cloudflare
-**Tailscale Funnel** at a fixed address, https://neerajs-macbook-air.tail8cd657.ts.net (see
-[../deploy/README.md](../deploy/README.md)).
+**Friends are testing the redesigned app** (since 1 Nov 2026). Ask what they found and fix it before new work.
+The stack runs in Docker on the user's Mac (Colima, starts at login) with real email (Gmail SMTP), daily
+database backups and 8 built-in classics, at the fixed **Tailscale Funnel** address
+https://neerajs-macbook-air.tail8cd657.ts.net (see [../deploy/README.md](../deploy/README.md)).
 
 Open items:
-- **Mac must stay awake** while friends use it (user step: Battery → Options → prevent automatic sleeping).
-- **Next work after testing** (ask): Phase 2 leftovers (difficulty setting per user, FSRS option, OCR for scanned
-  PDFs), Phase 4 (recommendations, ready-made lists), Phase 5 (LLM-generated questions with a local model).
+- **Mac must stay awake** while friends use it (Battery → Options → prevent automatic sleeping).
+- **Old saved address:** anyone who saved the earlier `trycloudflare.com` link gets "Could not reach the server";
+  they must open the ts.net address and re-add the home-screen icon.
+- After a deploy, phones may show the previous version until reloaded once or twice (PWA cache). A "new version,
+  tap to reload" prompt was offered but not built.
+- **Next work** (ask): Phase 2 leftovers (difficulty setting, FSRS option, OCR for scanned PDFs), a way to move a
+  "known" word back to learning, Phase 4 (recommendations), Phase 5 (LLM questions with a local model).
 
 **First steps in the session:**
 
@@ -87,7 +90,25 @@ Required CI checks on `main`: Pre-commit, Backend, Frontend, Backend on PostgreS
 | #40, #41 | 8 built-in Gutenberg classics (no owner, readable by all, seeded on start); new users start on Pride and Prejudice; Classics shelf |
 | #42 | Daily database backup (pg_dump, 7 days) in `deploy/backups/`, restore steps in the deploy guide |
 
-**Tests:** backend 331 (99% coverage, also run on PostgreSQL), frontend 87. CI: 5 required jobs.
+| #45 | Legacy time-zone names (tzdata) and UTC fallback; a failed answer keeps the question |
+| #46, #47, #55 | Uploads: WordNet usable from worker threads; fontTools for PDF fonts; NUL characters stripped |
+| #48 | Your words: every answered word with a progress ring (green for the part done) |
+| #49, #50 | Login page "How it works" intro; tagline shown on phones |
+| #51 | Speaker button (Web Speech API) beside words; device's English, device's default voice |
+| #52 | Words in progress pause while none of the current reads uses them; learned words still come back for review |
+| #53 | Per-user daily goal (default 20 ≈ 5 min); raising it never breaks an earned streak |
+| #54 | `chapter_words`: every chapter a word appears in; earlier chapters at 1 in 4; chapters cover all their words; `reindex_chapters` command |
+
+### Redesign (1 Nov 2026, from an approved clickable preview)
+| PR | What |
+|----|------|
+| #56 | Green light/dark themes + sepia option; Fredoka/Figtree (OFL, self-hosted); chunky buttons; Fluent Emoji 3D icons (MIT, `public/icons`) |
+| #57 | Bottom tabs (Today · Books · Words · Me); Today home with goal ring, Continue, current book, week |
+| #58 | Sessions of 10 with progress bar, sliding feedback panel, vibration, confetti, summary + milestones |
+| #59 | Book page chapter path (readiness rings); word cards with the book sentence |
+| #60 | First-run tour for new accounts with a daily goal choice up to 100 (`users.onboarded_at`) |
+
+**Tests:** backend 353 (99% coverage, also run on PostgreSQL), frontend 112. CI: 5 required jobs.
 
 ### What works end to end today
 Sign up → verify → upload an EPUB / PDF / TXT → book ready in ~20 s with chapters and ~6,700 defined words →
@@ -119,7 +140,7 @@ start reading, set the chapter → optionally sort words → Quiz (endless, live
 | Backup | JSON with progress only (no book files); restore merges |
 | Hosting | The user's Mac: Docker via Colima (starts at login), Caddy, Tailscale Funnel at a fixed *.ts.net address (Cloudflare tunnel profiles kept as alternatives); real email via Gmail SMTP app password |
 | Reminders | Push (per device) or email, at a chosen local time, only if the daily goal isn't met; at most once a day |
-| Look | Sepia light theme + warm dark theme, serif reading text, sans-serif controls |
+| Look | Green light/dark themes with sepia as a third choice; rounded fonts; 3D icons; bottom tabs on phones |
 | Classics | Alice, Sherlock Holmes, Pride and Prejudice, Frankenstein, Dorian Gray, Dracula, Jane Eyre, Moby-Dick; new users auto-start Pride and Prejudice |
 | Backups | Nightly pg_dump kept 7 days (deploy/backups); users can also download their own progress |
 | Rate limits | Per client address, in memory (single API process): login 10/min + 50/h, emails 5/h |
@@ -134,7 +155,9 @@ start reading, set the chapter → optionally sort words → Quiz (endless, live
 - Tests print a Starlette deprecation warning (`httpx` → `httpx2`); installing `httpx2` was blocked in-session.
 - Many words per chapter (Loomings: 188). Sorting helps; a stricter Zipf threshold (≈3.5) is worth trying.
 - Within a part of speech, WordNet's first sense isn't always the book's (*spleen*: organ vs anger) → LLM phase.
-- The CSS is one global `index.css`; fine for now, revisit if the UI grows.
+- The CSS is one global `index.css` (≈1,900 lines after the redesign); worth splitting per feature.
+- Headless Chrome on the Mac stopped writing screenshots; visual checks use Playwright's Chromium in the
+  job's scratch folder (delete `~/Library/Caches/ms-playwright` afterwards: disk space is tight).
 
 ---
 
