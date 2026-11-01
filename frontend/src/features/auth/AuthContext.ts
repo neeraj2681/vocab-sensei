@@ -7,6 +7,7 @@ export interface AuthState {
   login: (email: string, password: string) => Promise<void>
   logout: () => Promise<void>
   deleteAccount: (password: string) => Promise<void>
+  finishOnboarding: () => Promise<void>
 }
 
 export const AuthContext = createContext<AuthState | null>(null)

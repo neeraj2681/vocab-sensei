@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router'
+import { Link, Navigate } from 'react-router'
 import { quizApi, type HistoryPoint, type QuizStats } from '../../api/quiz'
 import { readingsApi, type Reading } from '../../api/readings'
 import { GoalRing } from '../../components/GoalRing'
@@ -36,6 +36,7 @@ export function TodayPage() {
     }
   }, [])
 
+  if (user?.onboarded_at === null) return <Navigate to="/welcome" replace />
   if (error) {
     return (
       <p role="alert" className="form-error">
