@@ -28,7 +28,13 @@ def reindex(session_factory: Callable[[], Session], settings: Settings) -> tuple
     for document_id in ids:
         with session_factory() as session:
             service = DocumentService(session, settings, get_dictionary(settings))
-            if service.reindex_chapters(document_id):
+            try:
+                done = service.reindex_chapters(document_id)
+            except Exception:  # one bad book mustn't stop the others
+                logger.exception("document %s: couldn't record chapters", document_id)
+                session.rollback()
+                continue
+            if done:
                 updated += 1
                 logger.info("document %s: chapters recorded", document_id)
     return updated, len(ids) - updated

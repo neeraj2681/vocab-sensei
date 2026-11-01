@@ -11,6 +11,8 @@ from app.api.deps import get_dictionary
 from app.commands import reindex_chapters
 from app.core.config import Settings
 from app.dictionary.types import DictionaryUnavailableError, Sense
+from app.extraction.types import ParsedChapter, ParsedDocument
+from app.services import documents as documents_service
 from tests.conftest import FakeDictionary, log_in, make_user
 from tests.extraction.epub_builder import Chapter, EpubSpec, build_epub
 from tests.extraction.pdf_builder import build_pdf
@@ -126,6 +128,33 @@ def test_txt_books_are_read_too(user_client: TestClient) -> None:
     assert detail["status"] == "ready"
     assert [c["title"] for c in detail["chapters"]] == ["CHAPTER 1.", "CHAPTER 2."]
     assert detail["word_count"] > 0
+
+
+def test_nul_characters_in_a_later_chapter_do_not_break_processing(
+    user_client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Some PDFs extract with NUL characters; PostgreSQL refuses them in text columns.
+    class NulPdfParser:
+        def parse(self, path: Path) -> ParsedDocument:
+            return ParsedDocument(
+                title="Credit\x00 Risk",
+                author=None,
+                chapters=[
+                    ParsedChapter("One", TEXT + " " + RARE[0]),
+                    ParsedChapter("Two\x00", TEXT + " All rights rese\x00rved; a lugubrious end."),
+                ],
+            )
+
+    monkeypatch.setattr(documents_service, "get_parser", lambda _format: NulPdfParser())
+    created = upload(user_client, b"%PDF-1.4", "book.pdf")
+
+    detail = user_client.get(f"/api/documents/{created['id']}").json()
+
+    assert detail["status"] == "ready", detail.get("error")
+    assert detail["title"] == "Credit Risk"
+    chapter_two = user_client.get(f"/api/documents/{created['id']}/words?chapter=1").json()
+    lugubrious = next(w for w in chapter_two if w["lemma"] == "lugubrious")
+    assert "\x00" not in lugubrious["context_sentence"]
 
 
 def test_pdf_books_are_read_too(user_client: TestClient, tmp_path: Path) -> None:
@@ -367,3 +396,24 @@ def test_reindexing_records_later_chapters_of_books_processed_before(
 
     assert "lugubrious" in [w["lemma"] for w in user_client.get(url).json()]
     assert reindex_chapters.reindex(session_factory, settings) == (1, 0)  # safe to run again
+
+
+def test_reindexing_carries_on_past_a_book_that_fails(
+    user_client: TestClient,
+    tmp_path: Path,
+    session_factory: sessionmaker[Session],
+    settings: Settings,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    first = upload(user_client, epub_bytes(tmp_path), "one.epub")
+    upload(user_client, epub_bytes(tmp_path), "two.epub")
+    real = documents_service.DocumentService.reindex_chapters
+
+    def flaky(self: documents_service.DocumentService, document_id: int) -> bool:
+        if document_id == first["id"]:
+            raise RuntimeError("bad book")
+        return real(self, document_id)
+
+    monkeypatch.setattr(documents_service.DocumentService, "reindex_chapters", flaky)
+
+    assert reindex_chapters.reindex(session_factory, settings) == (1, 1)

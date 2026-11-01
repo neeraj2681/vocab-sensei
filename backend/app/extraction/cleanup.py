@@ -13,6 +13,21 @@ _GUTENBERG_START = re.compile(
 _GUTENBERG_END = re.compile(r"\*{3} ?END OF (?:THE|THIS) PROJECT GUTENBERG EBOOK", re.I)
 
 
+def remove_nul_characters(document: ParsedDocument) -> ParsedDocument:
+    """Drops NUL characters, which some PDFs contain and PostgreSQL can't store in text."""
+    return replace(
+        document,
+        title=document.title.replace("\x00", "") if document.title else document.title,
+        chapters=[
+            ParsedChapter(
+                title=c.title.replace("\x00", "") if c.title else c.title,
+                text=c.text.replace("\x00", ""),
+            )
+            for c in document.chapters
+        ],
+    )
+
+
 def strip_gutenberg_boilerplate(document: ParsedDocument) -> ParsedDocument:
     chapters = list(document.chapters)
 

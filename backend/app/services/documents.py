@@ -17,7 +17,7 @@ from app.core.config import Settings
 from app.core.enums import DocumentFormat, DocumentStatus
 from app.db.models import Chapter, Document
 from app.dictionary.types import Dictionary, DictionaryUnavailableError
-from app.extraction.cleanup import strip_gutenberg_boilerplate
+from app.extraction.cleanup import remove_nul_characters, strip_gutenberg_boilerplate
 from app.extraction.registry import get_parser
 from app.extraction.types import ParsedDocument, ParseError
 from app.extraction.words import WordExtractor
@@ -168,7 +168,8 @@ class DocumentService:
             raise UnsupportedFileError("The file is empty")
 
     def _parse(self, document: Document) -> ParsedDocument:
-        return strip_gutenberg_boilerplate(get_parser(document.format).parse(self._path(document)))
+        parsed = get_parser(document.format).parse(self._path(document))
+        return strip_gutenberg_boilerplate(remove_nul_characters(parsed))
 
     def _path(self, document: Document) -> Path:
         return self._settings.data_dir / document.file_path
