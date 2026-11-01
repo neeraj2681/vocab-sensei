@@ -112,10 +112,18 @@ class HistoryPoint:
 
 
 @dataclass(frozen=True)
+class _InBook:
+    meaning: str | None
+    book: str | None
+    sentence: str | None
+
+
+@dataclass(frozen=True)
 class PractisedWord:
     lemma: str
     book: str | None  # the book the quiz takes the word from
     meaning: str | None  # in that book's sense
+    sentence: str | None  # where the book uses it
     progress: int  # 0-100: how far the word's score is towards "learned"
     learned: bool
 
@@ -375,12 +383,16 @@ class QuizService:
         word = self._repo.word(word_id)
         if word is None:
             return "", None
-        return word.lemma, self._meaning_and_book(user_id, word)[0]
+        return word.lemma, self._in_book(user_id, word).meaning
 
-    def _meaning_and_book(self, user_id: int, word: Word) -> tuple[str | None, str | None]:
+    def _in_book(self, user_id: int, word: Word) -> _InBook:
         found = self._repo.occurrence(user_id, word.id)
         definitions = definitions_in_context(word, found[0].pos if found else None)
-        return (definitions[0].text if definitions else None), (found[1].title if found else None)
+        return _InBook(
+            meaning=definitions[0].text if definitions else None,
+            book=found[1].title if found else None,
+            sentence=found[0].context_sentence if found else None,
+        )
 
     def know(self, user_id: int, question_id: int, now: datetime) -> None:
         """The "I know this" button: the word is never asked again; a new question replaces it."""
@@ -445,13 +457,14 @@ class QuizService:
         words = []
         for user_word, word in self._repo.practised_words(user_id):
             progress = _progress(user_word)
-            meaning, book = self._meaning_and_book(user_id, word)
+            in_book = self._in_book(user_id, word)
             score = effective_score(progress, now, rules)
             words.append(
                 PractisedWord(
                     lemma=word.lemma,
-                    book=book,
-                    meaning=meaning,
+                    book=in_book.book,
+                    meaning=in_book.meaning,
+                    sentence=in_book.sentence,
                     progress=min(100, score * 100 // rules.learned_threshold),
                     learned=current_status(progress, now, rules) is WordStatus.LEARNED,
                 )

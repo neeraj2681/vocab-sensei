@@ -12,6 +12,7 @@ import { FormError } from '../../components/Form'
 import { useSubmit } from '../../components/useSubmit'
 import { SortLink } from '../sorting/SortLink'
 import { bookSummary, chapterLabel } from './labels'
+import { ChapterPath } from './ChapterPath'
 import { ReadinessBar } from './ReadinessBar'
 import { SpeakButton } from '../../components/SpeakButton'
 
@@ -113,6 +114,14 @@ export function BookPage() {
         <p>{bookSummary(detail)}</p>
       ) : (
         <>
+          {readiness && (
+            <ChapterPath
+              chapters={readiness}
+              current={reading?.current_chapter_index ?? null}
+              selected={chapter}
+              onSelect={setChosenChapter}
+            />
+          )}
           <div className="toolbar">
             <label htmlFor="chapter">Chapter</label>
             <select
@@ -128,7 +137,11 @@ export function BookPage() {
                 </option>
               ))}
             </select>
-            {shown && <span className="muted">{shown.length.toLocaleString()} words</span>}
+            {shown && (
+              <span className="muted">
+                {shown.length.toLocaleString()} {shown.length === 1 ? 'word' : 'words'}
+              </span>
+            )}
             {reading &&
               (reading.current_chapter_index === chapter ? (
                 <span className="muted">You’re on this chapter</span>
@@ -171,7 +184,7 @@ export function BookPage() {
 function BackLink() {
   return (
     <p>
-      <Link to="/">← My books</Link>
+      <Link to="/books">← Books</Link>
     </p>
   )
 }
