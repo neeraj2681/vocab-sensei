@@ -47,7 +47,7 @@ describe('classics shelf', () => {
   it('lists the built-in books with author and word count', async () => {
     home([])
 
-    renderApp('/')
+    renderApp('/books')
 
     const shelf = await screen.findByRole('region', { name: 'Classics' })
     expect(within(shelf).getByRole('link', { name: 'Pride and Prejudice' })).toHaveAttribute(
@@ -60,7 +60,7 @@ describe('classics shelf', () => {
 
   it('starts reading a classic', async () => {
     const api = home([], { 'POST /api/readings': () => json(reading(ALICE), 201) })
-    const user = renderApp('/')
+    const user = renderApp('/books')
 
     await user.click(
       await screen.findByRole('button', { name: "Start reading Alice's Adventures in Wonderland" }),
@@ -74,7 +74,7 @@ describe('classics shelf', () => {
   it('marks the classic you are already reading', async () => {
     home([reading(PRIDE)])
 
-    renderApp('/')
+    renderApp('/books')
 
     const shelf = await screen.findByRole('region', { name: 'Classics' })
     expect(
@@ -86,7 +86,7 @@ describe('classics shelf', () => {
   it('is hidden when there are no classics', async () => {
     home([], { 'GET /api/documents/classics': () => json([]) })
 
-    renderApp('/')
+    renderApp('/books')
 
     expect(await screen.findByRole('region', { name: 'My books' })).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'Classics' })).not.toBeInTheDocument()

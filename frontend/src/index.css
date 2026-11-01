@@ -97,7 +97,6 @@ select,
 label,
 legend,
 summary,
-.app__nav,
 .scorebar,
 .tile dt,
 .muted,
@@ -132,7 +131,7 @@ h3 {
   font-weight: 600;
 }
 
-/* Top-right corner: theme toggle and profile menu. */
+/* Top-right corner: the theme toggle. */
 .app__corner {
   position: absolute;
   top: 0;
@@ -383,17 +382,6 @@ button {
 
 .up-next li {
   margin: 0.25rem 0;
-}
-
-.app__nav {
-  display: flex;
-  gap: 1rem;
-  margin-bottom: 0.5rem;
-}
-
-.app__nav a.active {
-  font-weight: 600;
-  text-decoration: none;
 }
 
 /* Quiz */
@@ -694,34 +682,6 @@ button {
   position: relative;
 }
 
-.profile {
-  position: relative;
-}
-
-.profile summary {
-  cursor: pointer;
-  color: var(--accent);
-}
-
-.profile__menu {
-  position: absolute;
-  right: 0;
-  z-index: 10;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.5rem;
-  min-width: 12rem;
-  padding: 0.75rem 1rem;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface);
-}
-
-.profile__menu p {
-  margin: 0;
-}
-
 /* Progress */
 
 .tiles {
@@ -984,16 +944,329 @@ button[type='submit'].danger__confirm {
   font-style: italic;
 }
 
+/* Main navigation: a row in the header; a bar along the bottom on phones (see Phones). */
+
+.tabs {
+  display: flex;
+  gap: 0.25rem;
+  margin-top: 0.75rem;
+}
+
+.tabs__tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 12px;
+  color: var(--muted);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.tabs__tab .icon {
+  filter: grayscale(0.85) opacity(0.75);
+  transition:
+    filter 0.15s,
+    transform 0.15s;
+}
+
+.tabs__tab.active {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.tabs__tab.active .icon {
+  filter: none;
+  transform: scale(1.06);
+}
+
+/* Shared pieces */
+
+.card {
+  display: block;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--surface);
+  color: inherit;
+  text-decoration: none;
+}
+
+.button-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+a.primary {
+  padding: 0.75rem 1.25rem;
+  border-radius: 14px;
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: 0 4px 0 var(--accent-deep);
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 1.1rem;
+  letter-spacing: 0.02em;
+}
+
+a.primary:active {
+  transform: translateY(4px);
+  box-shadow: 0 0 0 var(--accent-deep);
+}
+
+.stat-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.75rem 0.25rem 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.bar {
+  display: block;
+  height: 10px;
+  margin-top: 0.5rem;
+  border-radius: 999px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+
+.bar > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+}
+
+.goal-ring {
+  position: relative;
+  flex: none;
+  width: 6.5rem;
+  height: 6.5rem;
+}
+
+.goal-ring svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.goal-ring circle {
+  fill: none;
+  stroke-width: 10;
+}
+
+.goal-ring__track {
+  stroke: var(--surface-2);
+}
+
+.goal-ring__done {
+  stroke: var(--accent);
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.6s ease;
+}
+
+.goal-ring__label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  padding-top: 2.1rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.goal-ring__label b {
+  color: var(--fg);
+  font-family: var(--display);
+  font-size: 1.5rem;
+}
+
+.card > h3:first-child {
+  margin-top: 0;
+}
+
+/* Today */
+
+.today {
+  display: grid;
+  gap: 1rem;
+  max-width: 34rem;
+}
+
+.today__pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.today__hero {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.today__hero h2 {
+  margin: 0 0 0.25rem;
+}
+
+.today__go {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 3.25rem;
+}
+
+.today__book {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.today__book > span {
+  display: grid;
+  min-width: 0;
+}
+
+.today__label {
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+.week {
+  display: flex;
+  justify-content: space-between;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.week__day {
+  display: grid;
+  justify-items: center;
+  gap: 0.25rem;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.week__dot {
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  background: var(--surface-2);
+}
+
+.week__day--met .week__dot {
+  background: var(--flame);
+}
+
+.week__day--today {
+  color: var(--fg);
+  font-weight: 700;
+}
+
+/* Me */
+
+.me {
+  display: grid;
+  gap: 1rem;
+  max-width: 34rem;
+}
+
+.me > h2,
+.me > p {
+  margin: 0;
+}
+
+.me__links {
+  display: grid;
+  padding: 0.25rem 1rem;
+}
+
+.me__links a {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.me__links a + a {
+  border-top: 1px solid var(--border);
+}
+
+.me__themes {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+}
+
+.me__themes button {
+  padding: 0.6rem 0.25rem;
+  border: 2px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: 0 3px 0 var(--border);
+  color: var(--fg);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.me__themes button[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  box-shadow: 0 3px 0 var(--accent);
+}
+
+.me .link-button {
+  justify-self: start;
+}
+
 /* Phones */
 
 @media (max-width: 640px) {
+  .tabs {
+    position: fixed;
+    inset: auto 0 0;
+    z-index: 10;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    margin: 0;
+    padding: 0.35rem max(0.5rem, env(safe-area-inset-right))
+      calc(0.35rem + env(safe-area-inset-bottom)) max(0.5rem, env(safe-area-inset-left));
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+  }
+
+  .tabs__tab {
+    flex-direction: column;
+    gap: 0.1rem;
+    padding: 0.3rem 0;
+    font-size: 0.75rem;
+  }
+
+  .app__main {
+    padding-bottom: 4.5rem; /* room above the tab bar */
+  }
+
   .app {
     padding: 1rem 0.75rem calc(1.5rem + env(safe-area-inset-bottom));
   }
 
   .app__header h1 {
     font-size: 1.4rem;
-    margin: 0 6rem 0.25rem 0; /* room for the profile menu */
+    margin: 0 3.5rem 0.25rem 0; /* room for the theme toggle */
   }
 
   .app__tagline {
@@ -1001,17 +1274,10 @@ button[type='submit'].danger__confirm {
     font-size: 0.95rem;
   }
 
-  .app__nav {
-    gap: 1.5rem;
-    font-size: 1.05rem;
-  }
-
   /* Comfortable tap targets (about 44px, as Apple and Google recommend). */
   button,
   .option,
-  .sort__choice,
-  .app__nav a,
-  .profile summary {
+  .sort__choice {
     min-height: 44px;
   }
 
@@ -1024,12 +1290,6 @@ button[type='submit'].danger__confirm {
   .word-list .speak {
     width: 44px;
     height: 44px;
-  }
-
-  .app__nav a,
-  .profile summary {
-    display: inline-flex;
-    align-items: center;
   }
 
   /* iOS zooms into form fields smaller than 16px. */

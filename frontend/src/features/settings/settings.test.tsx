@@ -131,16 +131,16 @@ describe('daily reminder settings', () => {
     expect(await screen.findByRole('status')).toHaveTextContent('Sent!')
   })
 
-  it('is in the profile menu', async () => {
+  it('is reached from the Me tab', async () => {
     settingsPage(SETTINGS, {
-      'GET /api/documents': () => json([]),
+      'GET /api/quiz/history': () => json([]),
       'GET /api/readings': () => json([]),
       'GET /api/health': () => json({ status: 'ok', database: 'ok' }),
     })
     const user = renderApp('/')
 
-    await user.click(await screen.findByText('Reader'))
-    await user.click(screen.getByRole('link', { name: 'Settings' }))
+    await user.click(await screen.findByRole('link', { name: 'Me' }))
+    await user.click(await screen.findByRole('link', { name: /Settings/ }))
 
     expect(await screen.findByRole('heading', { name: 'Settings' })).toBeInTheDocument()
   })

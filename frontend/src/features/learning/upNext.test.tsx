@@ -54,7 +54,7 @@ describe('up next', () => {
   it('previews the next words to learn with their meaning and book', async () => {
     home([READING], () => json([word('damp', 'slightly wet'), word('grim', 'harshly uninviting')]))
 
-    renderApp('/')
+    renderApp('/books')
 
     const upNext = await screen.findByRole('region', { name: 'Up next' })
     const items = await within(upNext).findAllByRole('listitem')
@@ -71,7 +71,7 @@ describe('up next', () => {
   it('is hidden when nothing is being read', async () => {
     const api = home([], () => json([]))
 
-    renderApp('/')
+    renderApp('/books')
 
     expect(await screen.findByRole('region', { name: 'My books' })).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'Up next' })).not.toBeInTheDocument()
@@ -81,7 +81,7 @@ describe('up next', () => {
   it('explains an empty list', async () => {
     home([READING], () => json([]))
 
-    renderApp('/')
+    renderApp('/books')
 
     expect(await screen.findByText(/started every word from your current chapters/)).toBeVisible()
   })
@@ -89,7 +89,7 @@ describe('up next', () => {
   it('reports a failure', async () => {
     home([READING], () => fail(500, 'boom'))
 
-    renderApp('/')
+    renderApp('/books')
 
     await waitFor(() => {
       expect(screen.getByRole('alert')).toHaveTextContent("Couldn't load your next words")

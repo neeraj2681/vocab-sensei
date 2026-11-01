@@ -90,7 +90,7 @@ describe('chapter primer', () => {
       'GET /api/learning/next?count=10': () => json([]),
     })
 
-    renderApp('/')
+    renderApp('/books')
 
     const current = await screen.findByRole('region', { name: 'Currently reading' })
     expect(current).toHaveTextContent('CHAPTER 1. Loomings. · 61% ready')

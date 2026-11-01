@@ -29,6 +29,13 @@ export function WordsPanel() {
 
   if (error) return <p className="muted">Couldn&apos;t load your words.</p>
   if (!words) return null
+  if (words.length === 0) {
+    return (
+      <p className="muted">
+        No words yet. Answer a few questions and they appear here with their progress.
+      </p>
+    )
+  }
 
   const learned = words.filter((w) => w.learned)
   const learning = words.filter((w) => !w.learned)
@@ -40,7 +47,6 @@ export function WordsPanel() {
 
   return (
     <div className="panel">
-      <h3>Your words</h3>
       <div className="word-tools">
         <div className="word-tabs" role="group" aria-label="Show">
           <TabButton tab="learned" shown={shownTab} count={learned.length} onPick={setTab} />
