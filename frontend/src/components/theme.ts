@@ -1,11 +1,12 @@
-export type Theme = 'light' | 'dark'
+export type Theme = 'light' | 'dark' | 'sepia'
 
 export const THEME_STORAGE_KEY = 'vs-theme'
+export const THEMES: readonly Theme[] = ['light', 'dark', 'sepia']
 
-/** The theme on screen: the user's choice if they made one, otherwise the system's. */
+/** The theme on screen: the user's choice if they made one, otherwise the system's light or dark. */
 export function currentTheme(): Theme {
   const chosen = document.documentElement.dataset.theme
-  if (chosen === 'light' || chosen === 'dark') return chosen
+  if (THEMES.includes(chosen as Theme)) return chosen as Theme
   const prefersDark =
     typeof window.matchMedia === 'function' &&
     window.matchMedia('(prefers-color-scheme: dark)').matches

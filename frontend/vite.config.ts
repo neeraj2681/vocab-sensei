@@ -15,12 +15,16 @@ export default defineConfig({
       srcDir: 'src',
       filename: 'sw.ts',
       includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
+      injectManifest: {
+        // The app, its Latin fonts and the 3D icons work offline.
+        globPatterns: ['**/*.{js,css,html}', 'assets/*-latin-[0-9]*-normal-*.woff2', 'icons/*.png'],
+      },
       manifest: {
         name: 'Vocab Sensei',
         short_name: 'Vocab Sensei',
         description: 'Learn the words of your next read before you read them.',
-        theme_color: '#8a4b1f',
-        background_color: '#f4ecd8',
+        theme_color: '#2f9e58',
+        background_color: '#f3f8f2',
         display: 'standalone',
         start_url: '/',
         icons: [
