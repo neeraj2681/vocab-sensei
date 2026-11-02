@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 import type { Reading } from '../../api/readings'
 import { fakeApi, json, type Routes } from '../../test/fakeApi'
@@ -30,6 +30,20 @@ function today(readings: Reading[] = [READING], extra: Routes = {}) {
     'GET /api/quiz/stats?tz=UTC': () => json({ total: 270, today: 12, daily_goal: 20, streak: 2 }),
     'GET /api/quiz/history': () => json([]),
     'GET /api/readings': () => json(readings),
+    'GET /api/learning/next?count=10': () =>
+      json([
+        {
+          lemma: 'ebullient',
+          pos: 'adjective',
+          definitions: [{ pos: 'adjective', text: 'cheerful and full of energy' }],
+          context_sentence: null,
+          document_id: 10,
+          document_title: 'Digital Minimalism',
+          chapter_index: 4,
+          chapter_title: "Don't Click Like",
+          earlier: false,
+        },
+      ]),
     ...extra,
   })
 }
@@ -60,6 +74,14 @@ describe('today', () => {
     const book = await screen.findByRole('link', { name: /Digital Minimalism/ })
     expect(book).toHaveAttribute('href', '/books/10')
     expect(book).toHaveTextContent("Don't Click Like · 68% ready")
+  })
+
+  it('lists the next words to learn', async () => {
+    today()
+    renderApp('/')
+
+    const upNext = await screen.findByRole('region', { name: 'Up next' })
+    expect(await within(upNext).findByText('ebullient')).toBeInTheDocument()
   })
 
   it('suggests picking a book when nothing is being read', async () => {

@@ -3,6 +3,7 @@ import { readingsApi, type Reading } from '../../api/readings'
 import { FormError } from '../../components/Form'
 import { useSubmit } from '../../components/useSubmit'
 import { chapterLabel } from './labels'
+import { BookCover } from './BookCover'
 
 interface Props {
   readings: Reading[]
@@ -39,15 +40,24 @@ export function CurrentReadings({ readings, onChange }: Props) {
           {readings.map((reading, i) => {
             const { id, title } = reading.document
             return (
-              <li key={id} className="row">
-                <span>
-                  <Link to={`/books/${String(id)}`}>{title}</Link>
+              <li key={id} className="reading-row">
+                <Link to={`/books/${String(id)}`} className="thumb" tabIndex={-1}>
+                  <BookCover book={reading.document} />
+                </Link>
+                <span className="reading-row__text">
+                  <Link to={`/books/${String(id)}`} className="reading-row__title">
+                    {title}
+                  </Link>
                   <span className="muted">
-                    {' · '}
                     {chapterLabel(reading.current_chapter_index, reading.current_chapter_title)}
                     {reading.current_chapter_readiness != null &&
                       ` · ${String(reading.current_chapter_readiness)}% ready`}
                   </span>
+                  {reading.current_chapter_readiness != null && (
+                    <span className="bar" aria-hidden="true">
+                      <span style={{ width: `${String(reading.current_chapter_readiness)}%` }} />
+                    </span>
+                  )}
                 </span>
                 <span className="row__actions">
                   <Link to={`/books/${String(id)}/sort`} aria-label={`Sort the words of ${title}`}>

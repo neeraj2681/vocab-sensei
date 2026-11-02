@@ -5,6 +5,8 @@ import { readingsApi, type Reading } from '../../api/readings'
 import { GoalRing } from '../../components/GoalRing'
 import { Icon } from '../../components/Icon'
 import { useAuth } from '../auth/AuthContext'
+import { UpNext } from '../learning/UpNext'
+import { BookCover } from '../library/BookCover'
 import { chapterLabel } from '../library/labels'
 
 const SECONDS_PER_ANSWER = 15 // measured from real sessions
@@ -93,7 +95,9 @@ export function TodayPage() {
               className="card today__book"
               to={`/books/${String(reading.document.id)}`}
             >
-              <Icon name="open_book" size={48} />
+              <span className="thumb">
+                <BookCover book={reading.document} />
+              </span>
               <span>
                 <span className="muted today__label">Reading now</span>
                 <strong>{reading.document.title}</strong>
@@ -112,6 +116,7 @@ export function TodayPage() {
           ))
         )}
 
+        {readings.length > 0 && <UpNext readings={readings} />}
         {stats.week && (
           <div className="card">
             <p className="muted today__label">This week</p>

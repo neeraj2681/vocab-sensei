@@ -20,8 +20,10 @@ export function LibraryPage() {
       )}
       {library && (
         <>
-          <CurrentReadings readings={library.readings} onChange={refresh} />
-          <UpNext readings={library.readings} />
+          <div className="library__top">
+            <CurrentReadings readings={library.readings} onChange={refresh} />
+            <UpNext readings={library.readings} />
+          </div>
           <Classics readings={library.readings} onChange={refresh} />
           <MyBooks books={library.books} readings={library.readings} onChange={refresh} />
         </>
