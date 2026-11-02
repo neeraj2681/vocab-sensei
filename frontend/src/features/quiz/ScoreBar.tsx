@@ -24,7 +24,9 @@ export function ScoreBar({ stats, pop, recent }: Props) {
   return (
     <div className="scorebar">
       <div className="scorebar__score">
-        <span className="scorebar__label">Score</span>
+        <span className="scorebar__label">
+          <Icon name="coin" size={20} /> Coins
+        </span>
         <span
           key={pop?.id}
           className={`scorebar__total ${pop ? `scorebar__total--${pop.correct ? 'up' : 'down'}` : ''}`}

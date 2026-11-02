@@ -36,7 +36,7 @@ export function UpNext({ readings }: { readings: Reading[] }) {
   if (!readingsKey) return null
 
   return (
-    <section aria-labelledby="up-next-heading" className="panel">
+    <section aria-labelledby="up-next-heading" className="panel up-next-panel">
       <h3 id="up-next-heading">Up next</h3>
       {error && (
         <p role="alert" className="form-error">

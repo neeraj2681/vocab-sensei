@@ -1,6 +1,6 @@
 #!/bin/sh
 # Keeps the friends' site reachable: starts Docker (Colima) and the stack, Tailscale and Funnel
-# again if any of them is down. launchd runs it every 5 minutes (see deploy/README.md).
+# again if any of them is down. launchd runs it every 30 minutes (see deploy/README.md).
 set -u
 PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin
 cd "$(dirname "$0")/.." || exit 1 # deploy/, where compose.yaml and .env live

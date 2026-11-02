@@ -54,7 +54,7 @@ address and run `docker compose up -d --force-recreate api` so email links use i
 `tailscale funnel --https=443 off`.
 
 **Keep it up.** If the Mac sleeps or Tailscale is quit, the public address goes down even though
-the app keeps running. A small watchdog checks every 5 minutes and starts whatever stopped
+the app keeps running. A small watchdog checks every 30 minutes and starts whatever stopped
 (Docker/Colima, the stack, Tailscale, Funnel), logging what it did:
 
 ```bash

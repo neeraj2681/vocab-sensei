@@ -514,7 +514,7 @@ function SessionSummary({
       </p>
       <dl className="summary__stats">
         <div>
-          <dt>Points</dt>
+          <dt>Coins</dt>
           <dd>{points}</dd>
         </div>
         <div>
