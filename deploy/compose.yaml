@@ -29,6 +29,10 @@ services:
       VOCAB_DATA_DIR: /data
       VOCAB_AUTH__COOKIE_SECURE: "true" # the public URL is HTTPS (Cloudflare)
       VOCAB_RATE_LIMIT__TRUST_PROXY: "true" # visitors' addresses come from CF-Connecting-IP
+      # Raised for now: behind Tailscale Funnel visitors may share one address, so per-visitor
+      # limits could be shared by everyone (to check, then restore 10/minute;50/hour and 5/hour).
+      VOCAB_RATE_LIMIT__LOGIN: "60/minute;300/hour"
+      VOCAB_RATE_LIMIT__EMAIL: "30/hour"
     volumes:
       - appdata:/data # uploads + WordNet
     healthcheck: # the first start downloads WordNet (~1 minute)
