@@ -58,9 +58,9 @@ export function TodayPage() {
           <span className="stat-pill" title="Days in a row with your daily goal met">
             <Icon name="fire" size={22} /> {stats.streak}-day streak
           </span>
-          <span className="stat-pill" title="Lifetime points">
-            <Icon name="gem_stone" size={22} /> {stats.total.toLocaleString()}
-          </span>
+          <Link className="stat-pill" to="/shop" title="Your coins: spend them in the shop">
+            <Icon name="coin" size={22} /> {stats.total.toLocaleString()}
+          </Link>
         </div>
 
         <div className="card today__hero">
@@ -80,6 +80,12 @@ export function TodayPage() {
         </Link>
       </div>
       <div className="today__side">
+        {stats.week && (
+          <div className="card">
+            <p className="muted today__label">This week</p>
+            <Week days={stats.week} />
+          </div>
+        )}
         {readings.length === 0 ? (
           <Link className="card today__book" to="/books">
             <Icon name="books" size={48} />
@@ -117,12 +123,6 @@ export function TodayPage() {
         )}
 
         {readings.length > 0 && <UpNext readings={readings} />}
-        {stats.week && (
-          <div className="card">
-            <p className="muted today__label">This week</p>
-            <Week days={stats.week} />
-          </div>
-        )}
       </div>
     </section>
   )

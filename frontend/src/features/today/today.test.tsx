@@ -102,6 +102,7 @@ describe('today', () => {
       ['Today', '/'],
       ['Books', '/books'],
       ['Words', '/words'],
+      ['Shop', '/shop'],
       ['Me', '/me'],
     ]) {
       expect(await screen.findByRole('link', { name })).toHaveAttribute('href', href)

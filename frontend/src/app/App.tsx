@@ -14,6 +14,7 @@ import { MePage } from '../features/me/MePage'
 import { ProgressPage } from '../features/progress/ProgressPage'
 import { QuizPage } from '../features/quiz/QuizPage'
 import { SettingsPage } from '../features/settings/SettingsPage'
+import { ShopPage } from '../features/shop/ShopPage'
 import { SortPage } from '../features/sorting/SortPage'
 import { TodayPage } from '../features/today/TodayPage'
 import { WelcomePage } from '../features/welcome/WelcomePage'
@@ -52,6 +53,14 @@ function AppRoutes() {
         element={
           <RequireAuth>
             <WelcomePage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/shop"
+        element={
+          <RequireAuth>
+            <ShopPage />
           </RequireAuth>
         }
       />

@@ -1693,6 +1693,195 @@ a.secondary {
   min-height: 3rem;
 }
 
+/* Shop: a cartoon desert market at dusk (a starry night in the dark theme) */
+
+.shop {
+  display: grid;
+  gap: 1.25rem;
+  max-width: 56rem;
+}
+
+.shop__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.shop__head h2 {
+  margin: 0;
+}
+
+.market {
+  --sky-top: #ffb46b;
+  --sky-bottom: #ffe3a3;
+  --dune-back: #f2c27b;
+  --dune-front: #e7a95a;
+  position: relative;
+  height: 20rem;
+  overflow: hidden;
+  border-radius: 24px;
+  background: linear-gradient(var(--sky-top), var(--sky-bottom) 70%);
+  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.05);
+}
+
+:root[data-theme='dark'] .market {
+  --sky-top: #141b3a;
+  --sky-bottom: #3a3466;
+  --dune-back: #6b5a46;
+  --dune-front: #806a4f;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']):not([data-theme='sepia']) .market {
+    --sky-top: #141b3a;
+    --sky-bottom: #3a3466;
+    --dune-back: #6b5a46;
+    --dune-front: #806a4f;
+  }
+}
+
+.market__moon {
+  position: absolute;
+  top: 1rem;
+  right: 1.5rem;
+}
+
+.market__dune {
+  position: absolute;
+  left: -10%;
+  width: 120%;
+  border-radius: 50% 50% 0 0;
+}
+
+.market__dune--back {
+  bottom: 22%;
+  height: 40%;
+  background: var(--dune-back);
+}
+
+.market__dune--front {
+  bottom: -18%;
+  height: 48%;
+  background: var(--dune-front);
+}
+
+.market__palm {
+  position: absolute;
+  bottom: 18%;
+}
+
+.market__palm--left {
+  left: 2%;
+}
+
+.market__palm--right {
+  right: 4%;
+  bottom: 22%;
+}
+
+.market__stalls {
+  position: absolute;
+  inset: auto 14% 14% 14%;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  align-items: end;
+}
+
+.stall {
+  display: grid;
+  filter: drop-shadow(0 6px 6px rgba(0, 0, 0, 0.18));
+}
+
+.stall__awning {
+  height: 2.6rem;
+  border-radius: 14px 14px 6px 6px;
+  background: repeating-linear-gradient(90deg, var(--stripe) 0 1.1rem, #fff8ec 1.1rem 2.2rem);
+  clip-path: polygon(
+    0 0,
+    100% 0,
+    100% 75%,
+    92% 100%,
+    84% 75%,
+    76% 100%,
+    68% 75%,
+    60% 100%,
+    52% 75%,
+    44% 100%,
+    36% 75%,
+    28% 100%,
+    20% 75%,
+    12% 100%,
+    4% 75%,
+    0 100%
+  );
+}
+
+.stall--red {
+  --stripe: #e2554a;
+}
+
+.stall--blue {
+  --stripe: #4a7fe2;
+}
+
+.stall--green {
+  --stripe: #3daa64;
+}
+
+.stall__front {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 0.35rem;
+  min-height: 4.5rem;
+  margin: 0 0.4rem;
+  padding: 0.4rem;
+  border-radius: 0 0 10px 10px;
+  background: #b97a45;
+  box-shadow: inset 0 6px 0 rgba(0, 0, 0, 0.12);
+}
+
+.stall--closed .stall__front {
+  background: #8a5a35;
+}
+
+.stall__sign {
+  position: absolute;
+  top: -0.6rem;
+  left: 50%;
+  transform: translateX(-50%) rotate(-4deg);
+  padding: 0.15rem 0.55rem;
+  border: 2px solid #6b4426;
+  border-radius: 6px;
+  background: #fff3d6;
+  color: #6b4426;
+  font-family: var(--display);
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.market__camel {
+  position: absolute;
+  bottom: 3%;
+  left: 6%;
+}
+
+.shop__notice {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.shop__notice h3,
+.shop__notice p {
+  margin: 0 0 0.25rem;
+}
+
 /* Laptops: the navigation becomes a side menu and the content uses the width. */
 
 @media (min-width: 960px) {
@@ -1763,8 +1952,16 @@ a.secondary {
     display: grid;
     grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
     gap: 1.25rem;
-    align-items: start;
+    align-items: stretch;
     margin: 1.25rem 0;
+  }
+
+  /* Up next takes Currently reading's height (size containment: its own content doesn't
+     stretch the row) and scrolls inside. */
+  .library__top .up-next-panel {
+    contain: size;
+    min-height: 14rem;
+    overflow-y: auto;
   }
 
   .library__top > .panel {
@@ -1799,12 +1996,45 @@ a.secondary {
 /* Phones */
 
 @media (max-width: 640px) {
+  .market {
+    height: 16rem;
+  }
+
+  .market__stalls {
+    inset: auto 3% 12% 22%;
+    gap: 0.35rem;
+  }
+
+  .stall__awning {
+    height: 2rem;
+    background-size: 1.4rem 100%;
+  }
+
+  .stall__front {
+    min-height: 3.6rem;
+    margin: 0 0.2rem;
+  }
+
+  .stall__front .icon {
+    width: 28px;
+    height: 28px;
+  }
+
+  .market__palm--right {
+    display: none;
+  }
+
+  .market__camel .icon {
+    width: 64px;
+    height: 64px;
+  }
+
   .tabs {
     position: fixed;
     inset: auto 0 0;
     z-index: 10;
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     gap: 0;
     margin: 0;
     padding: 0.35rem max(0.5rem, env(safe-area-inset-right))
@@ -2043,6 +2273,11 @@ a.secondary {
   display: none;
 }
 
+.readings {
+  max-height: calc(5 * 7.25rem); /* five books, then it scrolls */
+  overflow-y: auto;
+}
+
 .reading-row {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
@@ -2079,12 +2314,20 @@ a.secondary {
 
 /* Bookshelves: covers in a grid, like a library */
 
+/* Cards have a fixed size, so two rows have a known height; more rows scroll inside. */
 .shelf {
+  --card-width: 9.5rem;
+  --card-height: 23rem;
+  --row-gap: 1.25rem;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
-  gap: 1.25rem 1rem;
+  grid-template-columns: repeat(auto-fill, var(--card-width));
+  grid-auto-rows: var(--card-height);
+  gap: var(--row-gap) 1rem;
+  justify-content: space-between;
+  max-height: calc(2 * var(--card-height) + var(--row-gap));
   margin: 1rem 0 0;
-  padding: 0;
+  padding: 0 0.25rem 0 0;
+  overflow-y: auto;
   list-style: none;
 }
 
@@ -2134,11 +2377,15 @@ a.book-card__cover:hover {
 }
 
 .cover__title {
+  display: -webkit-box;
+  overflow: hidden;
   font-family: var(--display);
   font-size: 1.05rem;
   font-weight: 600;
   line-height: 1.2;
   overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 5; /* long titles stop before the author's name */
 }
 
 .cover__author {
@@ -2153,10 +2400,20 @@ a.book-card__cover:hover {
 }
 
 .book-card__title {
+  display: -webkit-box;
+  overflow: hidden;
   font-weight: 700;
   color: var(--fg);
   text-decoration: none;
   overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.book-card__text .muted {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .book-card button {
