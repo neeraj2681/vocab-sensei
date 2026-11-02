@@ -1,9 +1,8 @@
 import {
-  Bar,
-  BarChart,
   CartesianGrid,
   LabelList,
-  Rectangle,
+  Line,
+  LineChart,
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
@@ -37,7 +36,7 @@ function DayTooltip({ active, payload }: TooltipContentProps) {
   )
 }
 
-/** The score earned on each of the last seven days; a wrong answer costs points, so a day can dip. */
+/** The score earned on each of the last seven days, as a line; wrong answers cost points, so a day can dip. */
 export function WeekChart({ days }: { days: Day[] }) {
   const bars: DayBar[] = days.map((day, i) => {
     const local = new Date(`${day.date}T12:00:00`)
@@ -66,13 +65,14 @@ export function WeekChart({ days }: { days: Day[] }) {
       </div>
       <figure role="img" aria-label="Points earned on each of the last seven days">
         <ResponsiveContainer width="100%" height={180}>
-          <BarChart data={bars} margin={{ top: 20, right: 8, bottom: 0, left: 0 }}>
+          <LineChart data={bars} margin={{ top: 22, right: 16, bottom: 0, left: 0 }}>
             <CartesianGrid vertical={false} stroke="var(--border)" strokeOpacity={0.6} />
             <XAxis
               dataKey="label"
               tickLine={false}
               axisLine={false}
               interval={0}
+              padding={{ left: 12, right: 12 }}
               tick={{ fill: 'var(--muted)', fontSize: 12 }}
             />
             <YAxis
@@ -82,37 +82,40 @@ export function WeekChart({ days }: { days: Day[] }) {
               width={36}
               tick={{ fill: 'var(--muted)', fontSize: 12 }}
             />
-            <ReferenceLine y={0} stroke="var(--border)" />
+            <ReferenceLine y={0} stroke="var(--muted)" strokeOpacity={0.5} />
             <Tooltip
               content={DayTooltip}
-              cursor={{ fill: 'var(--accent-soft)', opacity: 0.5 }}
+              cursor={{ stroke: 'var(--muted)', strokeWidth: 1 }}
               isAnimationActive={false}
             />
-            <Bar
+            <Line
+              type="monotone"
               dataKey="points"
-              radius={[4, 4, 0, 0]}
-              maxBarSize={36}
+              stroke="var(--accent)"
+              strokeWidth={2}
               isAnimationActive={false}
-              shape={(props) => {
-                const bar = props.payload as DayBar
-                return (
-                  <Rectangle
-                    {...props}
-                    fill={bar.points < 0 ? 'var(--bad)' : 'var(--accent)'}
-                    fillOpacity={bar.label === 'Today' ? 1 : 0.75}
-                  />
-                )
-              }}
+              dot={(props: { cx?: number; cy?: number; index?: number; payload?: DayBar }) => (
+                <circle
+                  key={props.index}
+                  cx={props.cx}
+                  cy={props.cy}
+                  r={4.5}
+                  fill={(props.payload?.points ?? 0) < 0 ? 'var(--bad)' : 'var(--accent)'}
+                  stroke="var(--surface)"
+                  strokeWidth={2}
+                />
+              )}
+              activeDot={{ r: 6, stroke: 'var(--surface)', strokeWidth: 2 }}
             >
               {/* Only today's value is written on the chart; the rest are a tap away. */}
               <LabelList
                 dataKey="points"
                 position="top"
-                content={({ x, y, width, value, index }) =>
+                content={({ x, y, value, index }) =>
                   index === bars.length - 1 ? (
                     <text
-                      x={Number(x) + Number(width) / 2}
-                      y={Number(y) - 6}
+                      x={Number(x)}
+                      y={Number(y) - 10}
                       textAnchor="middle"
                       fill="var(--fg)"
                       fontSize={12}
@@ -123,8 +126,8 @@ export function WeekChart({ days }: { days: Day[] }) {
                   ) : null
                 }
               />
-            </Bar>
-          </BarChart>
+            </Line>
+          </LineChart>
         </ResponsiveContainer>
       </figure>
       <table className="sr-only">
