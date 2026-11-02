@@ -132,4 +132,25 @@ describe('this week', () => {
     expect(screen.getByLabelText('Sunday: goal not met')).toBeInTheDocument()
     expect(screen.getAllByLabelText(/goal not met/)).toHaveLength(6)
   })
+
+  it('graphs the score earned on each of the last seven days', async () => {
+    const points = [0, 15, -10, 40, 0, 25, 10]
+    const week = points.map((p, i) => ({
+      date: `2026-10-${String(26 + i)}`,
+      answers: Math.abs(p) / 5,
+      met: false,
+      points: p,
+    }))
+    today([READING], {
+      'GET /api/quiz/stats?tz=UTC': () =>
+        json({ total: 270, today: 2, daily_goal: 10, streak: 0, week }),
+    })
+    renderApp('/')
+
+    expect(await screen.findByRole('heading', { name: 'Score this week' })).toBeInTheDocument()
+    expect(screen.getByText('+80 points · best: Thursday +40')).toBeInTheDocument()
+    const table = screen.getByRole('table', { name: 'Points per day' })
+    expect(within(table).getByRole('row', { name: 'Wednesday -10' })).toBeInTheDocument()
+    expect(within(table).getByRole('row', { name: 'Today +10' })).toBeInTheDocument()
+  })
 })

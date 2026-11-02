@@ -536,6 +536,19 @@ class TestStats:
         ]
         assert len(stats["week"]) == 7
 
+    def test_the_week_has_the_score_earned_each_day(
+        self, user_client: TestClient, session: Session, clock: Clock
+    ) -> None:
+        clock.now = NOW - timedelta(days=1)
+        yesterday = [answer(user_client, session)["points"] for _ in range(3)]
+        clock.now = NOW
+        today = [answer(user_client, session, right=right)["points"] for right in (True, False)]
+
+        week = user_client.get("/api/quiz/stats?tz=UTC").json()["week"]
+
+        assert [d["points"] for d in week] == [0, 0, 0, 0, 0, sum(yesterday), sum(today)]
+        assert sum(yesterday) > 0
+
     @pytest.mark.parametrize("goal", [0, 201])
     def test_goals_must_be_sensible(self, user_client: TestClient, goal: int) -> None:
         assert user_client.put("/api/quiz/goal", json={"daily_goal": goal}).status_code == 422

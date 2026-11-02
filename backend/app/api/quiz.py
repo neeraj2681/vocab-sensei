@@ -118,6 +118,7 @@ class DayResponse(BaseModel):
     date: date
     answers: int
     met: bool  # judged by that day's goal, like the streak
+    points: int  # net score earned that day
 
 
 class StatsResponse(BaseModel):
@@ -134,7 +135,10 @@ class StatsResponse(BaseModel):
             today=stats.today,
             daily_goal=stats.daily_goal,
             streak=stats.streak,
-            week=[DayResponse(date=d.date, answers=d.answers, met=d.met) for d in stats.week],
+            week=[
+                DayResponse(date=d.date, answers=d.answers, met=d.met, points=d.points)
+                for d in stats.week
+            ],
         )
 
 

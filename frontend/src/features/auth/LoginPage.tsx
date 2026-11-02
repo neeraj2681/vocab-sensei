@@ -3,6 +3,7 @@ import { Link, Navigate, useLocation, useNavigate } from 'react-router'
 import { authApi } from '../../api/auth'
 import { ApiError } from '../../api/client'
 import { AppIntro } from './AppIntro'
+import { MagicBook } from './MagicBook'
 import { AuthCard, Field, FormError } from '../../components/Form'
 import { formValues } from '../../components/formValues'
 import { useAuth } from './AuthContext'
@@ -21,7 +22,10 @@ export function LoginPage() {
 
   return (
     <div className="welcome">
-      <AppIntro />
+      <div className="welcome__side">
+        <MagicBook />
+        <AppIntro />
+      </div>
       <AuthCard title="Log in">
         <form
           onSubmit={(event) => {

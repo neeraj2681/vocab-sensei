@@ -22,17 +22,11 @@ export function MePage() {
       <nav className="card me__links" aria-label="Your account">
         <Link to="/progress">
           <Icon name="bar_chart" size={32} />
-          <span>
-            <strong>Progress</strong>
-            <span className="muted"> · score graph, backup</span>
-          </span>
+          <strong>Progress</strong>
         </Link>
         <Link to="/settings">
           <Icon name="gear" size={32} />
-          <span>
-            <strong>Settings</strong>
-            <span className="muted"> · profile, email, theme, goal, reminders</span>
-          </span>
+          <strong>Settings</strong>
         </Link>
       </nav>
 
