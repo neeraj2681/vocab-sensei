@@ -21,8 +21,11 @@ Open items:
   they must open the ts.net address and re-add the home-screen icon.
 - After a deploy, phones may show the previous version until reloaded once or twice (PWA cache). A "new version,
   tap to reload" prompt was offered but not built.
-- **Next work** (ask): Phase 2 leftovers (difficulty setting, FSRS option, OCR for scanned PDFs), a way to move a
-  "known" word back to learning, Phase 4 (recommendations), Phase 5 (LLM questions with a local model).
+- **Next work** (ask): Phase 2 leftovers (pronunciation practice, difficulty setting, FSRS option, OCR for
+  scanned PDFs), a way to move a "known" word back to learning, offline sessions, Phase 4 (recommendations),
+  Phase 5 (LLM questions with a local model).
+- **Rate limits behind Funnel:** check that the API sees each visitor's address (a request from outside the
+  tailnet is needed; Funnel can't be reached from the Mac itself).
 
 **First steps in the session:**
 
@@ -108,7 +111,20 @@ Required CI checks on `main`: Pre-commit, Backend, Frontend, Backend on PostgreS
 | #59 | Book page chapter path (readiness rings); word cards with the book sentence |
 | #60 | First-run tour for new accounts with a daily goal choice up to 100 (`users.onboarded_at`) |
 
-**Tests:** backend 353 (99% coverage, also run on PostgreSQL), frontend 112. CI: 5 required jobs.
+### Testing fixes and speed (2 Nov 2026)
+| PR | What |
+|----|------|
+| #62 | Today's week strip judged like the streak (each day by that day's goal), sent by the server |
+| #63 | Choosing the next word ~6× faster (one grouped query instead of a subquery per appearance) |
+| #64, #65 | Tapping an option shows the whole result at once: questions carry the correct option, meaning, sentence and both outcomes; the save confirms in the background |
+| #66 | No "Right!" / "Not quite." text (the colour says it; screen readers still hear it) |
+| #67 | The next question is kept in hand (`include_next`), so Continue never waits; failed saves show a retry banner |
+| #68 | Watchdog (launchd, every 5 min) restarts Colima, the stack, Tailscale and Funnel if any stopped |
+
+Docker builds now use BuildKit (`brew install docker-buildx`): a code-only deploy takes ~20 s instead of
+10–20 min. `colima ssh -- sudo fstrim -av` after builds gives disk space back.
+
+**Tests:** backend 356 (99% coverage, also run on PostgreSQL), frontend 116. CI: 5 required jobs.
 
 ### What works end to end today
 Sign up → verify → upload an EPUB / PDF / TXT → book ready in ~20 s with chapters and ~6,700 defined words →

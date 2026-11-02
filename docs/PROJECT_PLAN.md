@@ -302,6 +302,16 @@ because git and the workflow files carry over.
 - [x] Mobile-friendly layout + installable PWA (`feat/mobile-pwa`)
 - [x] Daily reminder by push notification or email at a chosen time, only if the goal isn't met (`feat/reminders`, `feat/reminders-ui`)
 - [ ] OCR for scanned PDFs (Tesseract)
+- [x] Hear a word: speaker button using the browser's speech (Web Speech `speechSynthesis`) (#51)
+- [ ] **Pronunciation practice** (requested 2 Nov 2026): a mic button beside the word; the learner says
+  it and gets feedback (✓ / try again, then which sound was off).
+  - Record in the browser (`MediaRecorder`, needs mic permission; HTTPS is already in place).
+  - Check the speech with a **free, local** recogniser so audio never leaves our server: Vosk
+    (Apache-2.0, small models) or whisper.cpp (MIT), run in the API container; compare the heard
+    word with the target, later phoneme by phoneme (CMUdict / espeak-ng IPA, both free).
+  - Avoid the browser's built-in `SpeechRecognition`: it's missing in Firefox and sends audio to
+    Google/Apple.
+  - Could become a fourth question type ("Say this word"), unlocked once a word is well known.
 
 ### Phase 3 — Multi-user (future plan items 1–2)
 - [x] Accounts & auth (pulled forward into Phase 1)
