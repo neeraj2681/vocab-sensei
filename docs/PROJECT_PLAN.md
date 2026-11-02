@@ -325,6 +325,17 @@ because git and the workflow files carry over.
   - **Extra username change**: everyone gets one free change (Settings); more cost coins.
   - **Streak freeze**: keeps the streak alive through one missed day; bought ahead, used automatically.
   - Needs a coin ledger (earned vs spent) so spending never lowers the score history.
+- [ ] **Culture themes** (requested 2 Nov 2026, next phase): in Settings → Theme, pick a world theme such as
+  **Japanese**, **Chinese** or **Arabian** (more later, e.g. Indian, Persian). One choice changes the whole app.
+  - **Colours and fonts**: each theme sets its own palette and display font (free OFL fonts only). Examples:
+    vermilion and ink with sakura accents (Japanese), red and gold (Chinese), sand, teal and gold (Arabian).
+  - **Shop**: each theme has its own market and merchant: a Japanese street stall with lanterns, a Chinese
+    night market, the Arabian souk we have today.
+  - **Decorations**: theme icons and patterns on cards, the tab bar and the celebration screens.
+  - **Light and dark**: each culture theme also works in light and dark, so the choice becomes "culture ×
+    light/dark" and replaces today's Light / Dark / Sepia picker.
+  - **Saving it**: kept with the account so it follows you across devices, not just per browser. Some
+    themes could later be sold in the Shop for coins.
 
 ### Phase 3 — Multi-user (future plan items 1–2)
 - [x] Accounts & auth (pulled forward into Phase 1)
