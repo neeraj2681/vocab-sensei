@@ -313,6 +313,14 @@ because git and the workflow files carry over.
     Google/Apple.
   - Could become a fourth question type ("Say this word"), unlocked once a word is well known.
 
+- [ ] **Picture questions** (requested 2 Nov 2026, next phase): show the word and four pictures; the
+  learner taps the one that matches. Works for concrete words (nouns, many verbs, colours); abstract
+  words (*melancholy*) keep the text questions.
+  - Pictures need a free licence and no per-request cost: Wikimedia Commons / Openverse (CC-licensed,
+    attribution shown), or Fluent-style illustrations generated once with a local open model.
+  - Pick distractor pictures from words of the same part of speech; cache images on our server.
+  - Becomes a fifth question type, mixed in like the others.
+
 ### Phase 3 — Multi-user (future plan items 1–2)
 - [x] Accounts & auth (pulled forward into Phase 1)
 - [ ] Login rate limiting, account deletion / data export per user
