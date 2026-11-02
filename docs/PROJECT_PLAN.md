@@ -356,6 +356,25 @@ because git and the workflow files carry over.
   - **Collection**: found eggs go into a "Secrets found: 3 / 12" corner on the Me page, with no hints beyond a
     silhouette. Some could pay a few coins once the Shop opens.
   - Stored as a list of found egg ids on the account. Animations respect "reduce motion".
+- [ ] **Friends** (requested 2 Nov 2026, next phase): find people and send a friend request; they accept or
+  decline.
+  - **Search** by exact email or username. Exact matches only, so the site can't be used to list everyone's
+    email addresses. A profile switch can turn off being found.
+  - **Contacts sync**: on phones, the Contact Picker API (Chrome on Android) lets you choose contacts to look
+    up. Only the email addresses you pick are sent, hashed (SHA-256), and matched against hashed account
+    emails. The address book is never uploaded or stored. iPhone Safari has no picker, so it falls back to
+    search and an invite link.
+  - **Invite link**: share a link (WhatsApp etc.) that opens sign-up and sends the request automatically.
+  - Requests: pending → accepted / declined. Remove or block a friend at any time.
+  - Data: a `friendships` table (requester, addressee, status, timestamps).
+- [ ] **Leaderboards** (requested 2 Nov 2026, next phase): **Friends** and **Global** tabs.
+  - **Ranked by points earned this week**, resetting every Monday, so newcomers can compete. An all-time
+    tab can come later.
+  - Each row: rank, picture or figure, username, weekly points and streak. You're always shown, even outside
+    the top 50.
+  - Global shows usernames only, never emails. You can opt out of Global and stay on Friends only.
+  - Weekly points come from the answers table (as for the score graph). Cache the global board for a few
+    minutes.
 
 ### Phase 3 — Multi-user (future plan items 1–2)
 - [x] Accounts & auth (pulled forward into Phase 1)
@@ -363,6 +382,17 @@ because git and the workflow files carry over.
 - [ ] Personal profiles & settings
 - [ ] Move to PostgreSQL; Docker deployment
 - [ ] Per-user privacy of uploaded files
+- [ ] **Affiliate book links in the Shop** (requested 2 Nov 2026): the merchant sells real books. Each classic and
+  each book on someone's shelf links to buy it, e.g. "Buy the paperback" / "Get it on Kindle".
+  - **Programmes**: Amazon Associates (India: affiliate.amazon.in) is the most common. Others: Flipkart
+    Affiliate, Bookshop.org (UK/US, supports independent bookshops). Each needs its own sign-up and approval.
+  - **Matching**: look a book up by ISBN (from the EPUB's metadata) or by title and author with the free Open
+    Library API; store the product link per book.
+  - **Honesty**: a clear "affiliate link: we may earn a small commission" note next to the links (both
+    Amazon's rules and Indian advertising guidelines require disclosure); links open in a new tab.
+  - **Privacy**: no tracking scripts; plain links with the affiliate tag only.
+  - **Prerequisite**: a public site address that isn't a personal machine name (the custom domain idea),
+    since programmes ask for the website during approval.
 
 ### Phase 4 — Smart features (future plan items 3–5)
 - [ ] Recommendations based on usage (weak words, next books)
