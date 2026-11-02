@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { AnswerResult, QuizQuestion, QuizStats } from '../../api/quiz'
-import { fail, fakeApi, json, noContent, type Routes } from '../../test/fakeApi'
+import { fail, fakeApi, json, type Routes } from '../../test/fakeApi'
 import { renderApp } from '../../test/renderApp'
 
 const USER = { id: 1, email: 'reader@example.com', display_name: 'Reader', email_verified_at: 'x' }
@@ -199,20 +199,34 @@ describe('quiz', () => {
     expect(await screen.findByRole('status')).toHaveTextContent('Word learned!')
   })
 
-  it('"I know this" retires the word and moves on', async () => {
+  it('"I know this" moves on at once and retires the word in the background', async () => {
     const api = quiz({
       'GET /api/quiz/question?include_next=true': questions(
-        question(1, 'drizzly'),
-        question(2, 'lugubrious'),
+        question(1, 'drizzly', { next: question(2, 'lugubrious') }),
       ),
-      'POST /api/quiz/questions/1/know': () => noContent(),
+      // The server is slow to confirm: the next question shows anyway.
+      'POST /api/quiz/questions/1/know?include_next=true': () =>
+        new Promise<Response>(() => undefined) as unknown as Response,
+    })
+    const user = renderApp('/quiz')
+
+    await user.click(await screen.findByRole('button', { name: /I know this word/ }))
+
+    expect(screen.getByRole('heading', { name: 'lugubrious' })).toBeInTheDocument()
+    expect(api.calls('POST /api/quiz/questions/1/know?include_next=true')).toHaveLength(1)
+  })
+
+  it('"I know this" with nothing kept ready moves on when the reply brings the next question', async () => {
+    quiz({
+      'GET /api/quiz/question?include_next=true': questions(question(1, 'drizzly')),
+      'POST /api/quiz/questions/1/know?include_next=true': () =>
+        json({ next: question(2, 'lugubrious'), after_next: question(3, 'spleen') }),
     })
     const user = renderApp('/quiz')
 
     await user.click(await screen.findByRole('button', { name: /I know this word/ }))
 
     expect(await screen.findByRole('heading', { name: 'lugubrious' })).toBeInTheDocument()
-    expect(api.calls('POST /api/quiz/questions/1/know')).toHaveLength(1)
   })
 
   it('points to the library when there is nothing to ask', async () => {

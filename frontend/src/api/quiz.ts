@@ -98,7 +98,13 @@ export const quizApi = {
       }`,
       { chosen_index: chosenIndex },
     ),
-  know: (id: number) => apiPost(`/quiz/questions/${String(id)}/know`),
+  /** Marks a word known; the next questions come back with it (in `focus`, if given). */
+  know: (id: number, focus?: Focus) =>
+    apiPost<{ next: QuizQuestion | null; after_next?: QuizQuestion | null }>(
+      `/quiz/questions/${String(id)}/know?include_next=true${
+        focus ? `&document_id=${String(focus.documentId)}&chapter=${String(focus.chapter)}` : ''
+      }`,
+    ),
   stats: () => apiGet<QuizStats>(`/quiz/stats?${tz()}`),
   setGoal: (dailyGoal: number) =>
     apiPut<QuizStats>(`/quiz/goal?${tz()}`, { daily_goal: dailyGoal }),

@@ -86,7 +86,7 @@ export function QuizPage() {
   // question on screen, and each saved answer brings the one after.
   const ready = useRef<QuizQuestion[]>([])
   const seen = useRef(new Set<number>()) // ids shown or kept ready, so none is added twice
-  const failed = useRef<{ question: QuizQuestion; index: number } | null>(null)
+  const failed = useRef<(() => Promise<void>) | null>(null) // saves the failed save again
 
   function keep(...questions: (QuizQuestion | null | undefined)[]) {
     for (const question of questions) {
@@ -166,7 +166,7 @@ export function QuizPage() {
       keep(result.next, result.after_next)
     } catch (err) {
       // What's on screen stays; a banner offers to save again.
-      failed.current = { question, index }
+      failed.current = () => save(question, index)
       const error = errorPhase(err)
       setAnswerError(error.kind === 'error' ? error.message : 'Something went wrong')
     } finally {
@@ -175,16 +175,29 @@ export function QuizPage() {
   }
 
   function retry() {
-    if (failed.current) void save(failed.current.question, failed.current.index)
+    if (failed.current) void failed.current()
   }
 
-  async function know(question: QuizQuestion) {
+  /** "I know this": moves on at once and marks the word known in the background. */
+  function know(question: QuizQuestion) {
+    setBusy(true) // until marked, the server still has this question on screen
+    void saveKnown(question)
+    const kept = ready.current.shift()
+    if (kept) show(kept)
+    else setContinueQueued(true) // the reply brings the next questions
+  }
+
+  async function saveKnown(question: QuizQuestion) {
     setBusy(true)
+    setAnswerError(null)
+    failed.current = null
     try {
-      await quizApi.know(question.id)
-      next()
+      const reply = await quizApi.know(question.id, focusOf(focusBook, focusChapter))
+      keep(reply.next, reply.after_next)
     } catch (err) {
-      setPhase(errorPhase(err))
+      failed.current = () => saveKnown(question)
+      const error = errorPhase(err)
+      setAnswerError(error.kind === 'error' ? error.message : 'Something went wrong')
     } finally {
       setBusy(false)
     }
@@ -293,7 +306,9 @@ export function QuizPage() {
           onChoose={(index) => {
             choose(phase.question, index)
           }}
-          onKnow={() => void know(phase.question)}
+          onKnow={() => {
+            know(phase.question)
+          }}
           onNext={next}
         />
       )}
