@@ -87,6 +87,7 @@ class Day:
     date: date
     answers: int
     met: bool  # judged by the goal the user had that day, like the streak
+    points: int  # net change in the lifetime score that day (wrong answers subtract)
 
 
 @dataclass(frozen=True)
@@ -161,9 +162,11 @@ def quiz_stats(repo: QuizRepository, user: User, now: datetime, tz: ZoneInfo) ->
     """Lifetime points, today's answers and the streak, with days in the user's time zone."""
     today = now.astimezone(tz).date()
     since = datetime.combine(today - timedelta(days=_STREAK_DAYS), datetime.min.time(), tz)
-    per_day: Counter[date] = Counter(
-        a.answered_at.astimezone(tz).date() for a in repo.answers(user.id, since)
-    )
+    answers = repo.answers(user.id, since)
+    per_day: Counter[date] = Counter(a.answered_at.astimezone(tz).date() for a in answers)
+    points: Counter[date] = Counter()
+    for answer in answers:
+        points[answer.answered_at.astimezone(tz).date()] += answer.points
     goal = daily_goal(user, tz)
     days = [today - timedelta(days=back) for back in range(6, -1, -1)]
     return Stats(
@@ -171,7 +174,7 @@ def quiz_stats(repo: QuizRepository, user: User, now: datetime, tz: ZoneInfo) ->
         today=per_day[today],
         daily_goal=goal.on(today),
         streak=streak(per_day, today, goal),
-        week=[Day(day, per_day[day], per_day[day] >= goal.on(day)) for day in days],
+        week=[Day(day, per_day[day], per_day[day] >= goal.on(day), points[day]) for day in days],
     )
 
 

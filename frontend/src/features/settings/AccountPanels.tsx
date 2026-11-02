@@ -180,10 +180,18 @@ export function ProfilePanel() {
 /** A new address only takes over once its confirmation link is opened. */
 export function EmailPanel() {
   const { user, updateUser } = useAuth()
-  const { busy, error, run } = useSubmit()
+  const { busy, error, setError, run } = useSubmit()
+  const [open, setOpen] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   if (!user) return null
+
+  function close() {
+    setOpen(false)
+    setEmail('')
+    setPassword('')
+    setError(null)
+  }
 
   function submit(event: SyntheticEvent) {
     event.preventDefault()
@@ -191,8 +199,7 @@ export function EmailPanel() {
       async () => {
         await authApi.changeEmail(email, password)
         updateUser({ pending_email: email.trim().toLowerCase() })
-        setEmail('')
-        setPassword('')
+        close()
       },
       { 403: 'That password isn’t right.' },
     )
@@ -209,91 +216,155 @@ export function EmailPanel() {
           We sent a link to <strong>{user.pending_email}</strong>. Open it to finish the change.
         </p>
       )}
-      <form onSubmit={submit}>
-        <Field
-          label="New email"
-          name="new_email"
-          type="email"
-          autoComplete="email"
-          required
-          value={email}
-          onChange={(event) => {
-            setEmail(event.target.value)
+      {open ? (
+        <form onSubmit={submit}>
+          <Field
+            label="New email"
+            name="new_email"
+            type="email"
+            autoComplete="email"
+            required
+            autoFocus
+            value={email}
+            onChange={(event) => {
+              setEmail(event.target.value)
+            }}
+          />
+          <Field
+            label="Your password"
+            name="email_password"
+            type="password"
+            autoComplete="current-password"
+            required
+            value={password}
+            onChange={(event) => {
+              setPassword(event.target.value)
+            }}
+          />
+          <div className="settings__actions">
+            <button type="submit" disabled={busy}>
+              Send confirmation link
+            </button>
+            <button type="button" className="link-button" onClick={close}>
+              Cancel
+            </button>
+          </div>
+          <FormError message={error} />
+        </form>
+      ) : (
+        <button
+          type="button"
+          className="primary"
+          onClick={() => {
+            setOpen(true)
           }}
-        />
-        <Field
-          label="Your password"
-          name="email_password"
-          type="password"
-          autoComplete="current-password"
-          required
-          value={password}
-          onChange={(event) => {
-            setPassword(event.target.value)
-          }}
-        />
-        <button type="submit" disabled={busy}>
-          Send confirmation link
+        >
+          Change email
         </button>
-      </form>
-      <FormError message={error} />
+      )}
     </section>
   )
 }
 
+/** Change it knowing the current one, or have a reset link emailed when it's forgotten. */
 export function PasswordPanel() {
-  const { busy, error, run } = useSubmit()
+  const { user } = useAuth()
+  const { busy, error, setError, run } = useSubmit()
+  const [open, setOpen] = useState(false)
   const [current, setCurrent] = useState('')
   const [next, setNext] = useState('')
-  const [done, setDone] = useState(false)
+  const [notice, setNotice] = useState<string | null>(null)
+  if (!user) return null
+
+  function close() {
+    setOpen(false)
+    setCurrent('')
+    setNext('')
+    setError(null)
+  }
 
   function submit(event: SyntheticEvent) {
     event.preventDefault()
-    setDone(false)
     void run(
       async () => {
         await authApi.changePassword(current, next)
-        setCurrent('')
-        setNext('')
-        setDone(true)
+        close()
+        setNotice('✓ Password changed.')
       },
       { 403: 'Your current password isn’t right.' },
     )
   }
 
+  function sendReset() {
+    if (!user) return
+    setNotice(null)
+    void run(async () => {
+      await authApi.forgotPassword(user.email)
+      setNotice(`We sent a reset link to ${user.email}.`)
+    })
+  }
+
   return (
     <section aria-labelledby="password-heading" className="panel">
       <h3 id="password-heading">Password</h3>
-      <form onSubmit={submit}>
-        <Field
-          label="Current password"
-          name="current_password"
-          type="password"
-          autoComplete="current-password"
-          required
-          value={current}
-          onChange={(event) => {
-            setCurrent(event.target.value)
-          }}
-        />
-        <Field
-          label="New password"
-          name="new_password"
-          type="password"
-          autoComplete="new-password"
-          minLength={MIN_PASSWORD_LENGTH}
-          required
-          value={next}
-          onChange={(event) => {
-            setNext(event.target.value)
-          }}
-        />
-        <button type="submit" disabled={busy}>
-          Change password
-        </button>
-      </form>
+      {open ? (
+        <form onSubmit={submit}>
+          <Field
+            label="Current password"
+            name="current_password"
+            type="password"
+            autoComplete="current-password"
+            required
+            autoFocus
+            value={current}
+            onChange={(event) => {
+              setCurrent(event.target.value)
+            }}
+          />
+          <Field
+            label="New password"
+            name="new_password"
+            type="password"
+            autoComplete="new-password"
+            minLength={MIN_PASSWORD_LENGTH}
+            required
+            value={next}
+            onChange={(event) => {
+              setNext(event.target.value)
+            }}
+          />
+          <div className="settings__actions">
+            <button type="submit" disabled={busy}>
+              Save new password
+            </button>
+            <button type="button" className="link-button" onClick={close}>
+              Cancel
+            </button>
+          </div>
+        </form>
+      ) : (
+        <div className="settings__actions">
+          <button
+            type="button"
+            className="primary"
+            onClick={() => {
+              setNotice(null)
+              setOpen(true)
+            }}
+          >
+            Change password
+          </button>
+          <button type="button" className="raised" disabled={busy} onClick={sendReset}>
+            Reset password
+          </button>
+        </div>
+      )}
       <FormError message={error} />
-      {done && <p role="status">✓ Password changed.</p>}
+      {notice && (
+        <p role="status" className="notice">
+          {notice}
+        </p>
+      )}
     </section>
   )
 }

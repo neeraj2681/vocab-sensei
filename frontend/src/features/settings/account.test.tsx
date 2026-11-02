@@ -116,7 +116,8 @@ describe('email and password', () => {
     })
     const user = renderApp('/settings')
 
-    await user.type(await screen.findByLabelText('New email'), 'New@Example.com')
+    await user.click(await screen.findByRole('button', { name: 'Change email' }))
+    await user.type(screen.getByLabelText('New email'), 'New@Example.com')
     await user.type(screen.getByLabelText('Your password'), 'correct horse battery')
     await user.click(screen.getByRole('button', { name: 'Send confirmation link' }))
 
@@ -147,11 +148,42 @@ describe('email and password', () => {
     })
     const user = renderApp('/settings')
 
-    await user.type(await screen.findByLabelText('Current password'), 'not it')
+    await user.click(await screen.findByRole('button', { name: 'Change password' }))
+    await user.type(screen.getByLabelText('Current password'), 'not it')
     await user.type(screen.getByLabelText('New password'), 'a much better secret')
-    await user.click(screen.getByRole('button', { name: 'Change password' }))
+    await user.click(screen.getByRole('button', { name: 'Save new password' }))
 
     expect(await screen.findByText('Your current password isn’t right.')).toBeInTheDocument()
+  })
+})
+
+describe('email and password buttons', () => {
+  it('show only buttons until one is pressed', async () => {
+    account()
+    const user = renderApp('/settings')
+
+    await screen.findByRole('button', { name: 'Change email' })
+    expect(screen.queryByLabelText('New email')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Current password')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Change email' }))
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+
+    expect(screen.queryByLabelText('New email')).not.toBeInTheDocument()
+  })
+
+  it('reset password emails a link to your address', async () => {
+    const api = account(USER, {
+      'POST /api/auth/forgot-password': () => json({ message: 'sent' }),
+    })
+    const user = renderApp('/settings')
+
+    await user.click(await screen.findByRole('button', { name: 'Reset password' }))
+
+    expect(
+      await screen.findByText('We sent a reset link to reader@example.com.'),
+    ).toBeInTheDocument()
+    expect(api.calls('POST /api/auth/forgot-password')).toEqual([{ email: 'reader@example.com' }])
   })
 })
 

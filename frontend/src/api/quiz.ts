@@ -37,6 +37,7 @@ export interface Day {
   date: string // YYYY-MM-DD in the user's time zone
   answers: number
   met: boolean
+  points?: number // net score earned that day
 }
 
 export interface AnswerResult {

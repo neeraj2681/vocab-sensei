@@ -8,6 +8,7 @@ import { useAuth } from '../auth/AuthContext'
 import { UpNext } from '../learning/UpNext'
 import { BookCover } from '../library/BookCover'
 import { chapterLabel } from '../library/labels'
+import { WeekChart } from './WeekChart'
 
 const SECONDS_PER_ANSWER = 15 // measured from real sessions
 const DAY_NAMES = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
@@ -124,6 +125,7 @@ export function TodayPage() {
 
         {readings.length > 0 && <UpNext readings={readings} />}
       </div>
+      {stats.week && <WeekChart days={stats.week} />}
     </section>
   )
 }
