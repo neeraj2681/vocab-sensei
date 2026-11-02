@@ -9,6 +9,7 @@ export interface QuizQuestion {
   // (fill_in_blank). The word itself is only revealed in the answer for the last two.
   prompt: string
   options: string[]
+  correct_index: number // sent with the question so right or wrong shows at once
 }
 
 export interface QuizStats {

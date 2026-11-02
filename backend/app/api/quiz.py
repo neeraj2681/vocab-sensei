@@ -67,16 +67,19 @@ QuizServiceDep = Annotated[QuizService, Depends(get_quiz_service)]
 
 
 class QuestionResponse(BaseModel):
-    """What the screen shows. The correct answer is only revealed after answering.
+    """What the screen shows.
 
     `prompt` is the word (definition_mcq), a meaning (reverse) or the book's sentence with a blank
-    (fill_in_blank); for the last two the word itself is the answer, so it isn't sent.
+    (fill_in_blank); for the last two the word itself is the answer. `correct_index` comes along
+    so the screen can show right or wrong the moment an option is tapped, while the answer is
+    saved in the background: a learner who peeks only fools themselves.
     """
 
     id: int
     type: QuestionType
     prompt: str
     options: list[str]
+    correct_index: int
 
     @classmethod
     def of(cls, question: Question) -> Self:
@@ -85,6 +88,7 @@ class QuestionResponse(BaseModel):
             type=question.type,
             prompt=question.prompt,
             options=list(question.options),
+            correct_index=question.correct_index,
         )
 
 

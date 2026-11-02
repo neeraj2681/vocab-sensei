@@ -45,7 +45,13 @@ function buzz(correct: boolean) {
 type Phase =
   | { kind: 'loading' }
   | { kind: 'asking'; question: QuizQuestion }
-  | { kind: 'answered'; question: QuizQuestion; chosen: number; result: AnswerResult }
+  | {
+      kind: 'answered'
+      question: QuizQuestion
+      chosen: number
+      correct: boolean // known at once from the question
+      result: AnswerResult | null // the saved answer (score, sentence), a moment later
+    }
   | { kind: 'error'; message: string; noWords: boolean }
   | { kind: 'summary' }
 
@@ -68,7 +74,7 @@ export function QuizPage() {
   const [recent, setRecent] = useState<number[]>([])
   const [pop, setPop] = useState<Pop | null>(null)
   const [busy, setBusy] = useState(false)
-  const [answerError, setAnswerError] = useState<string | null>(null) // the question stays on screen
+  const [answerError, setAnswerError] = useState<string | null>(null) // saving failed; can retry
   const [session, setSession] = useState<Session>(newSession(null))
   const [questionVersion, setQuestionVersion] = useState(0) // bump to fetch the next question
   // "Study this chapter": /quiz?book=1&chapter=4 asks only that chapter's words.
@@ -111,25 +117,34 @@ export function QuizPage() {
     }
   }, [questionVersion, focusBook, focusChapter])
 
-  async function choose(question: QuizQuestion, index: number) {
+  /** Shows right or wrong at once, then saves the answer in the background. */
+  function choose(question: QuizQuestion, index: number) {
+    const correct = index === question.correct_index
+    setPhase({ kind: 'answered', question, chosen: index, correct, result: null })
+    buzz(correct)
+    setSession((s) => ({
+      ...s,
+      answered: s.answered + 1,
+      right: s.right + (correct ? 1 : 0),
+      combo: correct ? s.combo + 1 : 0,
+    }))
+    void save(question, index)
+  }
+
+  async function save(question: QuizQuestion, index: number) {
     setBusy(true)
     setAnswerError(null)
     try {
       const result = await quizApi.answer(question.id, index)
-      setPhase({ kind: 'answered', question, chosen: index, result })
+      setPhase((p) =>
+        p.kind === 'answered' && p.question.id === question.id ? { ...p, result } : p,
+      )
       // While the feedback is read, fetch what comes next (the server makes it once this answer
       // is saved). A failure surfaces when Continue uses it.
       const next = quizApi.question(focusOf(focusBook, focusChapter))
       next.catch(() => undefined)
       upcoming.current = next
-      buzz(result.correct)
-      setSession((s) => ({
-        ...s,
-        answered: s.answered + 1,
-        right: s.right + (result.correct ? 1 : 0),
-        points: s.points + result.points,
-        combo: result.correct ? s.combo + 1 : 0,
-      }))
+      setSession((s) => ({ ...s, points: s.points + result.points }))
       setStats(result.stats)
       setRecent((values) => [...values, result.stats.total].slice(-(RECENT_ANSWERS + 1)))
       setPop((previous) => ({
@@ -138,7 +153,7 @@ export function QuizPage() {
         correct: result.correct,
       }))
     } catch (err) {
-      // Keep the question so a tap can simply be tried again.
+      // The result stays on screen; saving can simply be tried again.
       const failed = errorPhase(err)
       setAnswerError(failed.kind === 'error' ? failed.message : 'Something went wrong')
     } finally {
@@ -180,13 +195,16 @@ export function QuizPage() {
       if (busy || event.metaKey || event.ctrlKey || event.altKey) return
       if (phase.kind === 'asking') {
         const index = Number(event.key) - 1
-        if (index >= 0 && index < phase.question.options.length) void choose(phase.question, index)
+        if (index >= 0 && index < phase.question.options.length) {
+          choose(phase.question, index)
+        }
       } else if (
         phase.kind === 'answered' &&
         (event.key === 'Enter' || event.key === 'ArrowRight')
       ) {
         event.preventDefault()
-        next()
+        if (answerError) void save(phase.question, phase.chosen)
+        else if (phase.result) next()
       }
     }
     window.addEventListener('keydown', onKey)
@@ -228,15 +246,16 @@ export function QuizPage() {
         <QuestionCard
           phase={phase}
           busy={busy}
-          onChoose={(index) => void choose(phase.question, index)}
+          saveError={answerError}
+          onChoose={(index) => {
+            choose(phase.question, index)
+          }}
           onKnow={() => void know(phase.question)}
           onNext={next}
+          onRetry={() => {
+            if (phase.kind === 'answered') void save(phase.question, phase.chosen)
+          }}
         />
-      )}
-      {answerError && (
-        <p role="alert" className="form-error">
-          Couldn’t save that answer: {answerError}. Tap an option to try again.
-        </p>
       )}
     </section>
   )
@@ -245,18 +264,20 @@ export function QuizPage() {
 interface CardProps {
   phase: Extract<Phase, { kind: 'asking' | 'answered' }>
   busy: boolean
+  saveError: string | null
   onChoose: (index: number) => void
   onKnow: () => void
   onNext: () => void
+  onRetry: () => void
 }
 
-function QuestionCard({ phase, busy, onChoose, onKnow, onNext }: CardProps) {
+function QuestionCard({ phase, busy, saveError, onChoose, onKnow, onNext, onRetry }: CardProps) {
   const { question } = phase
   const answered = phase.kind === 'answered' ? phase : null
 
   function optionClass(index: number) {
     if (!answered) return 'option'
-    if (index === answered.result.correct_index) return 'option option--correct'
+    if (index === question.correct_index) return 'option option--correct'
     if (index === answered.chosen) return 'option option--wrong'
     return 'option option--dim'
   }
@@ -284,7 +305,15 @@ function QuestionCard({ phase, busy, onChoose, onKnow, onNext }: CardProps) {
         ))}
       </ol>
       {answered ? (
-        <Feedback question={question} result={answered.result} onNext={onNext} />
+        <Feedback
+          question={question}
+          correct={answered.correct}
+          result={answered.result}
+          saving={busy}
+          saveError={saveError}
+          onNext={onNext}
+          onRetry={onRetry}
+        />
       ) : (
         <button type="button" className="link-button" disabled={busy} onClick={onKnow}>
           I know this word, don’t ask again
@@ -320,53 +349,78 @@ function Prompt({ question }: { question: QuizQuestion }) {
 
 function Feedback({
   question,
+  correct,
   result,
+  saving,
+  saveError,
   onNext,
+  onRetry,
 }: {
   question: QuizQuestion
-  result: AnswerResult
+  correct: boolean
+  result: AnswerResult | null
+  saving: boolean
+  saveError: string | null
   onNext: () => void
+  onRetry: () => void
 }) {
+  // For reverse and fill-in questions the options are words, so the answer is known already.
+  const word = result?.word ?? question.options[question.correct_index] ?? ''
+  const learned = correct && result?.word_status === 'learned'
+
   return (
-    <div className={`feedback feedback--${result.correct ? 'right' : 'wrong'}`}>
-      {result.correct && result.word_status === 'learned' && <Burst />}
+    <div className={`feedback feedback--${correct ? 'right' : 'wrong'}`}>
+      {learned && <Burst />}
       <p role="status" className="feedback__verdict">
-        <Icon name={result.correct ? 'check_mark_button' : 'cross_mark'} size={28} />{' '}
-        {result.correct ? 'Right!' : 'Not quite.'}{' '}
+        <Icon name={correct ? 'check_mark_button' : 'cross_mark'} size={28} />{' '}
+        {correct ? 'Right!' : 'Not quite.'}{' '}
         {question.type === 'definition_mcq' ? (
-          !result.correct && (
+          !correct && (
             <>
-              It means: <strong>{question.options[result.correct_index]}</strong>
+              It means: <strong>{question.options[question.correct_index]}</strong>
             </>
           )
         ) : (
           <>
-            <strong>{result.word}</strong>
-            <SpeakButton word={result.word} />
-            {result.meaning && <span className="muted"> · {result.meaning}</span>}
+            <strong>{word}</strong>
+            <SpeakButton word={word} />
+            {result?.meaning && <span className="muted"> · {result.meaning}</span>}
           </>
         )}
-        {result.correct && result.word_status === 'learned' && (
+        {learned && (
           <>
             {' '}
             <Icon name="party_popper" size={24} /> Word learned!
           </>
         )}
       </p>
-      {!result.counted && (
+      {result && !result.counted && (
         <p className="muted">This word came back too soon to score; it’s practice.</p>
       )}
-      {result.context_sentence && (
+      {result?.context_sentence && (
         <blockquote className="feedback__sentence">{result.context_sentence}</blockquote>
       )}
-      <button
-        type="button"
-        className={result.correct ? 'primary' : 'primary primary--wrong'}
-        onClick={onNext}
-        autoFocus
-      >
-        Continue
-      </button>
+      {saveError ? (
+        <>
+          <p role="alert" className="form-error">
+            Couldn’t save that answer: {saveError}
+          </p>
+          <button type="button" className="primary" onClick={onRetry} disabled={saving}>
+            Try saving again
+          </button>
+        </>
+      ) : (
+        <button
+          type="button"
+          className={correct ? 'primary' : 'primary primary--wrong'}
+          onClick={onNext}
+          disabled={result === null}
+          aria-busy={saving}
+          autoFocus
+        >
+          {result === null ? 'Saving…' : 'Continue'}
+        </button>
+      )}
     </div>
   )
 }

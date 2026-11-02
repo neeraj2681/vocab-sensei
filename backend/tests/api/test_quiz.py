@@ -137,7 +137,8 @@ class TestAsking:
         assert (asked["type"], asked["prompt"]) == ("definition_mcq", "word00")
         assert len(asked["options"]) == 4
         assert "meaning of word00" in asked["options"]
-        assert "correct_index" not in asked  # only revealed after answering
+        # Sent along so the screen can show right or wrong at once.
+        assert asked["options"][asked["correct_index"]] == "meaning of word00"
 
     def test_the_same_question_stays_until_it_is_answered(self, user_client: TestClient) -> None:
         first = question(user_client)

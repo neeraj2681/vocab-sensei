@@ -12,6 +12,7 @@ const question = (id: number, word: string): QuizQuestion => ({
   type: 'definition_mcq',
   prompt: word,
   options: ['wet with light rain', 'excessively mournful', 'a small bag', 'confidently optimistic'],
+  correct_index: 0,
 })
 
 const result = (overrides: Partial<AnswerResult>): AnswerResult => ({
@@ -225,6 +226,7 @@ describe('question types', () => {
           type: 'reverse',
           prompt: 'wet with light rain',
           options: ['drizzly', 'lugubrious', 'sanguine', 'purse'],
+          correct_index: 0,
         }),
       [ANSWER_URL(1)]: () => json(result({ correct: false, points: -10 })),
     })
@@ -247,6 +249,7 @@ describe('question types', () => {
           type: 'fill_in_blank',
           prompt: 'It was a damp, _____ November in my soul.',
           options: ['drizzly', 'lugubrious', 'sanguine', 'purse'],
+          correct_index: 0,
         }),
       [ANSWER_URL(1)]: () => json(result({})),
     })
@@ -261,10 +264,10 @@ describe('question types', () => {
 })
 
 describe('answer errors', () => {
-  it('keep the question on screen so it can be answered again', async () => {
+  it('keeps the result on screen when saving fails, and saves again on request', async () => {
     let calls = 0
     quiz({
-      'GET /api/quiz/question': questions(question(1, 'drizzly')),
+      'GET /api/quiz/question': questions(question(1, 'drizzly'), question(2, 'spleen')),
       [ANSWER_URL(1)]: () => (++calls === 1 ? fail(500, 'Server hiccup') : json(result({}))),
     })
     const user = renderApp('/quiz')
@@ -274,16 +277,41 @@ describe('answer errors', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Couldn’t save that answer: Server hiccup',
     )
-    expect(screen.getByRole('heading', { name: 'drizzly' })).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('Right!')
+    expect(screen.queryByRole('button', { name: 'Continue' })).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: /wet with light rain/ }))
+    await user.click(screen.getByRole('button', { name: 'Try saving again' }))
 
-    expect(await screen.findByRole('status')).toHaveTextContent('Right!')
+    expect(await screen.findByRole('button', { name: 'Continue' })).toBeEnabled()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(calls).toBe(2)
   })
 })
 
 describe('speed', () => {
+  it('shows right or wrong the moment an option is tapped, before the answer is saved', async () => {
+    let release: (response: Response) => void = () => undefined
+    const saved = new Promise<Response>((resolve) => {
+      release = resolve
+    })
+    quiz({
+      'GET /api/quiz/question': questions(question(1, 'drizzly'), question(2, 'spleen')),
+      [ANSWER_URL(1)]: () => saved as unknown as Response, // the server is slow to answer
+    })
+    const user = renderApp('/quiz')
+
+    await user.click(await screen.findByRole('button', { name: /mournful/ }))
+
+    expect(screen.getByRole('status')).toHaveTextContent('Not quite. It means: wet with light rain')
+    expect(screen.getByRole('button', { name: 'Saving…' })).toBeDisabled()
+    expect(await screen.findByTestId('score')).toHaveTextContent('120') // not saved yet
+
+    release(json(result({ correct: false, points: -10, stats: { ...STATS, total: 110 } })))
+
+    expect(await screen.findByRole('button', { name: 'Continue' })).toBeEnabled()
+    expect(screen.getByTestId('score')).toHaveTextContent('110')
+  })
+
   it('asks for the next question while the feedback is read, so Continue shows it at once', async () => {
     const api = quiz({
       'GET /api/quiz/question': questions(question(1, 'drizzly'), question(2, 'spleen')),
