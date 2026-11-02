@@ -14,6 +14,7 @@ from any book, so stopping a book doesn't mean forgetting its words.
 
 from collections import Counter
 from collections.abc import Callable
+from contextlib import suppress
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from random import Random
@@ -205,16 +206,32 @@ class QuizService:
     # Asking
 
     def current_question(self, user_id: int, now: datetime, focus: Focus | None = None) -> Question:
-        """The question on screen: the unanswered one, or a new one (from `focus` if given)."""
-        pending = self._repo.pending_question(user_id)
-        if pending is not None:
-            return pending
+        """The question on screen: the oldest unanswered one, or a new one (from `focus`)."""
+        pending = self._repo.unanswered(user_id, limit=1)
+        if pending:
+            return pending[0]
         question = self._ask(user_id, now, focus)
         self._session.commit()
         return question
 
+    def upcoming(
+        self, user_id: int, now: datetime, focus: Focus | None = None
+    ) -> tuple[Question, Question | None]:
+        """The question on screen and the one kept ready after it, so the screen can move on
+        without a request. Choosing the second a step early picks the same word: the first is
+        excluded either way (a word isn't asked twice within `spacing` questions)."""
+        pending = self._repo.unanswered(user_id, limit=2)
+        if not pending:
+            pending = [self._ask(user_id, now, focus)]
+        if len(pending) == 1:
+            with suppress(NoWordsError):  # nothing more to ask: the screen finds out there
+                pending.append(self._ask(user_id, now, focus))
+        self._session.commit()
+        return pending[0], pending[1] if len(pending) > 1 else None
+
     def _ask(self, user_id: int, now: datetime, focus: Focus | None) -> Question:
         recent = self._repo.recently_answered_word_ids(user_id, self._quiz.spacing)
+        recent |= {q.word_id for q in self._repo.unanswered(user_id)}  # not twice in a row
         unusable: set[int] = set()  # words we couldn't build a question for
         # First try words not asked recently; if there are none, allow repeats (they don't score).
         for allow_recent in (False, True):

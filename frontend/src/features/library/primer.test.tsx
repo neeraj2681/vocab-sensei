@@ -99,7 +99,7 @@ describe('chapter primer', () => {
 
 describe('studying a chapter', () => {
   const STATS = { total: 0, today: 0, daily_goal: 10, streak: 0 }
-  const FOCUSED_URL = 'GET /api/quiz/question?document_id=1&chapter=1'
+  const FOCUSED_URL = 'GET /api/quiz/question?include_next=true&document_id=1&chapter=1'
 
   it('asks only that chapter and shows a banner with its readiness', async () => {
     const api = fakeApi({

@@ -1273,6 +1273,20 @@ a.primary:active {
   transition: width 0.35s ease;
 }
 
+/* An answer that couldn't be saved: says so and offers to try again. */
+.save-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  padding: 0.6rem 0.9rem;
+  border-radius: 14px;
+  background: var(--bad-soft);
+  color: var(--bad);
+}
+
 /* The feedback panel slides up from the bottom and stays in reach of the thumb. */
 .feedback {
   position: sticky;

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { ApiError } from '../../api/client'
 import { documentsApi, type ChapterReadiness } from '../../api/documents'
-import { quizApi, type AnswerResult, type QuizQuestion, type QuizStats } from '../../api/quiz'
+import { quizApi, type QuizQuestion, type QuizStats } from '../../api/quiz'
 import { chapterLabel } from '../library/labels'
 import { type Pop, ScoreBar } from './ScoreBar'
 import { Burst } from '../../components/Burst'
@@ -50,7 +50,6 @@ type Phase =
       question: QuizQuestion
       chosen: number
       correct: boolean // known at once from the question
-      result: AnswerResult | null // the saved answer (score, sentence), a moment later
     }
   | { kind: 'error'; message: string; noWords: boolean }
   | { kind: 'summary' }
@@ -83,8 +82,26 @@ export function QuizPage() {
   const focusBook = params.has('book') ? Number(params.get('book')) : null
   const focusChapter = params.has('chapter') ? Number(params.get('chapter')) : null
   const focused = focusBook !== null && focusChapter !== null
-  // The next question, asked for as soon as an answer is saved so Continue shows it at once.
-  const upcoming = useRef<Promise<QuizQuestion> | null>(null)
+  // Questions kept ready, so Continue never waits for the network: the first comes with the
+  // question on screen, and each saved answer brings the one after.
+  const ready = useRef<QuizQuestion[]>([])
+  const seen = useRef(new Set<number>()) // ids shown or kept ready, so none is added twice
+  const failed = useRef<{ question: QuizQuestion; index: number } | null>(null)
+
+  function keep(...questions: (QuizQuestion | null | undefined)[]) {
+    for (const question of questions) {
+      if (question && !seen.current.has(question.id)) {
+        seen.current.add(question.id)
+        ready.current.push(question)
+      }
+    }
+  }
+
+  function show(question: QuizQuestion) {
+    seen.current.add(question.id)
+    keep(question.next)
+    setPhase({ kind: 'asking', question })
+  }
 
   useEffect(() => {
     let current = true
@@ -104,11 +121,10 @@ export function QuizPage() {
 
   useEffect(() => {
     let current = true
-    const request = upcoming.current ?? quizApi.question(focusOf(focusBook, focusChapter))
-    upcoming.current = null
-    request
+    quizApi
+      .question(focusOf(focusBook, focusChapter))
       .then((question) => {
-        if (current) setPhase({ kind: 'asking', question })
+        if (current) show(question)
       })
       .catch((err: unknown) => {
         if (current) setPhase(errorPhase(err))
@@ -116,14 +132,14 @@ export function QuizPage() {
     return () => {
       current = false
     }
-  }, [questionVersion, focusBook, focusChapter])
+  }, [questionVersion, focusBook, focusChapter]) // eslint-disable-line react-hooks/exhaustive-deps
 
   /** Shows the whole result at once (the question carries both outcomes), then saves the answer
-  in the background; the saved answer confirms the score and brings the next question. */
+  in the background; the saved answer confirms the score and brings a question to keep ready. */
   function choose(question: QuizQuestion, index: number) {
     const correct = index === question.correct_index
     const outcome = correct ? question.if_right : question.if_wrong
-    setPhase({ kind: 'answered', question, chosen: index, correct, result: null })
+    setPhase({ kind: 'answered', question, chosen: index, correct })
     buzz(correct)
     setSession((s) => ({
       ...s,
@@ -143,25 +159,23 @@ export function QuizPage() {
   async function save(question: QuizQuestion, index: number) {
     setBusy(true)
     setAnswerError(null)
+    failed.current = null
     try {
       const result = await quizApi.answer(question.id, index, focusOf(focusBook, focusChapter))
-      setPhase((p) =>
-        p.kind === 'answered' && p.question.id === question.id ? { ...p, result } : p,
-      )
       setStats(result.stats) // the server's numbers win (streak, week)
-      // The next question came with the answer; ask separately only if it didn't.
-      const next = result.next
-        ? Promise.resolve(result.next)
-        : quizApi.question(focusOf(focusBook, focusChapter))
-      next.catch(() => undefined)
-      upcoming.current = next
+      keep(result.next, result.after_next)
     } catch (err) {
-      // The result stays on screen; saving can simply be tried again.
-      const failed = errorPhase(err)
-      setAnswerError(failed.kind === 'error' ? failed.message : 'Something went wrong')
+      // What's on screen stays; a banner offers to save again.
+      failed.current = { question, index }
+      const error = errorPhase(err)
+      setAnswerError(error.kind === 'error' ? error.message : 'Something went wrong')
     } finally {
       setBusy(false)
     }
+  }
+
+  function retry() {
+    if (failed.current) void save(failed.current.question, failed.current.index)
   }
 
   async function know(question: QuizQuestion) {
@@ -177,35 +191,44 @@ export function QuizPage() {
   }
 
   function next() {
-    if (phase.kind === 'answered' && phase.result === null) {
-      setContinueQueued(true) // moves on the moment the answer is saved
-      return
-    }
-    setContinueQueued(false)
-    setAnswerError(null)
     if (phase.kind === 'answered' && session.answered >= SESSION_LENGTH) {
+      setContinueQueued(false)
       setPhase({ kind: 'summary' })
       return
     }
-    setPhase({ kind: 'loading' })
-    setQuestionVersion((v) => v + 1)
+    const question = ready.current.shift()
+    if (question) {
+      setContinueQueued(false)
+      show(question) // kept ready: no request, no wait
+    } else if (busy) {
+      setContinueQueued(true) // a save is bringing one: go on the moment it lands
+    } else {
+      setContinueQueued(false)
+      setPhase({ kind: 'loading' })
+      setQuestionVersion((v) => v + 1)
+    }
   }
 
-  // Continue was tapped before the save finished: go on as soon as it has.
+  // Continue was tapped before anything was kept ready: go on once a save brings a question.
   useEffect(() => {
-    if (continueQueued && phase.kind === 'answered' && phase.result !== null) next()
+    if (continueQueued && (ready.current.length > 0 || !busy)) next()
   })
 
   function keepGoing() {
     setSession(newSession(stats?.today ?? null))
-    setPhase({ kind: 'loading' })
-    setQuestionVersion((v) => v + 1)
+    const question = ready.current.shift()
+    if (question) {
+      show(question)
+    } else {
+      setPhase({ kind: 'loading' })
+      setQuestionVersion((v) => v + 1)
+    }
   }
 
   // Keyboard: 1-4 pick an option, Enter (or →) goes to the next question.
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
-      if (busy || event.metaKey || event.ctrlKey || event.altKey) return
+      if (event.metaKey || event.ctrlKey || event.altKey) return
       if (phase.kind === 'asking') {
         const index = Number(event.key) - 1
         if (index >= 0 && index < phase.question.options.length) {
@@ -216,8 +239,7 @@ export function QuizPage() {
         (event.key === 'Enter' || event.key === 'ArrowRight')
       ) {
         event.preventDefault()
-        if (answerError) void save(phase.question, phase.chosen)
-        else next()
+        next()
       }
     }
     window.addEventListener('keydown', onKey)
@@ -255,20 +277,24 @@ export function QuizPage() {
           )}
         </div>
       )}
+      {answerError && (
+        <div role="alert" className="save-error">
+          <span>Couldn’t save an answer: {answerError}</span>
+          <button type="button" className="link-button" onClick={retry} disabled={busy}>
+            Try again
+          </button>
+        </div>
+      )}
       {(phase.kind === 'asking' || phase.kind === 'answered') && (
         <QuestionCard
           phase={phase}
           busy={busy}
-          saveError={answerError}
           continueQueued={continueQueued}
           onChoose={(index) => {
             choose(phase.question, index)
           }}
           onKnow={() => void know(phase.question)}
           onNext={next}
-          onRetry={() => {
-            if (phase.kind === 'answered') void save(phase.question, phase.chosen)
-          }}
         />
       )}
     </section>
@@ -277,25 +303,14 @@ export function QuizPage() {
 
 interface CardProps {
   phase: Extract<Phase, { kind: 'asking' | 'answered' }>
-  busy: boolean
-  saveError: string | null
+  busy: boolean // a save is running ("I know this" waits for it)
   continueQueued: boolean
   onChoose: (index: number) => void
   onKnow: () => void
   onNext: () => void
-  onRetry: () => void
 }
 
-function QuestionCard({
-  phase,
-  busy,
-  saveError,
-  continueQueued,
-  onChoose,
-  onKnow,
-  onNext,
-  onRetry,
-}: CardProps) {
+function QuestionCard({ phase, busy, continueQueued, onChoose, onKnow, onNext }: CardProps) {
   const { question } = phase
   const answered = phase.kind === 'answered' ? phase : null
 
@@ -315,7 +330,7 @@ function QuestionCard({
             <button
               type="button"
               className={optionClass(index)}
-              disabled={busy || answered !== null}
+              disabled={answered !== null}
               onClick={() => {
                 onChoose(index)
               }}
@@ -332,11 +347,8 @@ function QuestionCard({
         <Feedback
           question={question}
           correct={answered.correct}
-          saving={busy}
-          saveError={saveError}
           continueQueued={continueQueued}
           onNext={onNext}
-          onRetry={onRetry}
         />
       ) : (
         <button type="button" className="link-button" disabled={busy} onClick={onKnow}>
@@ -374,19 +386,13 @@ function Prompt({ question }: { question: QuizQuestion }) {
 function Feedback({
   question,
   correct,
-  saving,
-  saveError,
   continueQueued,
   onNext,
-  onRetry,
 }: {
   question: QuizQuestion
   correct: boolean
-  saving: boolean
-  saveError: string | null
   continueQueued: boolean
   onNext: () => void
-  onRetry: () => void
 }) {
   // All of this came with the question, so it shows the moment an option is tapped.
   const learned = correct && question.if_right.learned
@@ -424,26 +430,15 @@ function Feedback({
       {question.context_sentence && (
         <blockquote className="feedback__sentence">{question.context_sentence}</blockquote>
       )}
-      {saveError ? (
-        <>
-          <p role="alert" className="form-error">
-            Couldn’t save that answer: {saveError}
-          </p>
-          <button type="button" className="primary" onClick={onRetry} disabled={saving}>
-            Try saving again
-          </button>
-        </>
-      ) : (
-        <button
-          type="button"
-          className={correct ? 'primary' : 'primary primary--wrong'}
-          onClick={onNext}
-          aria-busy={continueQueued}
-          autoFocus
-        >
-          Continue
-        </button>
-      )}
+      <button
+        type="button"
+        className={correct ? 'primary' : 'primary primary--wrong'}
+        onClick={onNext}
+        aria-busy={continueQueued}
+        autoFocus
+      >
+        Continue
+      </button>
     </div>
   )
 }
