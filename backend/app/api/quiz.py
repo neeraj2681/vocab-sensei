@@ -93,6 +93,7 @@ class QuestionResponse(BaseModel):
     counted: bool  # False when the word came back too soon to score
     if_right: OutcomeResponse
     if_wrong: OutcomeResponse
+    next: "QuestionResponse | None" = None  # with include_next: the one kept ready after it
 
     @classmethod
     def of(cls, question: Question, preview: Preview) -> Self:
@@ -157,7 +158,8 @@ class AnswerResponse(BaseModel):
     word_status: WordStatus
     context_sentence: str | None  # the sentence from the book, shown after answering
     stats: StatsResponse
-    next: QuestionResponse | None  # what comes next, so it needs no request of its own
+    next: QuestionResponse | None  # with include_next: the question now on screen
+    after_next: QuestionResponse | None = None  # and the one kept ready after it
 
 
 class PractisedWordResponse(BaseModel):
@@ -214,14 +216,23 @@ def current_question(
         int | None, Query(description="with `chapter`: study one chapter")
     ] = None,
     chapter: Annotated[int | None, Query(ge=0)] = None,
+    include_next: Annotated[
+        bool, Query(description="also the question kept ready after it")
+    ] = False,
 ) -> QuestionResponse:
     """The question to show: the unanswered one if there is one, otherwise a new one."""
     focus = get_focus(user.id, documents, document_id, chapter)
     if focus is None:
         LibraryService(session, settings).start_default_if_new(user.id)  # new users get a classic
     try:
-        question = quiz.current_question(user.id, now, focus)
-        return QuestionResponse.of(question, quiz.preview(user.id, question, now))
+        if not include_next:
+            question = quiz.current_question(user.id, now, focus)
+            return QuestionResponse.of(question, quiz.preview(user.id, question, now))
+        current, after = quiz.upcoming(user.id, now, focus)
+        response = QuestionResponse.of(current, quiz.preview(user.id, current, now))
+        if after is not None:
+            response.next = QuestionResponse.of(after, quiz.preview(user.id, after, now))
+        return response
     except NoWordsError as exc:
         raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from None
     except DictionaryUnavailableError:
@@ -270,19 +281,25 @@ def answer(
         word_status=outcome.word.status,
         context_sentence=outcome.question.source_sentence,
         stats=StatsResponse.of(outcome.stats),
-        next=next_question(quiz, user.id, now, focus) if include_next else None,
+        **(next_questions(quiz, user.id, now, focus) if include_next else {"next": None}),
     )
 
 
-def next_question(
+def next_questions(
     quiz: QuizService, user_id: int, now: datetime, focus: Focus | None
-) -> QuestionResponse | None:
-    """None when there's nothing to ask; the screen then asks itself and shows why."""
+) -> dict[str, QuestionResponse | None]:
+    """The question now on screen and the one kept ready after it; None when there's nothing
+    to ask (the screen then asks itself and shows why)."""
     try:
-        question = quiz.current_question(user_id, now, focus)
+        current, after = quiz.upcoming(user_id, now, focus)
     except (NoWordsError, DictionaryUnavailableError):
-        return None
-    return QuestionResponse.of(question, quiz.preview(user_id, question, now))
+        return {"next": None, "after_next": None}
+    return {
+        "next": QuestionResponse.of(current, quiz.preview(user_id, current, now)),
+        "after_next": (
+            QuestionResponse.of(after, quiz.preview(user_id, after, now)) if after else None
+        ),
+    }
 
 
 @router.post("/questions/{question_id}/know", status_code=status.HTTP_204_NO_CONTENT)

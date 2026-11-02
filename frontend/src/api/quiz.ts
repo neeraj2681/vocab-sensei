@@ -17,6 +17,7 @@ export interface QuizQuestion {
   counted: boolean // false when the word came back too soon to score
   if_right: Outcome
   if_wrong: Outcome
+  next?: QuizQuestion | null // the question kept ready after this one
 }
 
 export interface Outcome {
@@ -50,7 +51,8 @@ export interface AnswerResult {
   word_status: 'new' | 'learning' | 'learned' | 'known'
   context_sentence: string | null
   stats: QuizStats
-  next?: QuizQuestion | null // the next question, sent with the saved answer
+  next?: QuizQuestion | null // the question now on screen, sent with the saved answer
+  after_next?: QuizQuestion | null // and the one kept ready after it
 }
 
 export interface HistoryPoint {
@@ -81,11 +83,12 @@ export interface Focus {
 }
 
 export const quizApi = {
+  /** The question on screen and the one kept ready after it. */
   question: (focus?: Focus) =>
     apiGet<QuizQuestion>(
-      focus
-        ? `/quiz/question?document_id=${String(focus.documentId)}&chapter=${String(focus.chapter)}`
-        : '/quiz/question',
+      `/quiz/question?include_next=true${
+        focus ? `&document_id=${String(focus.documentId)}&chapter=${String(focus.chapter)}` : ''
+      }`,
     ),
   /** Saves an answer; the next question comes back with it (in `focus`, if given). */
   answer: (id: number, chosenIndex: number, focus?: Focus) =>

@@ -427,21 +427,25 @@ def test_a_word_one_right_answer_from_learned_says_so(
     assert asked["if_right"]["learned"] is True
 
 
-def test_the_next_question_can_come_with_the_answer(
+def test_the_next_question_is_kept_ready(
     user_client: TestClient, session: Session, book: Document, clock: Clock
 ) -> None:
-    asked = question(user_client)
-    right = correct_index(session, asked["id"])
+    first = user_client.get("/api/quiz/question?include_next=true").json()
+    ready = first["next"]
+
+    assert ready["id"] != first["id"] and ready["word"] != first["word"]
+    assert question(user_client)["id"] == first["id"]  # still the one on screen
 
     saved = user_client.post(
-        f"/api/quiz/questions/{asked['id']}/answer?tz=UTC&include_next=true",
-        json={"chosen_index": right},
+        f"/api/quiz/questions/{first['id']}/answer?tz=UTC&include_next=true",
+        json={"chosen_index": correct_index(session, first["id"])},
     ).json()
 
-    assert saved["next"]["id"] != asked["id"]
-    assert question(user_client)["id"] == saved["next"]["id"]  # it's the one now on screen
-    plain = answer(user_client, session)
-    assert plain["next"] is None  # only when asked for
+    assert saved["next"]["id"] == ready["id"]  # the kept question is now on screen
+    after = saved["after_next"]
+    assert after["id"] not in {first["id"], ready["id"]}
+    assert after["word"] != ready["word"]
+    assert answer(user_client, session)["next"] is None  # only when asked for
 
 
 @pytest.mark.usefixtures("book")

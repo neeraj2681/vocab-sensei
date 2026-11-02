@@ -26,15 +26,18 @@ class QuizRepository:
 
     # Questions and answers
 
-    def pending_question(self, user_id: int) -> Question | None:
-        """The user's newest question that hasn't been answered yet."""
-        return self._session.scalars(
-            select(Question)
-            .outerjoin(QuizAnswer, QuizAnswer.question_id == Question.id)
-            .where(Question.user_id == user_id, QuizAnswer.id.is_(None))
-            .order_by(Question.id.desc())
-            .limit(1)
-        ).first()
+    def unanswered(self, user_id: int, limit: int = 2) -> list[Question]:
+        """The user's questions not answered yet, oldest first: the one on screen, then the one
+        kept ready after it."""
+        return list(
+            self._session.scalars(
+                select(Question)
+                .outerjoin(QuizAnswer, QuizAnswer.question_id == Question.id)
+                .where(Question.user_id == user_id, QuizAnswer.id.is_(None))
+                .order_by(Question.id)
+                .limit(limit)
+            )
+        )
 
     def question(self, user_id: int, question_id: int) -> Question | None:
         question = self._session.get(Question, question_id)
