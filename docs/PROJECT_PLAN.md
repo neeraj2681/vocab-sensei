@@ -298,6 +298,14 @@ because git and the workflow files carry over.
 - [x] Fill-in-the-blank questions using sentences from the book (`feat/question-types`)
 - [x] Reverse questions (definition → word); formats unlock by word score: 0–29 meaning, 30–69 + reverse, 70+ + fill-in
 - [ ] Adjustable difficulty threshold per user
+- [ ] **Harder options for well-known words** (requested 2 Nov 2026, next phase): once a word's score passes
+  a threshold (e.g. 70, alongside fill-in), its wrong options become look-alikes, so it's harder to guess.
+  - Today wrong options are other words of the same part of speech with meanings of similar length. Close
+    options instead: near-meanings (WordNet siblings, e.g. *melancholy* vs *wistful*, *sombre*), words
+    that look or sound alike (*affect/effect*, *elicit/illicit*), or the same root.
+  - Never a true synonym, so exactly one answer is still right.
+  - Steps by score: 0–69 the usual options, 70–89 one or two close ones, 90+ all close.
+  - A little badge ("Tricky") on the question, and the threshold configurable in settings.
 - [ ] Spaced-repetition option (FSRS) alongside the point system
 - [x] Mobile-friendly layout + installable PWA (`feat/mobile-pwa`)
 - [x] Daily reminder by push notification or email at a chosen time, only if the goal isn't met (`feat/reminders`, `feat/reminders-ui`)
