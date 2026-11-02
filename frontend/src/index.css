@@ -1320,10 +1320,6 @@ a.primary:active {
   max-width: 34rem;
 }
 
-.week-chart {
-  grid-column: 1 / -1; /* the full width under both columns */
-}
-
 .week-chart__head {
   display: flex;
   flex-wrap: wrap;

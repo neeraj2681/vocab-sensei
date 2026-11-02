@@ -79,6 +79,7 @@ export function TodayPage() {
         <Link className="button-link primary today__go" to="/quiz">
           {left > 0 ? `Continue · about ${String(minutes)} min` : 'Keep practising'}
         </Link>
+        {stats.week && <WeekChart days={stats.week} />}
       </div>
       <div className="today__side">
         {stats.week && (
@@ -125,7 +126,6 @@ export function TodayPage() {
 
         {readings.length > 0 && <UpNext readings={readings} />}
       </div>
-      {stats.week && <WeekChart days={stats.week} />}
     </section>
   )
 }
