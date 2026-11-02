@@ -32,7 +32,7 @@ export function MyBooks({ books, readings, onChange }: Props) {
       {books.length === 0 ? (
         <p className="muted">No books yet. Upload an EPUB, PDF or TXT file to get started.</p>
       ) : (
-        <ul className="shelf">
+        <ul className="shelf shelf--mine">
           {books.map((book) => (
             <li key={book.id} className="book-card">
               {book.status === 'ready' ? (

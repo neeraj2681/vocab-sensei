@@ -2623,7 +2623,8 @@ a.secondary {
 /* Cards have a fixed size, so two rows have a known height; more rows scroll inside. */
 .shelf {
   --card-width: 9.5rem;
-  --card-height: 23rem;
+  /* cover (2:3) + title, author and count + the buttons; every card the same, so rows line up */
+  --card-height: calc(var(--card-width) * 1.5 + 10rem);
   --row-gap: 1.25rem;
   display: grid;
   grid-template-columns: repeat(auto-fill, var(--card-width));
@@ -2646,6 +2647,7 @@ a.secondary {
 
 .book-card__cover {
   display: block;
+  flex: none; /* a long title never squeezes the cover */
   border-radius: 8px;
   box-shadow:
     0 1px 2px rgba(0, 0, 0, 0.12),
@@ -2707,6 +2709,8 @@ a.book-card__cover:hover {
 
 .book-card__title {
   display: -webkit-box;
+  min-height: 2.6em; /* always two lines' room, so authors line up across a row */
+  line-height: 1.3;
   overflow: hidden;
   font-weight: 700;
   color: var(--fg);
@@ -2744,4 +2748,35 @@ a.book-card__cover:hover {
   align-items: center;
   margin-top: auto;
   font-size: 0.85rem;
+}
+
+/* Your own books have two buttons (read, delete), which can take two lines */
+.shelf--mine {
+  --card-height: calc(var(--card-width) * 1.5 + 12.5rem);
+}
+
+/* Phones: smaller covers than on a laptop, three to a row */
+@media (max-width: 640px) {
+  .shelf {
+    --card-width: 6.6rem;
+    gap: var(--row-gap) 0.5rem;
+  }
+
+  .book-card__text {
+    font-size: 0.8rem;
+  }
+
+  .book-card .cover__title {
+    font-size: 0.8rem;
+  }
+
+  .book-card .cover--drawn {
+    padding: 0.6rem 0.5rem;
+  }
+
+  .book-card button {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    white-space: nowrap;
+  }
 }
