@@ -7,12 +7,19 @@ import { renderApp } from '../../test/renderApp'
 const USER = { id: 1, email: 'reader@example.com', display_name: 'Reader', email_verified_at: 'x' }
 const STATS: QuizStats = { total: 120, today: 3, daily_goal: 10, streak: 4 }
 
-const question = (id: number, word: string): QuizQuestion => ({
+const question = (id: number, word: string, extra: Partial<QuizQuestion> = {}): QuizQuestion => ({
   id,
   type: 'definition_mcq',
   prompt: word,
   options: ['wet with light rain', 'excessively mournful', 'a small bag', 'confidently optimistic'],
   correct_index: 0,
+  word,
+  meaning: 'wet with light rain',
+  context_sentence: 'It was a damp, drizzly November in my soul.',
+  counted: true,
+  if_right: { points: 5, learned: false },
+  if_wrong: { points: -10, learned: false },
+  ...extra,
 })
 
 const result = (overrides: Partial<AnswerResult>): AnswerResult => ({
@@ -31,7 +38,8 @@ const result = (overrides: Partial<AnswerResult>): AnswerResult => ({
 })
 
 const STATS_URL = 'GET /api/quiz/stats?tz=UTC'
-const ANSWER_URL = (id: number) => `POST /api/quiz/questions/${String(id)}/answer?tz=UTC`
+const ANSWER_URL = (id: number) =>
+  `POST /api/quiz/questions/${String(id)}/answer?tz=UTC&include_next=true`
 
 function quiz(routes: Routes) {
   return fakeApi({
@@ -153,7 +161,13 @@ describe('quiz', () => {
 
   it('says when an early repeat did not score', async () => {
     quiz({
-      'GET /api/quiz/question': questions(question(1, 'drizzly')),
+      'GET /api/quiz/question': questions(
+        question(1, 'drizzly', {
+          counted: false,
+          if_right: { points: 0, learned: false },
+          if_wrong: { points: 0, learned: false },
+        }),
+      ),
       [ANSWER_URL(1)]: () => json(result({ counted: false, points: 0, score_delta: 0 })),
     })
     const user = renderApp('/quiz')
@@ -165,7 +179,9 @@ describe('quiz', () => {
 
   it('celebrates a learned word', async () => {
     quiz({
-      'GET /api/quiz/question': questions(question(1, 'drizzly')),
+      'GET /api/quiz/question': questions(
+        question(1, 'drizzly', { if_right: { points: 5, learned: true } }),
+      ),
       [ANSWER_URL(1)]: () => json(result({ word_status: 'learned', word_score: 100 })),
     })
     const user = renderApp('/quiz')
@@ -227,6 +243,12 @@ describe('question types', () => {
           prompt: 'wet with light rain',
           options: ['drizzly', 'lugubrious', 'sanguine', 'purse'],
           correct_index: 0,
+          word: 'drizzly',
+          meaning: 'wet with light rain',
+          context_sentence: 'It was a damp, drizzly November in my soul.',
+          counted: true,
+          if_right: { points: 5, learned: false },
+          if_wrong: { points: -10, learned: false },
         }),
       [ANSWER_URL(1)]: () => json(result({ correct: false, points: -10 })),
     })
@@ -250,6 +272,12 @@ describe('question types', () => {
           prompt: 'It was a damp, _____ November in my soul.',
           options: ['drizzly', 'lugubrious', 'sanguine', 'purse'],
           correct_index: 0,
+          word: 'drizzly',
+          meaning: 'wet with light rain',
+          context_sentence: 'It was a damp, drizzly November in my soul.',
+          counted: true,
+          if_right: { points: 5, learned: false },
+          if_wrong: { points: -10, learned: false },
         }),
       [ANSWER_URL(1)]: () => json(result({})),
     })
@@ -289,45 +317,54 @@ describe('answer errors', () => {
 })
 
 describe('speed', () => {
-  it('shows right or wrong the moment an option is tapped, before the answer is saved', async () => {
+  it('shows the whole result and score the moment an option is tapped, before saving', async () => {
     let release: (response: Response) => void = () => undefined
     const saved = new Promise<Response>((resolve) => {
       release = resolve
     })
     quiz({
-      'GET /api/quiz/question': questions(question(1, 'drizzly'), question(2, 'spleen')),
+      'GET /api/quiz/question': questions(question(1, 'drizzly')),
       [ANSWER_URL(1)]: () => saved as unknown as Response, // the server is slow to answer
     })
     const user = renderApp('/quiz')
+    expect(await screen.findByTestId('score')).toHaveTextContent('120')
 
     await user.click(await screen.findByRole('button', { name: /mournful/ }))
 
+    // Everything came with the question: verdict, passage and the score change.
     expect(screen.getByRole('status')).toHaveTextContent('Not quite. It means: wet with light rain')
-    expect(screen.getByRole('button', { name: 'Saving…' })).toBeDisabled()
-    expect(await screen.findByTestId('score')).toHaveTextContent('120') // not saved yet
-
-    release(json(result({ correct: false, points: -10, stats: { ...STATS, total: 110 } })))
-
-    expect(await screen.findByRole('button', { name: 'Continue' })).toBeEnabled()
+    expect(screen.getByText('It was a damp, drizzly November in my soul.')).toBeInTheDocument()
     expect(screen.getByTestId('score')).toHaveTextContent('110')
+
+    // Continue tapped while still saving: it moves on as soon as the save (and next question) land.
+    await user.click(screen.getByRole('button', { name: 'Continue' }))
+    expect(screen.getByRole('button', { name: 'Continue' })).toHaveAttribute('aria-busy', 'true')
+    release(
+      json(
+        result({
+          correct: false,
+          points: -10,
+          stats: { ...STATS, total: 110 },
+          next: question(2, 'spleen'),
+        }),
+      ),
+    )
+
+    expect(await screen.findByRole('heading', { name: 'spleen' })).toBeInTheDocument()
   })
 
-  it('asks for the next question while the feedback is read, so Continue shows it at once', async () => {
+  it('takes the next question from the saved answer, with no request of its own', async () => {
     const api = quiz({
-      'GET /api/quiz/question': questions(question(1, 'drizzly'), question(2, 'spleen')),
-      [ANSWER_URL(1)]: () => json(result({})),
+      'GET /api/quiz/question': questions(question(1, 'drizzly')),
+      [ANSWER_URL(1)]: () => json(result({ next: question(2, 'spleen') })),
     })
     const user = renderApp('/quiz')
     await user.click(await screen.findByRole('button', { name: /wet with light rain/ }))
-    await screen.findByRole('button', { name: 'Continue' })
 
-    await waitFor(() => {
-      expect(api.calls('GET /api/quiz/question')).toHaveLength(2) // before Continue
-    })
     await user.click(screen.getByRole('button', { name: 'Continue' }))
 
     expect(await screen.findByRole('heading', { name: 'spleen' })).toBeInTheDocument()
-    expect(api.calls('GET /api/quiz/question')).toHaveLength(2) // nothing more to wait for
+    expect(api.calls('GET /api/quiz/question')).toHaveLength(1) // only the first one
   })
 })
 
