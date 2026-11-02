@@ -131,6 +131,16 @@ h3 {
   font-weight: 600;
 }
 
+h2 {
+  font-size: 1.75rem;
+  line-height: 1.2;
+}
+
+h3 {
+  font-size: 1.35rem;
+  line-height: 1.25;
+}
+
 /* Top-right corner: the theme toggle. */
 .app__corner {
   position: absolute;
@@ -350,15 +360,14 @@ button {
 
 .upload input[type='file']::file-selector-button {
   margin-right: 0.75rem;
-  padding: 0.7rem 1.25rem;
+  padding: 0.4rem 0.9rem;
   border: 2px solid var(--accent);
-  border-radius: 14px;
+  border-radius: 12px;
   background: var(--accent-soft);
   color: var(--accent);
   font: inherit;
-  font-family: var(--display);
   font-weight: 600;
-  font-size: 1.05rem;
+  font-size: 0.95rem;
   cursor: pointer;
 }
 
@@ -1737,6 +1746,40 @@ a.secondary {
     padding-top: 1.5rem;
   }
 
+  /* Sections as cards, like a web dashboard */
+  .app--nav .panel {
+    margin: 1.25rem 0;
+    padding: 1.25rem 1.5rem;
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    background: var(--surface);
+  }
+
+  .app--nav .panel > h3:first-child {
+    margin-top: 0;
+  }
+
+  .library__top {
+    display: grid;
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    gap: 1.25rem;
+    align-items: start;
+    margin: 1.25rem 0;
+  }
+
+  .library__top > .panel {
+    margin: 0;
+  }
+
+  /* Less chunky controls with a mouse */
+  .option {
+    padding: 0.65rem 0.9rem;
+  }
+
+  .today__go {
+    min-height: 2.9rem;
+  }
+
   .today {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     max-width: none;
@@ -1976,6 +2019,62 @@ a.secondary {
 /* Links styled as buttons stay in the body font. */
 .link-button {
   font-family: var(--sans);
+}
+
+/* Small cover thumbnails beside a book in a list */
+.thumb {
+  display: block;
+  flex: none;
+  width: 3.5rem;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.thumb .cover--drawn {
+  padding: 0.35rem;
+}
+
+.thumb .cover__title {
+  font-size: 0.55rem;
+}
+
+.thumb .cover__author {
+  display: none;
+}
+
+.reading-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.5rem 0.9rem;
+  align-items: center;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.reading-row:last-child {
+  border-bottom: 0;
+}
+
+.reading-row__text {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.reading-row__title {
+  font-weight: 700;
+  color: var(--fg);
+  text-decoration: none;
+}
+
+.reading-row .bar {
+  max-width: 16rem;
+}
+
+.reading-row .row__actions {
+  grid-column: 2;
+  flex-wrap: wrap;
 }
 
 /* Bookshelves: covers in a grid, like a library */
