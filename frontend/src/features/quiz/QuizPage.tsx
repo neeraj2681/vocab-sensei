@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { ApiError } from '../../api/client'
 import { documentsApi, type ChapterReadiness } from '../../api/documents'
@@ -28,6 +28,10 @@ const newSession = (todayAtStart: number | null): Session => ({
   combo: 0,
   todayAtStart,
 })
+
+function focusOf(book: number | null, chapter: number | null) {
+  return book !== null && chapter !== null ? { documentId: book, chapter } : undefined
+}
 
 /** A short buzz for right, a double one for wrong, on phones that can (Android). */
 function buzz(correct: boolean) {
@@ -72,6 +76,8 @@ export function QuizPage() {
   const focusBook = params.has('book') ? Number(params.get('book')) : null
   const focusChapter = params.has('chapter') ? Number(params.get('chapter')) : null
   const focused = focusBook !== null && focusChapter !== null
+  // The next question, asked for as soon as an answer is saved so Continue shows it at once.
+  const upcoming = useRef<Promise<QuizQuestion> | null>(null)
 
   useEffect(() => {
     let current = true
@@ -91,12 +97,9 @@ export function QuizPage() {
 
   useEffect(() => {
     let current = true
-    const focus =
-      focusBook !== null && focusChapter !== null
-        ? { documentId: focusBook, chapter: focusChapter }
-        : undefined
-    quizApi
-      .question(focus)
+    const request = upcoming.current ?? quizApi.question(focusOf(focusBook, focusChapter))
+    upcoming.current = null
+    request
       .then((question) => {
         if (current) setPhase({ kind: 'asking', question })
       })
@@ -114,6 +117,11 @@ export function QuizPage() {
     try {
       const result = await quizApi.answer(question.id, index)
       setPhase({ kind: 'answered', question, chosen: index, result })
+      // While the feedback is read, fetch what comes next (the server makes it once this answer
+      // is saved). A failure surfaces when Continue uses it.
+      const next = quizApi.question(focusOf(focusBook, focusChapter))
+      next.catch(() => undefined)
+      upcoming.current = next
       buzz(result.correct)
       setSession((s) => ({
         ...s,

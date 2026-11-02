@@ -283,6 +283,26 @@ describe('answer errors', () => {
   })
 })
 
+describe('speed', () => {
+  it('asks for the next question while the feedback is read, so Continue shows it at once', async () => {
+    const api = quiz({
+      'GET /api/quiz/question': questions(question(1, 'drizzly'), question(2, 'spleen')),
+      [ANSWER_URL(1)]: () => json(result({})),
+    })
+    const user = renderApp('/quiz')
+    await user.click(await screen.findByRole('button', { name: /wet with light rain/ }))
+    await screen.findByRole('button', { name: 'Continue' })
+
+    await waitFor(() => {
+      expect(api.calls('GET /api/quiz/question')).toHaveLength(2) // before Continue
+    })
+    await user.click(screen.getByRole('button', { name: 'Continue' }))
+
+    expect(await screen.findByRole('heading', { name: 'spleen' })).toBeInTheDocument()
+    expect(api.calls('GET /api/quiz/question')).toHaveLength(2) // nothing more to wait for
+  })
+})
+
 describe('sessions', () => {
   function tenQuestions(extra: Routes = {}) {
     const items = Array.from({ length: 12 }, (_, i) => question(i + 1, `word${String(i + 1)}`))
