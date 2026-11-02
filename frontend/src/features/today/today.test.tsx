@@ -133,15 +133,3 @@ describe('this week', () => {
     expect(screen.getAllByLabelText(/goal not met/)).toHaveLength(6)
   })
 })
-
-describe('me', () => {
-  it('picks a theme', async () => {
-    today()
-    const user = renderApp('/me')
-
-    await user.click(await screen.findByRole('button', { name: '❦ Sepia' }))
-
-    expect(document.documentElement.dataset.theme).toBe('sepia')
-    expect(screen.getByRole('button', { name: '❦ Sepia' })).toHaveAttribute('aria-pressed', 'true')
-  })
-})

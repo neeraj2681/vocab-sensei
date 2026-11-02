@@ -141,31 +141,6 @@ h3 {
   line-height: 1.25;
 }
 
-/* Top-right corner: the theme toggle. */
-.app__corner {
-  position: absolute;
-  top: 0;
-  right: 0;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.theme-toggle {
-  padding: 0;
-  -webkit-appearance: none;
-  appearance: none;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--surface);
-  color: var(--fg);
-  width: 2.25rem;
-  height: 2.25rem;
-  cursor: pointer;
-  font-size: 1rem;
-  line-height: 1;
-}
-
 .app__tagline {
   color: var(--muted);
 }
@@ -239,7 +214,8 @@ a {
   margin-bottom: 1rem;
 }
 
-.field input {
+.field input,
+.field select {
   font: inherit;
   padding: 0.5rem;
   border: 1px solid var(--border);
@@ -1257,13 +1233,13 @@ a.primary:active {
   border-top: 1px solid var(--border);
 }
 
-.me__themes {
+.settings__themes {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 0.5rem;
 }
 
-.me__themes button {
+.settings__themes button {
   padding: 0.6rem 0.25rem;
   border: 2px solid var(--border);
   border-radius: 14px;
@@ -1274,14 +1250,105 @@ a.primary:active {
   cursor: pointer;
 }
 
-.me__themes button[aria-pressed='true'] {
+.settings__themes button[aria-pressed='true'] {
   border-color: var(--accent);
   background: var(--accent-soft);
   box-shadow: 0 3px 0 var(--accent);
 }
 
-.me .link-button {
+/* You in a circle: your photo, or a figure for the gender you picked */
+.avatar {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--accent-soft);
+  box-shadow:
+    0 0 0 2px var(--surface),
+    0 0 0 4px var(--accent);
+}
+
+.tabs__tab .avatar {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+.me__who {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.me__who h2,
+.me__who p {
+  margin: 0;
+}
+
+/* Log out: a chunky red 3D button */
+.logout-button {
   justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+  padding: 0.7rem 1.6rem;
+  border: none;
+  border-radius: 16px;
+  background: linear-gradient(#ef5a50, #d9473f);
+  box-shadow:
+    0 5px 0 #a3302a,
+    0 8px 14px rgb(163 48 42 / 30%);
+  color: #fff;
+  font: inherit;
+  font-family: var(--display);
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    transform 0.08s,
+    box-shadow 0.08s;
+}
+
+.logout-button:active {
+  transform: translateY(4px);
+  box-shadow:
+    0 1px 0 #a3302a,
+    0 2px 6px rgb(163 48 42 / 30%);
+}
+
+/* Settings: profile */
+.profile__photo {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.profile__photo-actions {
+  display: grid;
+  justify-items: start;
+  gap: 0.5rem;
+}
+
+.profile__row {
+  margin-bottom: 0.5rem;
+}
+
+.profile__buttons {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.notice {
+  padding: 0.6rem 0.8rem;
+  border-radius: 12px;
+  background: var(--accent-soft);
+}
+
+.profile__rename .notice {
+  background: var(--bad-soft);
 }
 
 /* Sessions */
@@ -1929,12 +1996,6 @@ a.secondary {
     font-size: 1.05rem;
   }
 
-  .app--nav .app__corner {
-    position: static;
-    margin-top: auto; /* the theme switch sits at the bottom of the menu */
-    padding-top: 1.5rem;
-  }
-
   /* Sections as cards, like a web dashboard */
   .app--nav .panel {
     margin: 1.25rem 0;
@@ -2060,7 +2121,7 @@ a.secondary {
 
   .app__header h1 {
     font-size: 1.4rem;
-    margin: 0 3.5rem 0.25rem 0; /* room for the theme toggle */
+    margin: 0 0 0.25rem;
   }
 
   .app__tagline {
@@ -2076,7 +2137,6 @@ a.secondary {
   }
 
   /* Round buttons stay round at that size */
-  .theme-toggle,
   .speak,
   .words .speak,
   .up-next .speak,

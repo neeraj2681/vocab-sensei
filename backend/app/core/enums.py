@@ -39,6 +39,15 @@ class DocumentStatus(StrEnum):
 class EmailTokenPurpose(StrEnum):
     VERIFY_EMAIL = "verify_email"
     RESET_PASSWORD = "reset_password"
+    CHANGE_EMAIL = "change_email"
+
+
+class Gender(StrEnum):
+    """Only picks the person shown in the Me icon."""
+
+    MALE = "male"
+    FEMALE = "female"
+    UNSPECIFIED = "unspecified"  # prefer not to say
 
 
 class QuestionType(StrEnum):

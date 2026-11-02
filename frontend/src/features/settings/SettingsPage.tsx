@@ -3,6 +3,7 @@ import { remindersApi, type ReminderSettings } from '../../api/reminders'
 import { FormError } from '../../components/Form'
 import { useSubmit } from '../../components/useSubmit'
 import { timeZone } from '../../api/quiz'
+import { EmailPanel, PasswordPanel, ProfilePanel, ThemePanel } from './AccountPanels'
 import { GoalPanel } from './GoalPanel'
 import { pushSupported, subscribeThisDevice, thisDeviceSubscribed } from './push'
 
@@ -88,6 +89,8 @@ export function SettingsPage() {
   return (
     <section className="settings">
       <h2>Settings</h2>
+      <ProfilePanel />
+      <ThemePanel />
       <GoalPanel />
       <section aria-labelledby="reminder-heading" className="panel">
         <h3 id="reminder-heading">Daily reminder</h3>
@@ -170,6 +173,8 @@ export function SettingsPage() {
         <FormError message={error} />
         {notice && <p role="status">{notice}</p>}
       </section>
+      <EmailPanel />
+      <PasswordPanel />
     </section>
   )
 }

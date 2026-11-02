@@ -37,9 +37,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser((current) => current && { ...current, onboarded_at: new Date().toISOString() })
   }, [])
 
+  const updateUser = useCallback((changes: Partial<User>) => {
+    setUser((current) => current && { ...current, ...changes })
+  }, [])
+
   const value = useMemo(
-    () => ({ user, loading, login, logout, deleteAccount, finishOnboarding }),
-    [user, loading, login, logout, deleteAccount, finishOnboarding],
+    () => ({ user, loading, login, logout, deleteAccount, finishOnboarding, updateUser }),
+    [user, loading, login, logout, deleteAccount, finishOnboarding, updateUser],
   )
   return <AuthContext value={value}>{children}</AuthContext>
 }
