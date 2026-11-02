@@ -536,6 +536,23 @@ class TestStats:
         ]
         assert len(stats["week"]) == 7
 
+    def test_changing_the_goal_on_another_day_keeps_older_days_goals(
+        self, user_client: TestClient, session: Session, clock: Clock
+    ) -> None:
+        clock.now = NOW - timedelta(days=2)
+        for _ in range(10):  # meets the goal of 10 it has that day
+            answer(user_client, session)
+        clock.now = NOW - timedelta(days=1)
+        user_client.put("/api/quiz/goal?tz=UTC", json={"daily_goal": 12})
+        for _ in range(12):
+            answer(user_client, session)
+        clock.now = NOW
+        user_client.put("/api/quiz/goal?tz=UTC", json={"daily_goal": 20})
+        stats = user_client.put("/api/quiz/goal?tz=UTC", json={"daily_goal": 12}).json()  # and back
+
+        assert [d["met"] for d in stats["week"][-3:]] == [True, True, False]
+        assert stats["streak"] == 2  # two days ago still counts with the 10 it had
+
     def test_the_week_has_the_score_earned_each_day(
         self, user_client: TestClient, session: Session, clock: Clock
     ) -> None:

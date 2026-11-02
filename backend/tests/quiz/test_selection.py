@@ -67,11 +67,20 @@ def test_a_missed_day_resets_the_streak() -> None:
 
 
 def test_raising_the_goal_keeps_the_streak_already_earned() -> None:
-    raised_today = DailyGoal(20, earlier=10, since=day(0))
+    raised_today = DailyGoal(20, steps=((day(30), 10), (day(0), 20)))
     answers = {day(0): 20, day(1): 10, day(2): 12}
 
     assert streak(answers, TODAY, goal=raised_today) == 3  # earlier days judged by 10
     assert streak({**answers, day(0): 15}, TODAY, goal=raised_today) == 2  # today needs 20
+
+
+def test_every_past_day_keeps_the_goal_it_had() -> None:
+    # 10 at first, 50 from two days ago, and today 50 -> 20 -> 50 again.
+    goal = DailyGoal(50, steps=((day(30), 10), (day(2), 50), (day(0), 50)))
+    answers = {day(0): 60, day(1): 55, day(2): 50, day(3): 11}
+
+    assert [goal.on(day(n)) for n in (3, 2, 1, 0)] == [10, 50, 50, 50]
+    assert streak(answers, TODAY, goal=goal) == 4  # day 3's 11 met the 10 it had
 
 
 def kinds_for(score: int, can_fill: bool = True) -> set[QuestionType]:
