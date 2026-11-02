@@ -53,6 +53,22 @@ Tailscale keeps this after reboots, and its certificate gives the site HTTPS. Se
 address and run `docker compose up -d --force-recreate api` so email links use it. To stop publishing:
 `tailscale funnel --https=443 off`.
 
+**Keep it up.** If the Mac sleeps or Tailscale is quit, the public address goes down even though
+the app keeps running. A small watchdog checks every 5 minutes and starts whatever stopped
+(Docker/Colima, the stack, Tailscale, Funnel), logging what it did:
+
+```bash
+sed -e "s|DEPLOY_DIR|$PWD|" -e "s|LOG_FILE|$HOME/Library/Logs/vocab-sensei-watchdog.log|" \
+  watchdog/com.vocabsensei.watchdog.plist > ~/Library/LaunchAgents/com.vocabsensei.watchdog.plist
+launchctl load ~/Library/LaunchAgents/com.vocabsensei.watchdog.plist      # starts now and at login
+tail ~/Library/Logs/vocab-sensei-watchdog.log                             # empty while all is well
+launchctl unload ~/Library/LaunchAgents/com.vocabsensei.watchdog.plist    # to stop it
+```
+
+Also turn on *Launch at login* in the Tailscale app and *Prevent automatic sleeping on power
+adapter when the display is off* (System Settings → Battery → Options); the watchdog can't wake a
+sleeping Mac.
+
 **Quick try (no account):** a random `https://….trycloudflare.com` address that changes on every restart.
 
 ```bash
