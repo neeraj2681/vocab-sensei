@@ -4,6 +4,7 @@ import { documentsApi, type BookDocument } from '../../api/documents'
 import { readingsApi, type Reading } from '../../api/readings'
 import { FormError } from '../../components/Form'
 import { useSubmit } from '../../components/useSubmit'
+import { BookCover } from './BookCover'
 import { bookSummary } from './labels'
 
 interface Props {
@@ -31,20 +32,30 @@ export function MyBooks({ books, readings, onChange }: Props) {
       {books.length === 0 ? (
         <p className="muted">No books yet. Upload an EPUB, PDF or TXT file to get started.</p>
       ) : (
-        <ul className="books">
+        <ul className="shelf">
           {books.map((book) => (
-            <li key={book.id} className="row">
-              <span>
+            <li key={book.id} className="book-card">
+              {book.status === 'ready' ? (
+                <Link to={`/books/${String(book.id)}`} className="book-card__cover" tabIndex={-1}>
+                  <BookCover book={book} />
+                </Link>
+              ) : (
+                <span className="book-card__cover">
+                  <BookCover book={book} />
+                </span>
+              )}
+              <span className="book-card__text">
                 {book.status === 'ready' ? (
-                  <Link to={`/books/${String(book.id)}`}>{book.title}</Link>
+                  <Link to={`/books/${String(book.id)}`} className="book-card__title">
+                    {book.title}
+                  </Link>
                 ) : (
-                  book.title
+                  <span className="book-card__title">{book.title}</span>
                 )}
-                {book.author && <span className="muted"> by {book.author}</span>}
-                <br />
+                {book.author && <span className="muted">{book.author}</span>}
                 <span className={`muted status status--${book.status}`}>{bookSummary(book)}</span>
               </span>
-              <span className="row__actions">
+              <span className="book-card__actions">
                 {reading.has(book.id) ? (
                   <span className="muted">Reading</span>
                 ) : (

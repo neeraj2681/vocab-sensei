@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import Annotated, Self
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, UploadFile, status
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -38,6 +39,7 @@ class DocumentResponse(BaseModel):
     chapter_count: int
     word_count: int
     classic: bool = False  # a built-in book everyone can read
+    has_cover: bool = False  # GET /documents/{id}/cover has a picture; otherwise draw one
 
     @classmethod
     def of(cls, document: Document, word_count: int) -> Self:
@@ -53,6 +55,7 @@ class DocumentResponse(BaseModel):
             chapter_count=len(document.chapters),
             word_count=word_count,
             classic=document.is_classic,
+            has_cover=document.cover_path is not None,
         )
 
 
@@ -186,6 +189,17 @@ def list_words(
             document, chapter
         )
     ]
+
+
+@router.get("/{document_id}/cover", response_class=FileResponse)
+def cover(document: ReadableDocument, documents: DocumentServiceDep) -> FileResponse:
+    """The book's cover thumbnail (JPEG); 404 when it has none (the screen draws one)."""
+    path = documents.cover_file(document)
+    if path is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "This book has no cover picture")
+    return FileResponse(
+        path, media_type="image/jpeg", headers={"Cache-Control": "private, max-age=86400"}
+    )
 
 
 @router.delete("/{document_id}", status_code=status.HTTP_204_NO_CONTENT)

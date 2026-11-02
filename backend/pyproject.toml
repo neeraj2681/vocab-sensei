@@ -14,9 +14,11 @@ dependencies = [
     "fonttools>=4.68.0",
     "limits>=5.8.0",
     "lxml>=6.1.3",
+    "pillow>=11",
     "psycopg[binary]>=3.3.6",
     "pydantic-settings>=2.16.1",
     "pypdf>=6.21.4",
+    "pypdfium2>=4.30",
     "python-multipart>=0.0.32",
     "pywebpush>=2.5.0",
     "spacy>=3.8.18",
@@ -61,7 +63,7 @@ module = ["wn"]
 implicit_reexport = true  # `wn.config` is re-exported without an `__all__` entry
 
 [[tool.mypy.overrides]]
-module = ["pywebpush", "py_vapid"]
+module = ["pywebpush", "py_vapid", "pypdfium2"]
 ignore_missing_imports = true  # no type hints shipped
 
 [[tool.mypy.overrides]]

@@ -8,7 +8,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.api.deps import get_dictionary
-from app.commands import reindex_chapters
+from app.commands import make_covers, reindex_chapters
 from app.core.config import Settings
 from app.dictionary.types import DictionaryUnavailableError, Sense
 from app.extraction.types import ParsedChapter, ParsedDocument
@@ -417,3 +417,52 @@ def test_reindexing_carries_on_past_a_book_that_fails(
     monkeypatch.setattr(documents_service.DocumentService, "reindex_chapters", flaky)
 
     assert reindex_chapters.reindex(session_factory, settings) == (1, 1)
+
+
+def epub_with_cover(tmp_path: Path) -> bytes:
+    from tests.extraction.test_covers import png
+
+    spec = EpubSpec(
+        [Chapter(f"c{i}.xhtml", f"<p>Chapter {i}.{TEXT}</p><p>{RARE[0]}</p>") for i in (1, 2)],
+        cover=png(600, 900),
+    )
+    return build_epub(tmp_path / "covered.epub", spec).read_bytes()
+
+
+def test_a_book_with_a_cover_serves_it(
+    user_client: TestClient, tmp_path: Path, settings: Settings
+) -> None:
+    created = upload(user_client, epub_with_cover(tmp_path))
+    detail = user_client.get(f"/api/documents/{created['id']}").json()
+
+    cover = user_client.get(f"/api/documents/{created['id']}/cover")
+
+    assert detail["has_cover"] is True
+    assert cover.status_code == 200
+    assert cover.headers["content-type"] == "image/jpeg"
+    assert cover.content[:2] == b"\xff\xd8"  # a JPEG
+    assert user_client.delete(f"/api/documents/{created['id']}").status_code == 204
+    assert not list((settings.data_dir / "covers").glob("*.jpg"))  # deleted with the book
+
+
+def test_a_book_without_a_cover_says_so(user_client: TestClient, tmp_path: Path) -> None:
+    created = upload(user_client, epub_bytes(tmp_path))
+
+    assert user_client.get(f"/api/documents/{created['id']}").json()["has_cover"] is False
+    assert user_client.get(f"/api/documents/{created['id']}/cover").status_code == 404
+
+
+def test_older_books_get_their_covers_added(
+    user_client: TestClient,
+    tmp_path: Path,
+    session_factory: sessionmaker[Session],
+    settings: Settings,
+) -> None:
+    created = upload(user_client, epub_with_cover(tmp_path))
+    with session_factory() as session:  # as books processed before covers existed
+        session.execute(text("UPDATE documents SET cover_path = NULL"))
+        session.commit()
+
+    assert make_covers.make_covers(session_factory, settings) == 1
+    assert user_client.get(f"/api/documents/{created['id']}/cover").status_code == 200
+    assert make_covers.make_covers(session_factory, settings) == 0  # nothing left to do

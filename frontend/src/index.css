@@ -298,14 +298,9 @@ button {
   margin: 1.5rem 0;
 }
 
-.readings,
-.books {
+.readings {
   padding-left: 0;
   list-style-position: inside;
-}
-
-.books {
-  list-style: none;
 }
 
 .row {
@@ -326,6 +321,24 @@ button {
 
 .status--failed {
   color: var(--bad);
+}
+
+.upload input[type='file'] {
+  font: inherit;
+}
+
+.upload input[type='file']::file-selector-button {
+  margin-right: 0.75rem;
+  padding: 0.7rem 1.25rem;
+  border: 2px solid var(--accent);
+  border-radius: 14px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font: inherit;
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 1.05rem;
+  cursor: pointer;
 }
 
 .upload {
@@ -1868,32 +1881,108 @@ a.secondary {
   font-family: var(--sans);
 }
 
-/* Classics shelf */
+/* Bookshelves: covers in a grid, like a library */
 
-.classics {
-  list-style: none;
-  padding: 0;
+.shelf {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
-  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+  gap: 1.25rem 1rem;
+  margin: 1rem 0 0;
+  padding: 0;
+  list-style: none;
 }
 
-.classic {
+.book-card {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 0.2rem;
-  padding: 0.75rem 1rem;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--surface);
+  gap: 0.5rem;
+  min-width: 0;
 }
 
-.classic__title {
+.book-card__cover {
+  display: block;
+  border-radius: 8px;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.12),
+    0 6px 16px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+  transition: transform 0.15s;
+}
+
+a.book-card__cover:hover {
+  transform: translateY(-3px);
+}
+
+.cover {
+  display: block;
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+  background: var(--surface-2);
+}
+
+/* No cover picture: draw one, a colour per book, title and author in it */
+.cover--drawn {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-sizing: border-box;
+  padding: 0.9rem 0.75rem;
+  background: linear-gradient(
+    160deg,
+    hsl(var(--cover-hue) 45% 42%),
+    hsl(calc(var(--cover-hue) + 30) 50% 28%)
+  );
+  color: #fff;
+  overflow: hidden;
+}
+
+.cover__title {
+  font-family: var(--display);
+  font-size: 1.05rem;
   font-weight: 600;
-  text-decoration: none;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
 }
 
-.classic button {
-  margin-top: 0.4rem;
+.cover__author {
+  font-size: 0.8rem;
+  opacity: 0.85;
+}
+
+.book-card__text {
+  display: grid;
+  gap: 0.1rem;
+  font-size: 0.9rem;
+}
+
+.book-card__title {
+  font-weight: 700;
+  color: var(--fg);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.book-card button {
+  padding: 0.35rem 0.8rem;
+  border: 2px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--fg);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.book-card button:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.book-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+  margin-top: auto;
+  font-size: 0.85rem;
 }
