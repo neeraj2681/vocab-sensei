@@ -49,7 +49,8 @@ export function SettingsPage() {
           enabled: next.enabled,
           time: next.time,
           timezone: next.timezone,
-          channel: next.channel,
+          push: next.push,
+          email: next.email,
         }),
       )
     })
@@ -117,31 +118,32 @@ export function SettingsPage() {
           />
         </div>
         <fieldset className="settings__channel" disabled={busy || !settings.enabled}>
-          <legend>How</legend>
+          <legend>How (one or both)</legend>
           <label className="check">
             <input
-              type="radio"
-              name="channel"
-              checked={settings.channel === 'push'}
-              onChange={() => {
-                save({ channel: 'push' })
+              type="checkbox"
+              checked={settings.push}
+              // The last way left can't be unticked: turn the reminder off instead.
+              disabled={settings.push && !settings.email}
+              onChange={(event) => {
+                save({ push: event.target.checked })
               }}
             />{' '}
             Notification
           </label>
           <label className="check">
             <input
-              type="radio"
-              name="channel"
-              checked={settings.channel === 'email'}
-              onChange={() => {
-                save({ channel: 'email' })
+              type="checkbox"
+              checked={settings.email}
+              disabled={settings.email && !settings.push}
+              onChange={(event) => {
+                save({ email: event.target.checked })
               }}
             />{' '}
             Email
           </label>
         </fieldset>
-        {settings.channel === 'push' && (
+        {settings.push && (
           <p>
             {deviceOn ? (
               <span className="muted">✓ Notifications are on for this device.</span>

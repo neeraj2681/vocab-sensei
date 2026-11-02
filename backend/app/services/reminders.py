@@ -18,7 +18,6 @@ from sqlalchemy.orm import Session
 
 from app.core.config import Settings
 from app.core.email import Email, EmailSender
-from app.core.enums import ReminderChannel
 from app.core.push import PushError, PushSender, PushTarget, SubscriptionGoneError
 from app.db.models import PushSubscription, Reminder, User
 from app.repositories.quiz import QuizRepository
@@ -39,7 +38,8 @@ class ReminderView:
     enabled: bool
     time: str
     timezone: str
-    channel: ReminderChannel
+    push: bool  # notifications on this person's devices
+    email: bool
     devices: int  # devices with push turned on
 
 
@@ -81,21 +81,25 @@ class ReminderService:
             enabled=False,
             time="20:00",
             timezone="UTC",
-            channel=ReminderChannel.PUSH,
+            push=True,
+            email=False,
         )
         return ReminderView(
             enabled=reminder.enabled,
             time=reminder.time,
             timezone=reminder.timezone,
-            channel=reminder.channel,
+            push=reminder.push,
+            email=reminder.email,
             devices=len(self._repo.subscriptions(user_id)),
         )
 
     def update(
-        self, user_id: int, *, enabled: bool, at: str, timezone: str, channel: ReminderChannel
+        self, user_id: int, *, enabled: bool, at: str, timezone: str, push: bool, email: bool
     ) -> ReminderView:
         if not _TIME.match(at):
             raise ReminderError("Use a time like 20:00")
+        if enabled and not (push or email):
+            raise ReminderError("Choose notifications, email or both")
         zone(timezone)
         reminder = self._repo.get(user_id)
         if reminder is None:
@@ -103,7 +107,7 @@ class ReminderService:
             self._repo.add(reminder)
         changed_time = reminder.time != at or reminder.timezone != timezone
         reminder.enabled, reminder.time, reminder.timezone = enabled, at, timezone
-        reminder.channel = channel
+        reminder.push, reminder.email = push, email
         if changed_time:
             reminder.last_sent_on = None  # a new time may still fire today
         self._session.commit()
@@ -131,7 +135,7 @@ class ReminderService:
         """Sends one reminder now, whatever the time and goal. True if anything went out."""
         view = self.view(user.id)
         stats = quiz_stats(self._quiz, user, now, zone(view.timezone))
-        return self._send(user, view.channel, stats)
+        return self._send(user, stats, push=view.push, email=view.email)
 
     def send_due(self, now: datetime) -> int:
         """Sends every reminder that is due; returns how many went out."""
@@ -147,28 +151,36 @@ class ReminderService:
                 continue
             reminder.last_sent_on = local.date()  # checked today, sent or not
             stats = quiz_stats(self._quiz, user, now, tz)
-            if stats.today < stats.daily_goal and self._send(user, reminder.channel, stats):
+            due = stats.today < stats.daily_goal
+            if due and self._send(user, stats, push=reminder.push, email=reminder.email):
                 sent += 1
             self._session.commit()
         return sent
 
-    def _send(self, user: User, channel: ReminderChannel, stats: Stats) -> bool:
+    def _send(self, user: User, stats: Stats, *, push: bool, email: bool) -> bool:
+        """Sends on every chosen channel; True if any reached the person."""
         text = message(stats)
-        if channel is ReminderChannel.EMAIL:
-            link = f"{self._settings.email.app_base_url}/quiz"
-            try:
-                self._email.send(
-                    Email(
-                        to=user.email,
-                        subject="Your daily Vocab Sensei words",
-                        body=f"Hi {user.display_name},\n\n{text}\n\nPlay now: {link}\n\n"
-                        "(Change or turn off reminders in Profile → Settings.)",
-                    )
+        emailed = self._send_email(user, text) if email else False
+        pushed = self._send_push(user, text) if push else False
+        return emailed or pushed
+
+    def _send_email(self, user: User, text: str) -> bool:
+        link = f"{self._settings.email.app_base_url}/quiz"
+        try:
+            self._email.send(
+                Email(
+                    to=user.email,
+                    subject="Your daily Vocab Sensei words",
+                    body=f"Hi {user.display_name},\n\n{text}\n\nPlay now: {link}\n\n"
+                    "(Change or turn off reminders in Me → Settings.)",
                 )
-            except Exception:
-                logger.exception("reminder email failed")
-                return False
-            return True
+            )
+        except Exception:
+            logger.exception("reminder email failed")
+            return False
+        return True
+
+    def _send_push(self, user: User, text: str) -> bool:
         delivered = False
         payload = {"title": "Vocab Sensei", "body": text, "url": "/quiz"}
         for subscription in self._repo.subscriptions(user.id):

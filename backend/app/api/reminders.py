@@ -51,7 +51,9 @@ class ReminderResponse(BaseModel):
     enabled: bool
     time: str  # HH:MM in `timezone`
     timezone: str
-    channel: ReminderChannel
+    push: bool  # notifications on this person's devices
+    email: bool
+    channel: ReminderChannel  # for older cached apps: one of the two
     devices: int  # devices with push notifications turned on
     push_public_key: str  # for the browser's pushManager.subscribe()
 
@@ -61,7 +63,9 @@ class ReminderResponse(BaseModel):
             enabled=view.enabled,
             time=view.time,
             timezone=view.timezone,
-            channel=view.channel,
+            push=view.push,
+            email=view.email,
+            channel=ReminderChannel.PUSH if view.push else ReminderChannel.EMAIL,
             devices=view.devices,
             push_public_key=keys.public_key,
         )
@@ -71,7 +75,15 @@ class ReminderRequest(BaseModel):
     enabled: bool
     time: str = Field(examples=["20:00"])
     timezone: str = Field(examples=["Asia/Kolkata"])
-    channel: ReminderChannel
+    push: bool | None = None  # notifications
+    email: bool | None = None
+    channel: ReminderChannel | None = None  # older cached apps send one channel instead
+
+    def channels(self) -> tuple[bool, bool]:
+        """(push, email), from the two switches or an older app's single channel."""
+        if self.push is None and self.email is None and self.channel is not None:
+            return self.channel is ReminderChannel.PUSH, self.channel is ReminderChannel.EMAIL
+        return bool(self.push), bool(self.email)
 
 
 class DeviceKeys(BaseModel):
@@ -112,7 +124,8 @@ def update_reminder(
             enabled=body.enabled,
             at=body.time,
             timezone=body.timezone,
-            channel=body.channel,
+            push=body.channels()[0],
+            email=body.channels()[1],
         )
     except ReminderError as exc:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from None

@@ -4,12 +4,11 @@ from __future__ import annotations
 
 from datetime import date, datetime
 
-from sqlalchemy import Date, ForeignKey, String
+from sqlalchemy import Date, ForeignKey, String, false, true
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.core.enums import ReminderChannel
 from app.db.base import Base
-from app.db.types import UTCDateTime, str_enum, utcnow
+from app.db.types import UTCDateTime, utcnow
 
 
 class Reminder(Base):
@@ -23,9 +22,8 @@ class Reminder(Base):
     enabled: Mapped[bool] = mapped_column(default=False)
     time: Mapped[str] = mapped_column(String(5), default="20:00")  # HH:MM, local time
     timezone: Mapped[str] = mapped_column(String(64), default="UTC")  # IANA name
-    channel: Mapped[ReminderChannel] = mapped_column(
-        str_enum(ReminderChannel), default=ReminderChannel.PUSH
-    )
+    push: Mapped[bool] = mapped_column(default=True, server_default=true())  # notifications
+    email: Mapped[bool] = mapped_column(default=False, server_default=false())
     last_sent_on: Mapped[date | None] = mapped_column(Date)  # local date, so once a day at most
 
 
