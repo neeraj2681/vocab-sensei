@@ -18,6 +18,7 @@ from app.core.enums import DocumentFormat, DocumentStatus
 from app.db.models import Chapter, Document
 from app.dictionary.types import Dictionary, DictionaryUnavailableError
 from app.extraction.cleanup import remove_nul_characters, strip_gutenberg_boilerplate
+from app.extraction.covers import make_cover
 from app.extraction.registry import get_parser
 from app.extraction.types import ParsedDocument, ParseError
 from app.extraction.words import WordExtractor
@@ -93,6 +94,7 @@ class DocumentService:
             ]
             self._session.flush()  # chapter ids are needed for the word list
             WordService(self._session).save_for_document(document, words, self._dictionary())
+            self._save_cover(document)
             document.status = DocumentStatus.READY
             document.error = None
             self._session.commit()
@@ -143,10 +145,38 @@ class DocumentService:
         return {d.id: counts.get(d.id, 0) for d in documents}
 
     def delete(self, document: Document) -> None:
-        path = self._path(document)
+        paths = [self._path(document), *self._cover_file(document)]
         self._documents.delete(document)
         self._session.commit()
-        path.unlink(missing_ok=True)
+        for path in paths:
+            path.unlink(missing_ok=True)
+
+    def cover_file(self, document: Document) -> Path | None:
+        """The book's cover thumbnail on disk, if it has one."""
+        found = self._cover_file(document)
+        return found[0] if found and found[0].is_file() else None
+
+    def add_missing_cover(self, document_id: int) -> bool:
+        """Makes a cover for a ready book processed before covers existed. True if one was made."""
+        document = self._documents.get(document_id)
+        if document is None or document.status != DocumentStatus.READY or document.cover_path:
+            return False
+        self._save_cover(document)
+        self._session.commit()
+        return document.cover_path is not None
+
+    def _save_cover(self, document: Document) -> None:
+        cover = make_cover(self._path(document), document.format)
+        if cover is None:
+            return
+        relative = Path("covers", f"{document.id}.jpg")
+        path = self._settings.data_dir / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(cover)
+        document.cover_path = relative.as_posix()
+
+    def _cover_file(self, document: Document) -> list[Path]:
+        return [self._settings.data_dir / document.cover_path] if document.cover_path else []
 
     def _save(self, content: BinaryIO, path: Path) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)

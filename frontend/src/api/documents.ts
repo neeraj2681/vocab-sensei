@@ -14,6 +14,7 @@ export interface BookDocument {
   chapter_count: number
   word_count: number
   classic?: boolean // a built-in book everyone can read
+  has_cover?: boolean // a cover picture at coverUrl(id); otherwise one is drawn
 }
 
 export interface Chapter {
@@ -55,6 +56,7 @@ export const isPending = (document: BookDocument) =>
   document.status === 'uploaded' || document.status === 'processing'
 
 export const documentsApi = {
+  coverUrl: (id: number) => `/api/documents/${String(id)}/cover`,
   list: () => apiGet<BookDocument[]>('/documents'),
   classics: () => apiGet<BookDocument[]>('/documents/classics'),
   get: (id: number) => apiGet<BookDocumentDetail>(`/documents/${String(id)}`),

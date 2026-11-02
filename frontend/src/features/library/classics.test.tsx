@@ -91,4 +91,16 @@ describe('classics shelf', () => {
     expect(await screen.findByRole('region', { name: 'My books' })).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'Classics' })).not.toBeInTheDocument()
   })
+
+  it("shows each book's cover, or draws one when it has none", async () => {
+    home([], {
+      'GET /api/documents/classics': () =>
+        json([{ ...PRIDE, has_cover: true }, { ...classic(5, 'Dracula', 'Bram Stoker', 900) }]),
+    })
+    renderApp('/books')
+
+    const shelf = await screen.findByRole('region', { name: 'Classics' })
+    await within(shelf).findByText('Dracula', { selector: '.cover__title' })
+    expect(shelf.querySelector('img.cover')).toHaveAttribute('src', '/api/documents/3/cover')
+  })
 })

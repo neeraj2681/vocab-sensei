@@ -29,6 +29,8 @@ class EpubSpec:
     opf_dir: str = "OEBPS"
     extra_manifest: list[tuple[str, str, str]] = field(default_factory=list)  # id, href, type
     toc_links: list[tuple[str, str]] | None = None  # (href, title); default: one per chapter
+    cover: bytes | None = None  # an image file, declared the EPUB 3 or the EPUB 2 way
+    cover_style: str = "epub3"
 
 
 def xhtml(body: str) -> str:
@@ -57,7 +59,7 @@ def build_epub(path: Path, spec: EpubSpec) -> Path:
         f'<itemref idref="c{i}"{"" if c.linear else ' linear="no"'}/>'
         for i, c in enumerate(spec.chapters)
     ]
-    files: dict[str, str] = {}
+    files: dict[str, str | bytes] = {}
 
     if spec.toc == "nav":
         manifest.append(
@@ -81,6 +83,15 @@ def build_epub(path: Path, spec: EpubSpec) -> Path:
         )
     for item_id, href, media_type in spec.extra_manifest:
         manifest.append(f'<item id="{item_id}" href="{href}" media-type="{media_type}"/>')
+    cover_meta = ""
+    if spec.cover is not None:
+        files[f"{d}images/front.png"] = spec.cover
+        properties = ' properties="cover-image"' if spec.cover_style == "epub3" else ""
+        manifest.append(
+            f'<item id="front" href="images/front.png" media-type="image/png"{properties}/>'
+        )
+        if spec.cover_style == "epub2":
+            cover_meta = '<meta name="cover" content="front"/>'
 
     toc_attr = ' toc="ncx"' if spec.toc == "ncx" else ""
     files[f"{d}content.opf"] = f"""<?xml version="1.0" encoding="utf-8"?>
@@ -89,6 +100,7 @@ def build_epub(path: Path, spec: EpubSpec) -> Path:
     <dc:identifier id="id">test-book</dc:identifier>
     <dc:title>{spec.title}</dc:title>
     <dc:creator>{spec.author}</dc:creator>
+    {cover_meta}
   </metadata>
   <manifest>{"".join(manifest)}</manifest>
   <spine{toc_attr}>{"".join(spine)}</spine>

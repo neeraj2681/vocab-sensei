@@ -26,6 +26,7 @@ class Document(Base):
     author: Mapped[str | None] = mapped_column(String(300))
     original_filename: Mapped[str] = mapped_column(String(255))
     file_path: Mapped[str] = mapped_column(String(1024))  # relative to settings.data_dir
+    cover_path: Mapped[str | None] = mapped_column(String(1024))  # a JPEG thumbnail, same base
     format: Mapped[DocumentFormat] = mapped_column(str_enum(DocumentFormat))
     status: Mapped[DocumentStatus] = mapped_column(
         str_enum(DocumentStatus), default=DocumentStatus.UPLOADED

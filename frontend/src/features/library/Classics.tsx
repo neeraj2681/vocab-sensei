@@ -4,6 +4,7 @@ import { documentsApi, type BookDocument } from '../../api/documents'
 import { readingsApi, type Reading } from '../../api/readings'
 import { FormError } from '../../components/Form'
 import { useSubmit } from '../../components/useSubmit'
+import { BookCover } from './BookCover'
 
 interface Props {
   readings: Reading[]
@@ -35,14 +36,19 @@ export function Classics({ readings, onChange }: Props) {
     <section aria-labelledby="classics-heading" className="panel">
       <h3 id="classics-heading">Classics</h3>
       <p className="muted">Public-domain books from Project Gutenberg, ready to learn from.</p>
-      <ul className="classics">
+      <ul className="shelf">
         {classics.map((book) => (
-          <li key={book.id} className="classic">
-            <Link to={`/books/${String(book.id)}`} className="classic__title">
-              {book.title}
+          <li key={book.id} className="book-card">
+            <Link to={`/books/${String(book.id)}`} className="book-card__cover" tabIndex={-1}>
+              <BookCover book={book} />
             </Link>
-            {book.author && <span className="muted">{book.author}</span>}
-            <span className="muted">{book.word_count.toLocaleString()} words</span>
+            <span className="book-card__text">
+              <Link to={`/books/${String(book.id)}`} className="book-card__title">
+                {book.title}
+              </Link>
+              {book.author && <span className="muted">{book.author}</span>}
+              <span className="muted">{book.word_count.toLocaleString()} words</span>
+            </span>
             {reading.has(book.id) ? (
               <span className="muted">Reading</span>
             ) : (
