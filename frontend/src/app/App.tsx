@@ -113,9 +113,16 @@ function AppRoutes() {
   )
 }
 
-function Header() {
+/** Whether the main navigation shows: a session has its own ✕ to leave and the tour its own
+buttons, so neither does. */
+function useShowsNav(): boolean {
   const { user } = useAuth()
   const { pathname } = useLocation()
+  return user !== null && !['/quiz', '/welcome'].includes(pathname)
+}
+
+function Header() {
+  const showsNav = useShowsNav()
 
   return (
     <header className="app__header">
@@ -123,8 +130,7 @@ function Header() {
         <Link to="/">Vocab Sensei</Link>
       </h1>
       <p className="app__tagline">Learn the words of your next read before you read them.</p>
-      {/* A session has its own ✕ to leave and the tour its own buttons, so neither shows tabs. */}
-      {user && !['/quiz', '/welcome'].includes(pathname) && <TabBar />}
+      {showsNav && <TabBar />}
       <div className="app__corner">
         <ThemeToggle />
       </div>
@@ -134,8 +140,9 @@ function Header() {
 
 /** Everything inside the router and auth provider; tests render this with a MemoryRouter. */
 export function AppShell() {
+  // With the navigation, wide screens put it in a side column (see "Laptops" in index.css).
   return (
-    <div className="app">
+    <div className={useShowsNav() ? 'app app--nav' : 'app'}>
       <Header />
       <main className="app__main">
         <AppRoutes />

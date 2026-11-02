@@ -238,6 +238,27 @@ a {
   color: var(--fg);
 }
 
+/* Buttons without a style of their own (Stop reading, the order arrows…): quiet pills. */
+button:not([class]):not([type='submit']) {
+  padding: 0.35rem 0.85rem;
+  border: 2px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--fg);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:not([class]):not([type='submit']):hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+button:not([class]):disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
 button[type='submit'],
 button.primary {
   font: inherit;
@@ -1116,6 +1137,13 @@ a.primary:active {
   max-width: 34rem;
 }
 
+.today__main,
+.today__side {
+  display: grid;
+  gap: 1rem;
+  align-content: start;
+}
+
 .today__pills {
   display: flex;
   flex-wrap: wrap;
@@ -1654,6 +1682,75 @@ a.secondary {
 .tour-actions .primary {
   width: 100%;
   min-height: 3rem;
+}
+
+/* Laptops: the navigation becomes a side menu and the content uses the width. */
+
+@media (min-width: 960px) {
+  .app {
+    max-width: 1180px;
+    padding-inline: 2rem;
+  }
+
+  .app--nav {
+    display: grid;
+    grid-template-columns: 14rem minmax(0, 1fr);
+    gap: 0 2.5rem;
+    align-items: start;
+  }
+
+  .app--nav .app__header {
+    position: sticky;
+    top: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    min-height: calc(100vh - 4rem);
+    margin: 0;
+    padding: 0 1.5rem 0 0;
+    border-bottom: 0;
+    border-right: 1px solid var(--border);
+  }
+
+  .app--nav .app__header h1 {
+    font-size: 1.6rem;
+    margin: 0 0 0.25rem;
+  }
+
+  .app--nav .app__tagline {
+    font-size: 0.9rem;
+  }
+
+  .app--nav .tabs {
+    flex-direction: column;
+    gap: 0.3rem;
+    margin-top: 1.25rem;
+  }
+
+  .app--nav .tabs__tab {
+    padding: 0.65rem 0.8rem;
+    font-size: 1.05rem;
+  }
+
+  .app--nav .app__corner {
+    position: static;
+    margin-top: auto; /* the theme switch sits at the bottom of the menu */
+    padding-top: 1.5rem;
+  }
+
+  .today {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    max-width: none;
+    align-items: start;
+  }
+
+  .me {
+    max-width: 40rem;
+  }
+
+  .quiz {
+    max-width: 44rem;
+    margin: 0 auto;
+  }
 }
 
 /* Phones */
