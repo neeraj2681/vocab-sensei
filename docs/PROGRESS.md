@@ -10,22 +10,26 @@ Living log of what's built and where to pick up. Update it at the end of every s
 
 ## ▶ Start here next session
 
-**Friends are testing the redesigned app** (since 1 Nov 2026). Ask what they found and fix it before new work.
+**Friends are testing the app** (since 1 Nov 2026). Ask what they found and fix it before new work.
 The stack runs in Docker on the user's Mac (Colima, starts at login) with real email (Gmail SMTP), daily
 database backups and 8 built-in classics, at the fixed **Tailscale Funnel** address
 https://neerajs-macbook-air.tail8cd657.ts.net (see [../deploy/README.md](../deploy/README.md)).
 
-Open items:
+Open items (waiting on the user):
+- **Moving to a real server** (asked 2 Nov 2026): recommended **Oracle Cloud Always Free** (ARM, Mumbai /
+  Hyderabad, ₹0) + a domain (~₹500–1,000/yr) + Caddy HTTPS + Cloudflare DNS; fallback AWS Lightsail Mumbai 2 GB
+  (~$10/month). The user must create the Oracle account, buy the domain and add an SSH key; then migrate
+  (pg_dump + data volume), off-site backups, retire the Mac/Funnel. This also fixes slow logins (Funnel's
+  entry point is in Tokyo, ~250–300 ms per round trip).
+- **Rate limits** are temporarily raised in `deploy/compose.yaml` (login 60/min;300/h, email 30/h). Funnel passes
+  real client IPs, so restoring the normal limits is safe; the user hasn't decided.
+- **Watchdog**: the launchd agent (`deploy/watchdog/`, every 30 min) still needs the user to install it
+  (one command in deploy/README.md); a session cron ran it meanwhile.
 - **Mac must stay awake** while friends use it (Battery → Options → prevent automatic sleeping).
-- **Old saved address:** anyone who saved the earlier `trycloudflare.com` link gets "Could not reach the server";
-  they must open the ts.net address and re-add the home-screen icon.
-- After a deploy, phones may show the previous version until reloaded once or twice (PWA cache). A "new version,
-  tap to reload" prompt was offered but not built.
-- **Next work** (ask): Phase 2 leftovers (pronunciation practice, difficulty setting, FSRS option, OCR for
-  scanned PDFs), a way to move a "known" word back to learning, offline sessions, Phase 4 (recommendations),
-  Phase 5 (LLM questions with a local model).
-- **Rate limits behind Funnel:** check that the API sees each visitor's address (a request from outside the
-  tailnet is needed; Funnel can't be reached from the Mac itself).
+- After a deploy, phones may show the previous version until reopened (PWA cache).
+- **Next work** (ask which first; recommended: harder options): see the Phase 2 list in PROJECT_PLAN.md:
+  harder look-alike options, picture questions, pronunciation, the Shop opening (name changes, streak freeze,
+  coin ledger), culture themes, easter eggs, friends + leaderboards; Phase 3 affiliate book links.
 
 **First steps in the session:**
 
@@ -125,6 +129,26 @@ Docker builds now use BuildKit (`brew install docker-buildx`): a code-only deplo
 10–20 min. `colima ssh -- sudo fstrim -av` after builds gives disk space back.
 
 **Tests:** backend 356 (99% coverage, also run on PostgreSQL), frontend 116. CI: 5 required jobs.
+
+### Features and fixes (2 Nov 2026, evening)
+| PR | What |
+|----|------|
+| #70 | Rate limits raised temporarily (see open items) |
+| #71 | "I know this" is instant (optimistic, with the next question in hand) |
+| #72 | Book covers (EPUB cover image / PDF first page → `data/covers`), shelves of cards, a smaller Choose file |
+| #73 | Reminders by notification, email or both (`push` / `email` booleans) |
+| #74, #76 | Laptop layout: a side menu, dashboard cards, covers in Reading now / Currently reading |
+| #77 | Coins instead of the diamond; a **Shop** tab (cartoon market, "The merchant isn't here yet"); scrolling shelves |
+| #78 | Settings: profile photo, username change **once** (with a warning), gender → Me icon (man/woman/person), email change confirmed by link, password change; theme picker only in Settings; red 3D Log out; gear icon |
+| #82, #83, #86 | Today: **Score this week** line graph (net points per day, `stats.week[].points`) under the Continue button; email/password behind 3D buttons + Reset password; animated green book on the login page |
+| #84 | **Streak fix**: `goal_changes` table keeps every goal change (the old columns only kept the last one, so a second change on another day re-judged older days) |
+| #85 | Shelf rows line up (covers never squeezed); three smaller covers per row on phones |
+| #69, #75, #79–#81, #87 | Plan: pronunciation, picture questions, the Shop, culture themes, easter eggs, harder options, friends + leaderboards, affiliate links |
+
+Migrations this stretch: covers, reminders push/email, profile (8c7b9f9e4cc0), goal history (9d225d8a45a4); each
+deploy was preceded by a `pg_dump` to `deploy/backups/before-*.sql.gz`.
+
+**Tests:** backend 380 (also run on PostgreSQL), frontend 133.
 
 ### What works end to end today
 Sign up → verify → upload an EPUB / PDF / TXT → book ready in ~20 s with chapters and ~6,700 defined words →
