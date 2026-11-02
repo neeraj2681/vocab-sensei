@@ -6,8 +6,8 @@ import { LoginPage } from '../features/auth/LoginPage'
 import { RegisterPage } from '../features/auth/RegisterPage'
 import { RequireAuth } from '../features/auth/RequireAuth'
 import { ResetPasswordPage } from '../features/auth/ResetPasswordPage'
+import { ConfirmEmailPage } from '../features/auth/ConfirmEmailPage'
 import { VerifyEmailPage } from '../features/auth/VerifyEmailPage'
-import { ThemeToggle } from '../components/ThemeToggle'
 import { BookPage } from '../features/library/BookPage'
 import { LibraryPage } from '../features/library/LibraryPage'
 import { MePage } from '../features/me/MePage'
@@ -115,6 +115,7 @@ function AppRoutes() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/verify-email" element={<VerifyEmailPage />} />
+      <Route path="/confirm-email" element={<ConfirmEmailPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
@@ -140,9 +141,6 @@ function Header() {
       </h1>
       <p className="app__tagline">Learn the words of your next read before you read them.</p>
       {showsNav && <TabBar />}
-      <div className="app__corner">
-        <ThemeToggle />
-      </div>
     </header>
   )
 }

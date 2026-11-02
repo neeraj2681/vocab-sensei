@@ -8,6 +8,7 @@ export interface AuthState {
   logout: () => Promise<void>
   deleteAccount: (password: string) => Promise<void>
   finishOnboarding: () => Promise<void>
+  updateUser: (changes: Partial<User>) => void // after a profile change the server confirmed
 }
 
 export const AuthContext = createContext<AuthState | null>(null)

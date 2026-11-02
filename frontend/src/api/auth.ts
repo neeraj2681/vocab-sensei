@@ -1,4 +1,4 @@
-import { apiDelete, apiGet, apiPost } from './client'
+import { apiDelete, apiGet, apiPatch, apiPost, apiPut } from './client'
 
 export interface User {
   id: number
@@ -6,7 +6,14 @@ export interface User {
   display_name: string
   email_verified_at: string | null
   onboarded_at?: string | null // null: show the first-run tour
+  name_changed_at?: string | null // set once the one name change is used
+  gender?: Gender
+  has_avatar?: boolean
+  pending_email?: string | null // a new address waiting for its link to be opened
+  avatar_stamp?: number // client-only: changes when the picture does, so the <img> reloads
 }
+
+export type Gender = 'male' | 'female' | 'unspecified'
 
 interface Message {
   message: string
@@ -25,4 +32,17 @@ export const authApi = {
     apiPost('/auth/reset-password', { token, new_password }),
   deleteAccount: (password: string) => apiDelete('/auth/me', { password }),
   finishOnboarding: () => apiPost('/auth/me/onboarded'),
+  changeName: (display_name: string) => apiPatch<User>('/auth/me/name', { display_name }),
+  setGender: (gender: Gender) => apiPut<User>('/auth/me/gender', { gender }),
+  setAvatar: (file: File) => {
+    const form = new FormData()
+    form.append('file', file)
+    return apiPut<User>('/auth/me/avatar', form)
+  },
+  removeAvatar: () => apiDelete('/auth/me/avatar'),
+  changeEmail: (email: string, password: string) =>
+    apiPost<Message>('/auth/me/email', { email, password }),
+  confirmEmail: (token: string) => apiPost('/auth/confirm-email', { token }),
+  changePassword: (current_password: string, new_password: string) =>
+    apiPost('/auth/me/password', { current_password, new_password }),
 }

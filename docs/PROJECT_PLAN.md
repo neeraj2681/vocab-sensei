@@ -320,6 +320,11 @@ because git and the workflow files carry over.
     attribution shown), or Fluent-style illustrations generated once with a local open model.
   - Pick distractor pictures from words of the same part of speech; cache images on our server.
   - Becomes a fifth question type, mixed in like the others.
+- [ ] **The Shop opens** (requested 2 Nov 2026, next phase): coins (the score) buy things in the Shop
+  tab, which today shows the cartoon market with "The merchant isn't here yet".
+  - **Extra username change**: everyone gets one free change (Settings); more cost coins.
+  - **Streak freeze**: keeps the streak alive through one missed day; bought ahead, used automatically.
+  - Needs a coin ledger (earned vs spent) so spending never lowers the score history.
 
 ### Phase 3 — Multi-user (future plan items 1–2)
 - [x] Accounts & auth (pulled forward into Phase 1)
