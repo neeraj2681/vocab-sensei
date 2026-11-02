@@ -396,7 +396,8 @@ function Feedback({
       {learned && <Burst />}
       <p role="status" className="feedback__verdict">
         <Icon name={correct ? 'check_mark_button' : 'cross_mark'} size={28} />{' '}
-        {correct ? 'Right!' : 'Not quite.'}{' '}
+        {/* The colour says right or wrong; screen readers get the word. */}
+        <span className="sr-only">{correct ? 'Right.' : 'Wrong.'}</span>{' '}
         {question.type === 'definition_mcq' ? (
           !correct && (
             <>

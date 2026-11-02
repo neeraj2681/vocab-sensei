@@ -79,7 +79,9 @@ describe('quiz', () => {
 
     await user.click(await screen.findByRole('button', { name: /wet with light rain/ }))
 
-    expect(await screen.findByRole('status')).toHaveTextContent('Right!')
+    expect(await screen.findByRole('status')).toHaveTextContent('Right.')
+    // No visible "Right": the green says it; the word is for screen readers only.
+    expect(screen.getByText('Right.')).toHaveClass('sr-only')
     expect(screen.getByTestId('score')).toHaveTextContent('125')
     expect(screen.getByText('+5')).toHaveClass('pop--up')
     expect(screen.getByText('It was a damp, drizzly November in my soul.')).toBeInTheDocument()
@@ -107,7 +109,7 @@ describe('quiz', () => {
     await user.click(await screen.findByRole('button', { name: /a small bag/ }))
 
     const verdict = await screen.findByRole('status')
-    expect(verdict).toHaveTextContent('Not quite. It means: wet with light rain')
+    expect(verdict).toHaveTextContent('Wrong. It means: wet with light rain')
     expect(screen.getByTestId('score')).toHaveTextContent('110')
     expect(screen.getByText('−10')).toHaveClass('pop--down')
     expect(screen.getByRole('button', { name: /a small bag/ })).toHaveClass('option--wrong')
@@ -259,7 +261,7 @@ describe('question types', () => {
     await user.click(screen.getByRole('button', { name: /lugubrious/ }))
 
     expect(await screen.findByRole('status')).toHaveTextContent(
-      'Not quite. drizzly · wet with light rain',
+      'Wrong. drizzly · wet with light rain',
     )
   })
 
@@ -287,7 +289,7 @@ describe('question types', () => {
     expect(screen.getByText('Which word fills the gap in the book’s sentence?')).toBeInTheDocument()
     await user.keyboard('1')
 
-    expect(await screen.findByRole('status')).toHaveTextContent('Right! drizzly')
+    expect(await screen.findByRole('status')).toHaveTextContent('Right. drizzly')
   })
 })
 
@@ -305,7 +307,7 @@ describe('answer errors', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Couldn’t save that answer: Server hiccup',
     )
-    expect(screen.getByRole('status')).toHaveTextContent('Right!')
+    expect(screen.getByRole('status')).toHaveTextContent('Right.')
     expect(screen.queryByRole('button', { name: 'Continue' })).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Try saving again' }))
@@ -332,7 +334,7 @@ describe('speed', () => {
     await user.click(await screen.findByRole('button', { name: /mournful/ }))
 
     // Everything came with the question: verdict, passage and the score change.
-    expect(screen.getByRole('status')).toHaveTextContent('Not quite. It means: wet with light rain')
+    expect(screen.getByRole('status')).toHaveTextContent('Wrong. It means: wet with light rain')
     expect(screen.getByText('It was a damp, drizzly November in my soul.')).toBeInTheDocument()
     expect(screen.getByTestId('score')).toHaveTextContent('110')
 
