@@ -395,6 +395,55 @@ def test_words_in_progress_stay_if_another_current_read_uses_them(
     assert user_client.get("/api/quiz/words").json()[0]["progress"] == 45  # progress kept
 
 
+def test_questions_carry_what_either_answer_would_show(
+    user_client: TestClient, session: Session, book: Document, clock: Clock
+) -> None:
+    asked = question(user_client)
+
+    assert (asked["word"], asked["meaning"]) == ("word00", "meaning of word00")
+    assert asked["context_sentence"] == "A sentence with word00."
+    assert asked["counted"] is True
+    assert asked["if_right"] == {"points": 5, "learned": False}
+    assert asked["if_wrong"] == {"points": 0, "learned": False}  # the total can't go below 0
+    result = answer(user_client, session, right=True)
+    assert (result["points"], result["context_sentence"]) == (5, asked["context_sentence"])
+
+
+def test_a_word_one_right_answer_from_learned_says_so(
+    user_client: TestClient, session: Session, book: Document, clock: Clock
+) -> None:
+    word = session.scalars(select(Word).where(Word.lemma == "word00")).one()
+    session.add(
+        UserWord(user_id=reader(session).id, word_id=word.id, score=95, status=WordStatus.LEARNING)
+    )
+    for lemma in LEMMAS[1:]:  # everything else known, so word00 is asked
+        other = session.scalars(select(Word).where(Word.lemma == lemma)).one()
+        session.add(UserWord(user_id=reader(session).id, word_id=other.id, status=WordStatus.KNOWN))
+    session.commit()
+
+    asked = question(user_client)
+
+    assert asked["word"] == "word00"
+    assert asked["if_right"]["learned"] is True
+
+
+def test_the_next_question_can_come_with_the_answer(
+    user_client: TestClient, session: Session, book: Document, clock: Clock
+) -> None:
+    asked = question(user_client)
+    right = correct_index(session, asked["id"])
+
+    saved = user_client.post(
+        f"/api/quiz/questions/{asked['id']}/answer?tz=UTC&include_next=true",
+        json={"chosen_index": right},
+    ).json()
+
+    assert saved["next"]["id"] != asked["id"]
+    assert question(user_client)["id"] == saved["next"]["id"]  # it's the one now on screen
+    plain = answer(user_client, session)
+    assert plain["next"] is None  # only when asked for
+
+
 @pytest.mark.usefixtures("book")
 class TestStats:
     def test_streak_counts_days_that_met_the_goal(

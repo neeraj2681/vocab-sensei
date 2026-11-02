@@ -112,6 +112,20 @@ class AnswerOutcome:
 
 
 @dataclass(frozen=True)
+class Preview:
+    """Everything the screen shows after an answer, for both outcomes, sent with the question so
+    tapping an option needs no wait. The saved answer then confirms it."""
+
+    lemma: str
+    meaning: str | None
+    sentence: str | None
+    counted: bool  # False when the word came back too soon to score
+    points_if_right: int
+    points_if_wrong: int
+    learned_if_right: bool
+
+
+@dataclass(frozen=True)
 class HistoryPoint:
     number: int  # 1 = the first question ever answered
     total: int  # lifetime points after this answer
@@ -387,6 +401,29 @@ class QuizService:
             word=word,
             question=question,
             stats=self.stats(user_id, now, tz),
+        )
+
+    def preview(self, user_id: int, question: Question, now: datetime) -> Preview:
+        """What answering `question` right or wrong would do, by the same rules as `answer`."""
+        rules = self._settings.scoring
+        counted = question.word_id not in self._repo.recently_answered_word_ids(
+            user_id, self._quiz.spacing
+        )
+        existing = self._repo.user_word(user_id, question.word_id)
+        progress = _progress(existing) if existing else WordProgress()
+        status_if_right = progress.status
+        if counted and progress.status is not WordStatus.KNOWN:
+            status_if_right = apply_answer(progress, correct=True, now=now, rules=rules).status
+        total = self._repo.total_points(user_id)
+        lemma, meaning = self._word_and_meaning(user_id, question.word_id)
+        return Preview(
+            lemma=lemma,
+            meaning=meaning,
+            sentence=question.source_sentence,
+            counted=counted,
+            points_if_right=answer_points(total, correct=True, counted=counted, rules=rules),
+            points_if_wrong=answer_points(total, correct=False, counted=counted, rules=rules),
+            learned_if_right=status_if_right is WordStatus.LEARNED,
         )
 
     def _word_and_meaning(self, user_id: int, word_id: int) -> tuple[str, str | None]:

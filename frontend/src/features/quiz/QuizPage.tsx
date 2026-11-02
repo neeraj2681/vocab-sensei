@@ -76,6 +76,7 @@ export function QuizPage() {
   const [busy, setBusy] = useState(false)
   const [answerError, setAnswerError] = useState<string | null>(null) // saving failed; can retry
   const [session, setSession] = useState<Session>(newSession(null))
+  const [continueQueued, setContinueQueued] = useState(false) // Continue tapped while saving
   const [questionVersion, setQuestionVersion] = useState(0) // bump to fetch the next question
   // "Study this chapter": /quiz?book=1&chapter=4 asks only that chapter's words.
   const [params] = useSearchParams()
@@ -117,17 +118,25 @@ export function QuizPage() {
     }
   }, [questionVersion, focusBook, focusChapter])
 
-  /** Shows right or wrong at once, then saves the answer in the background. */
+  /** Shows the whole result at once (the question carries both outcomes), then saves the answer
+  in the background; the saved answer confirms the score and brings the next question. */
   function choose(question: QuizQuestion, index: number) {
     const correct = index === question.correct_index
+    const outcome = correct ? question.if_right : question.if_wrong
     setPhase({ kind: 'answered', question, chosen: index, correct, result: null })
     buzz(correct)
     setSession((s) => ({
       ...s,
       answered: s.answered + 1,
       right: s.right + (correct ? 1 : 0),
+      points: s.points + outcome.points,
       combo: correct ? s.combo + 1 : 0,
     }))
+    setStats((s) => s && { ...s, total: s.total + outcome.points, today: s.today + 1 })
+    setRecent((values) =>
+      [...values, (values.at(-1) ?? 0) + outcome.points].slice(-(RECENT_ANSWERS + 1)),
+    )
+    setPop((previous) => ({ id: (previous?.id ?? 0) + 1, delta: outcome.points, correct }))
     void save(question, index)
   }
 
@@ -135,23 +144,17 @@ export function QuizPage() {
     setBusy(true)
     setAnswerError(null)
     try {
-      const result = await quizApi.answer(question.id, index)
+      const result = await quizApi.answer(question.id, index, focusOf(focusBook, focusChapter))
       setPhase((p) =>
         p.kind === 'answered' && p.question.id === question.id ? { ...p, result } : p,
       )
-      // While the feedback is read, fetch what comes next (the server makes it once this answer
-      // is saved). A failure surfaces when Continue uses it.
-      const next = quizApi.question(focusOf(focusBook, focusChapter))
+      setStats(result.stats) // the server's numbers win (streak, week)
+      // The next question came with the answer; ask separately only if it didn't.
+      const next = result.next
+        ? Promise.resolve(result.next)
+        : quizApi.question(focusOf(focusBook, focusChapter))
       next.catch(() => undefined)
       upcoming.current = next
-      setSession((s) => ({ ...s, points: s.points + result.points }))
-      setStats(result.stats)
-      setRecent((values) => [...values, result.stats.total].slice(-(RECENT_ANSWERS + 1)))
-      setPop((previous) => ({
-        id: (previous?.id ?? 0) + 1,
-        delta: result.points,
-        correct: result.correct,
-      }))
     } catch (err) {
       // The result stays on screen; saving can simply be tried again.
       const failed = errorPhase(err)
@@ -174,6 +177,11 @@ export function QuizPage() {
   }
 
   function next() {
+    if (phase.kind === 'answered' && phase.result === null) {
+      setContinueQueued(true) // moves on the moment the answer is saved
+      return
+    }
+    setContinueQueued(false)
     setAnswerError(null)
     if (phase.kind === 'answered' && session.answered >= SESSION_LENGTH) {
       setPhase({ kind: 'summary' })
@@ -182,6 +190,11 @@ export function QuizPage() {
     setPhase({ kind: 'loading' })
     setQuestionVersion((v) => v + 1)
   }
+
+  // Continue was tapped before the save finished: go on as soon as it has.
+  useEffect(() => {
+    if (continueQueued && phase.kind === 'answered' && phase.result !== null) next()
+  })
 
   function keepGoing() {
     setSession(newSession(stats?.today ?? null))
@@ -204,7 +217,7 @@ export function QuizPage() {
       ) {
         event.preventDefault()
         if (answerError) void save(phase.question, phase.chosen)
-        else if (phase.result) next()
+        else next()
       }
     }
     window.addEventListener('keydown', onKey)
@@ -247,6 +260,7 @@ export function QuizPage() {
           phase={phase}
           busy={busy}
           saveError={answerError}
+          continueQueued={continueQueued}
           onChoose={(index) => {
             choose(phase.question, index)
           }}
@@ -265,13 +279,23 @@ interface CardProps {
   phase: Extract<Phase, { kind: 'asking' | 'answered' }>
   busy: boolean
   saveError: string | null
+  continueQueued: boolean
   onChoose: (index: number) => void
   onKnow: () => void
   onNext: () => void
   onRetry: () => void
 }
 
-function QuestionCard({ phase, busy, saveError, onChoose, onKnow, onNext, onRetry }: CardProps) {
+function QuestionCard({
+  phase,
+  busy,
+  saveError,
+  continueQueued,
+  onChoose,
+  onKnow,
+  onNext,
+  onRetry,
+}: CardProps) {
   const { question } = phase
   const answered = phase.kind === 'answered' ? phase : null
 
@@ -308,9 +332,9 @@ function QuestionCard({ phase, busy, saveError, onChoose, onKnow, onNext, onRetr
         <Feedback
           question={question}
           correct={answered.correct}
-          result={answered.result}
           saving={busy}
           saveError={saveError}
+          continueQueued={continueQueued}
           onNext={onNext}
           onRetry={onRetry}
         />
@@ -350,23 +374,22 @@ function Prompt({ question }: { question: QuizQuestion }) {
 function Feedback({
   question,
   correct,
-  result,
   saving,
   saveError,
+  continueQueued,
   onNext,
   onRetry,
 }: {
   question: QuizQuestion
   correct: boolean
-  result: AnswerResult | null
   saving: boolean
   saveError: string | null
+  continueQueued: boolean
   onNext: () => void
   onRetry: () => void
 }) {
-  // For reverse and fill-in questions the options are words, so the answer is known already.
-  const word = result?.word ?? question.options[question.correct_index] ?? ''
-  const learned = correct && result?.word_status === 'learned'
+  // All of this came with the question, so it shows the moment an option is tapped.
+  const learned = correct && question.if_right.learned
 
   return (
     <div className={`feedback feedback--${correct ? 'right' : 'wrong'}`}>
@@ -382,9 +405,9 @@ function Feedback({
           )
         ) : (
           <>
-            <strong>{word}</strong>
-            <SpeakButton word={word} />
-            {result?.meaning && <span className="muted"> · {result.meaning}</span>}
+            <strong>{question.word}</strong>
+            <SpeakButton word={question.word} />
+            {question.meaning && <span className="muted"> · {question.meaning}</span>}
           </>
         )}
         {learned && (
@@ -394,11 +417,11 @@ function Feedback({
           </>
         )}
       </p>
-      {result && !result.counted && (
+      {!question.counted && (
         <p className="muted">This word came back too soon to score; it’s practice.</p>
       )}
-      {result?.context_sentence && (
-        <blockquote className="feedback__sentence">{result.context_sentence}</blockquote>
+      {question.context_sentence && (
+        <blockquote className="feedback__sentence">{question.context_sentence}</blockquote>
       )}
       {saveError ? (
         <>
@@ -414,11 +437,10 @@ function Feedback({
           type="button"
           className={correct ? 'primary' : 'primary primary--wrong'}
           onClick={onNext}
-          disabled={result === null}
-          aria-busy={saving}
+          aria-busy={continueQueued}
           autoFocus
         >
-          {result === null ? 'Saving…' : 'Continue'}
+          Continue
         </button>
       )}
     </div>

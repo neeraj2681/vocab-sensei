@@ -21,6 +21,7 @@ from app.services.quiz import (
     InvalidChoiceError,
     NoWordsError,
     PractisedWord,
+    Preview,
     QuestionNotFoundError,
     QuizService,
     Stats,
@@ -66,13 +67,19 @@ def get_quiz_service(
 QuizServiceDep = Annotated[QuizService, Depends(get_quiz_service)]
 
 
+class OutcomeResponse(BaseModel):
+    points: int  # what the live score changes by
+    learned: bool  # the word reaches "learned"
+
+
 class QuestionResponse(BaseModel):
-    """What the screen shows.
+    """What the screen shows, and what it shows after either answer.
 
     `prompt` is the word (definition_mcq), a meaning (reverse) or the book's sentence with a blank
-    (fill_in_blank); for the last two the word itself is the answer. `correct_index` comes along
-    so the screen can show right or wrong the moment an option is tapped, while the answer is
-    saved in the background: a learner who peeks only fools themselves.
+    (fill_in_blank); for the last two the word itself is the answer. The correct option, the
+    word's meaning, the book sentence and both outcomes come along so tapping an option shows the
+    whole result at once while the answer saves in the background: a learner who peeks only
+    fools themselves.
     """
 
     id: int
@@ -80,15 +87,29 @@ class QuestionResponse(BaseModel):
     prompt: str
     options: list[str]
     correct_index: int
+    word: str
+    meaning: str | None
+    context_sentence: str | None
+    counted: bool  # False when the word came back too soon to score
+    if_right: OutcomeResponse
+    if_wrong: OutcomeResponse
 
     @classmethod
-    def of(cls, question: Question) -> Self:
+    def of(cls, question: Question, preview: Preview) -> Self:
         return cls(
             id=question.id,
             type=question.type,
             prompt=question.prompt,
             options=list(question.options),
             correct_index=question.correct_index,
+            word=preview.lemma,
+            meaning=preview.meaning,
+            context_sentence=preview.sentence,
+            counted=preview.counted,
+            if_right=OutcomeResponse(
+                points=preview.points_if_right, learned=preview.learned_if_right
+            ),
+            if_wrong=OutcomeResponse(points=preview.points_if_wrong, learned=False),
         )
 
 
@@ -136,6 +157,7 @@ class AnswerResponse(BaseModel):
     word_status: WordStatus
     context_sentence: str | None  # the sentence from the book, shown after answering
     stats: StatsResponse
+    next: QuestionResponse | None  # what comes next, so it needs no request of its own
 
 
 class PractisedWordResponse(BaseModel):
@@ -165,6 +187,21 @@ class HistoryPointResponse(BaseModel):
     answered_at: datetime
 
 
+def get_focus(
+    user_id: int, documents: DocumentServiceDep, document_id: int | None, chapter: int | None
+) -> Focus | None:
+    """'Study this chapter', from the document_id and chapter query parameters."""
+    if (document_id is None) != (chapter is None):
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT, "Give both document_id and chapter, or neither"
+        )
+    if document_id is None or chapter is None:
+        return None
+    if documents.get_for(user_id, document_id) is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Document not found")
+    return Focus(document_id, chapter)
+
+
 @router.get("/question")
 def current_question(
     user: CurrentUser,
@@ -179,19 +216,12 @@ def current_question(
     chapter: Annotated[int | None, Query(ge=0)] = None,
 ) -> QuestionResponse:
     """The question to show: the unanswered one if there is one, otherwise a new one."""
-    focus = None
-    if (document_id is None) != (chapter is None):
-        raise HTTPException(
-            status.HTTP_422_UNPROCESSABLE_CONTENT, "Give both document_id and chapter, or neither"
-        )
-    if document_id is not None and chapter is not None:
-        if documents.get_for(user.id, document_id) is None:
-            raise HTTPException(status.HTTP_404_NOT_FOUND, "Document not found")
-        focus = Focus(document_id, chapter)
-    else:
+    focus = get_focus(user.id, documents, document_id, chapter)
+    if focus is None:
         LibraryService(session, settings).start_default_if_new(user.id)  # new users get a classic
     try:
-        return QuestionResponse.of(quiz.current_question(user.id, now, focus))
+        question = quiz.current_question(user.id, now, focus)
+        return QuestionResponse.of(question, quiz.preview(user.id, question, now))
     except NoWordsError as exc:
         raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from None
     except DictionaryUnavailableError:
@@ -206,9 +236,20 @@ def answer(
     body: AnswerRequest,
     user: CurrentUser,
     quiz: QuizServiceDep,
+    documents: DocumentServiceDep,
     now: Now,
     tz: TimeZone,
+    include_next: Annotated[
+        bool, Query(description="also make and send the next question")
+    ] = False,
+    document_id: Annotated[
+        int | None, Query(description="with `chapter`: study one chapter")
+    ] = None,
+    chapter: Annotated[int | None, Query(ge=0)] = None,
 ) -> AnswerResponse:
+    """Saves the answer. With include_next, the next question comes along (one round trip
+    instead of two); the screen passes its chapter focus so that question fits it."""
+    focus = get_focus(user.id, documents, document_id, chapter)
     try:
         outcome = quiz.answer(user.id, question_id, body.chosen_index, now, tz)
     except QuestionNotFoundError as exc:
@@ -229,7 +270,19 @@ def answer(
         word_status=outcome.word.status,
         context_sentence=outcome.question.source_sentence,
         stats=StatsResponse.of(outcome.stats),
+        next=next_question(quiz, user.id, now, focus) if include_next else None,
     )
+
+
+def next_question(
+    quiz: QuizService, user_id: int, now: datetime, focus: Focus | None
+) -> QuestionResponse | None:
+    """None when there's nothing to ask; the screen then asks itself and shows why."""
+    try:
+        question = quiz.current_question(user_id, now, focus)
+    except (NoWordsError, DictionaryUnavailableError):
+        return None
+    return QuestionResponse.of(question, quiz.preview(user_id, question, now))
 
 
 @router.post("/questions/{question_id}/know", status_code=status.HTTP_204_NO_CONTENT)

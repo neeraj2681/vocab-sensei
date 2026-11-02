@@ -10,6 +10,18 @@ export interface QuizQuestion {
   prompt: string
   options: string[]
   correct_index: number // sent with the question so right or wrong shows at once
+  // What the screen shows after either answer, so tapping an option needs no wait:
+  word: string
+  meaning: string | null
+  context_sentence: string | null
+  counted: boolean // false when the word came back too soon to score
+  if_right: Outcome
+  if_wrong: Outcome
+}
+
+export interface Outcome {
+  points: number // what the live score changes by
+  learned: boolean // the word reaches "learned"
 }
 
 export interface QuizStats {
@@ -38,6 +50,7 @@ export interface AnswerResult {
   word_status: 'new' | 'learning' | 'learned' | 'known'
   context_sentence: string | null
   stats: QuizStats
+  next?: QuizQuestion | null // the next question, sent with the saved answer
 }
 
 export interface HistoryPoint {
@@ -74,10 +87,14 @@ export const quizApi = {
         ? `/quiz/question?document_id=${String(focus.documentId)}&chapter=${String(focus.chapter)}`
         : '/quiz/question',
     ),
-  answer: (id: number, chosenIndex: number) =>
-    apiPost<AnswerResult>(`/quiz/questions/${String(id)}/answer?${tz()}`, {
-      chosen_index: chosenIndex,
-    }),
+  /** Saves an answer; the next question comes back with it (in `focus`, if given). */
+  answer: (id: number, chosenIndex: number, focus?: Focus) =>
+    apiPost<AnswerResult>(
+      `/quiz/questions/${String(id)}/answer?${tz()}&include_next=true${
+        focus ? `&document_id=${String(focus.documentId)}&chapter=${String(focus.chapter)}` : ''
+      }`,
+      { chosen_index: chosenIndex },
+    ),
   know: (id: number) => apiPost(`/quiz/questions/${String(id)}/know`),
   stats: () => apiGet<QuizStats>(`/quiz/stats?${tz()}`),
   setGoal: (dailyGoal: number) =>
