@@ -32,6 +32,10 @@ class EmailNotVerifiedError(AuthError):
     pass
 
 
+class EmailInUseError(AuthError):
+    pass
+
+
 class InvalidTokenError(AuthError):
     pass
 
@@ -166,9 +170,53 @@ class AuthService:
         if not security.verify_password(user.password_hash, password):
             raise InvalidCredentialsError
         uploads = self._settings.data_dir / "uploads" / str(user.id)
+        avatar = self._settings.data_dir / user.avatar_path if user.avatar_path else None
         self._users.delete(user)
         self._session.commit()
         shutil.rmtree(uploads, ignore_errors=True)
+        if avatar is not None:
+            avatar.unlink(missing_ok=True)
+
+    # --- changing email and password ---------------------------------------------------------
+
+    def change_email(self, user: User, new_email: str, password: str) -> None:
+        """Sends a link to the new address; the change happens when it's opened."""
+        if not security.verify_password(user.password_hash, password):
+            raise InvalidCredentialsError
+        email = normalize_email(new_email)
+        if email == user.email:
+            return
+        if self._users.get_by_email(email) is not None:
+            raise EmailInUseError("Another account uses that email")
+        user.pending_email = email
+        hours = self._settings.auth.verify_email_hours
+        token = self._issue_token(user, EmailTokenPurpose.CHANGE_EMAIL, timedelta(hours=hours))
+        message = Email(
+            to=email,
+            subject="Confirm your new Vocab Sensei email",
+            body=f"Hi {user.display_name}, confirm this as your new email address by opening:\n\n"
+            f"{self._link('confirm-email', token)}\n\nUntil then your old address stays in use. "
+            f"The link expires in {hours} hours.",
+        )
+        self._session.commit()  # save first, so the link works
+        self._email.send(message)
+
+    def confirm_email(self, token: str) -> None:
+        email_token = self._use_token(token, EmailTokenPurpose.CHANGE_EMAIL)
+        user = self._users.get(email_token.user_id)
+        if user is None or user.pending_email is None:
+            raise InvalidTokenError
+        if self._users.get_by_email(user.pending_email) is not None:  # taken in the meantime
+            raise InvalidTokenError
+        user.email, user.pending_email = user.pending_email, None
+        user.email_verified_at = self._now()
+        self._session.commit()
+
+    def change_password(self, user: User, current: str, new: str) -> None:
+        if not security.verify_password(user.password_hash, current):
+            raise InvalidCredentialsError
+        user.password_hash = security.hash_password(new)
+        self._session.commit()
 
     # --- password reset -----------------------------------------------------------------------
 

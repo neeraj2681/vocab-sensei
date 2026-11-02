@@ -7,7 +7,7 @@ from datetime import datetime
 from sqlalchemy import ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.core.enums import EmailTokenPurpose
+from app.core.enums import EmailTokenPurpose, Gender
 from app.db.base import Base
 from app.db.types import UTCDateTime, str_enum, utcnow
 
@@ -23,12 +23,20 @@ class User(Base):
     daily_goal: Mapped[int] = mapped_column(default=20, server_default="20")  # answers a day
     previous_daily_goal: Mapped[int | None]  # what days before daily_goal_since are judged by
     daily_goal_since: Mapped[datetime | None] = mapped_column(UTCDateTime)
-    onboarded_at: Mapped[datetime | None] = mapped_column(
-        UTCDateTime
-    )  # finished the first-run tour
+    onboarded_at: Mapped[datetime | None] = mapped_column(UTCDateTime)  # finished the tour
+    name_changed_at: Mapped[datetime | None] = mapped_column(UTCDateTime)  # one change allowed
+    gender: Mapped[Gender] = mapped_column(
+        str_enum(Gender), default=Gender.UNSPECIFIED, server_default=Gender.UNSPECIFIED.value
+    )
+    avatar_path: Mapped[str | None] = mapped_column(String(1024))  # relative to data_dir
+    pending_email: Mapped[str | None] = mapped_column(String(320))  # until its link is opened
     email_verified_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, onupdate=utcnow)
+
+    @property
+    def has_avatar(self) -> bool:
+        return self.avatar_path is not None
 
     sessions: Mapped[list[AuthSession]] = relationship(
         back_populates="user", cascade="all, delete-orphan", passive_deletes=True
