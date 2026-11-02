@@ -32,18 +32,22 @@ def choose_pool(available: Sequence[Pool], weights: Mapping[Pool, int], rng: Ran
 class DailyGoal:
     """Answers a day that keep the streak going.
 
-    Days before `since` (the day the user last changed it) are judged by the goal they had then,
-    so raising the goal never breaks a streak already earned.
+    Every past day is judged by the goal the user had that day, so changing the goal (however
+    often) never breaks a streak already earned.
     """
 
-    goal: int
-    earlier: int | None = None
-    since: date | None = None
+    goal: int  # today's
+    steps: tuple[tuple[date, int], ...] = ()  # (first day, goal) for each change, oldest first
 
     def on(self, day: date) -> int:
-        if self.earlier is not None and self.since is not None and day < self.since:
-            return self.earlier
-        return self.goal
+        if not self.steps:
+            return self.goal
+        current = self.steps[0][1]  # days before the first change had the first goal
+        for start, goal in self.steps:
+            if start > day:
+                break
+            current = goal
+        return current
 
 
 def streak(answers_per_day: Mapping[date, int], today: date, goal: DailyGoal) -> int:

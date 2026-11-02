@@ -21,8 +21,6 @@ class User(Base):
     display_name: Mapped[str] = mapped_column(String(100))
     is_active: Mapped[bool] = mapped_column(default=True)
     daily_goal: Mapped[int] = mapped_column(default=20, server_default="20")  # answers a day
-    previous_daily_goal: Mapped[int | None]  # what days before daily_goal_since are judged by
-    daily_goal_since: Mapped[datetime | None] = mapped_column(UTCDateTime)
     onboarded_at: Mapped[datetime | None] = mapped_column(UTCDateTime)  # finished the tour
     name_changed_at: Mapped[datetime | None] = mapped_column(UTCDateTime)  # one change allowed
     gender: Mapped[Gender] = mapped_column(
@@ -41,6 +39,23 @@ class User(Base):
     sessions: Mapped[list[AuthSession]] = relationship(
         back_populates="user", cascade="all, delete-orphan", passive_deletes=True
     )
+    # Every goal the user has had and when it started, oldest first; none until the first change.
+    goal_changes: Mapped[list[GoalChange]] = relationship(
+        order_by=lambda: (GoalChange.since, GoalChange.id),
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+
+
+class GoalChange(Base):
+    """The daily goal from `since` on, so past days keep being judged by the goal they had."""
+
+    __tablename__ = "goal_changes"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    goal: Mapped[int]
+    since: Mapped[datetime] = mapped_column(UTCDateTime)
 
 
 class AuthSession(Base):

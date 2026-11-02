@@ -24,7 +24,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import Settings
 from app.core.enums import QuestionType, WordStatus
-from app.db.models import Question, QuizAnswer, User, UserWord, Word
+from app.db.models import GoalChange, Question, QuizAnswer, User, UserWord, Word
 from app.dictionary.types import Dictionary
 from app.quiz.questions import (
     Candidate,
@@ -153,9 +153,9 @@ class PractisedWord:
 
 
 def daily_goal(user: User, tz: ZoneInfo) -> DailyGoal:
-    """The user's goal; the day they last changed it starts in their time zone."""
-    since = user.daily_goal_since.astimezone(tz).date() if user.daily_goal_since else None
-    return DailyGoal(user.daily_goal, user.previous_daily_goal, since)
+    """The user's goal and its history, with each change starting on a day in their time zone."""
+    steps = tuple((c.since.astimezone(tz).date(), c.goal) for c in user.goal_changes)
+    return DailyGoal(user.daily_goal, steps)
 
 
 def quiz_stats(repo: QuizRepository, user: User, now: datetime, tz: ZoneInfo) -> Stats:
@@ -501,15 +501,21 @@ class QuizService:
     def stats(self, user_id: int, now: datetime, tz: ZoneInfo) -> Stats:
         return quiz_stats(self._repo, self._user(user_id), now, tz)
 
-    def set_daily_goal(self, user_id: int, goal: int, now: datetime) -> None:
+    def set_daily_goal(self, user_id: int, goal: int, now: datetime, tz: ZoneInfo) -> None:
         """Changes the goal from today on; earlier days keep the goal they had (see DailyGoal)."""
         user = self._user(user_id)
         if goal == user.daily_goal:
             return
-        # Changed again the same day: earlier days keep the goal from before the first change.
-        if user.daily_goal_since is None or user.daily_goal_since.date() < now.date():
-            user.previous_daily_goal = user.daily_goal
-        user.daily_goal, user.daily_goal_since = goal, now
+        changes = user.goal_changes
+        if not changes:  # the first change: remember the goal every earlier day had
+            changes.append(GoalChange(goal=user.daily_goal, since=min(user.created_at, now)))
+        elif changes[-1].since.astimezone(tz).date() == now.astimezone(tz).date():
+            changes[-1].goal = goal  # changed again today: only today's goal moves
+            user.daily_goal = goal
+            self._session.commit()
+            return
+        changes.append(GoalChange(goal=goal, since=now))
+        user.daily_goal = goal
         self._session.commit()
 
     def _user(self, user_id: int) -> User:

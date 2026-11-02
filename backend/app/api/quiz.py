@@ -348,7 +348,7 @@ def set_goal(
     body: GoalRequest, user: CurrentUser, quiz: QuizServiceDep, now: Now, tz: TimeZone
 ) -> StatsResponse:
     """Changes the daily goal from today on; returns the stats with the new goal."""
-    quiz.set_daily_goal(user.id, body.daily_goal, now)
+    quiz.set_daily_goal(user.id, body.daily_goal, now, tz)
     return StatsResponse.of(quiz.stats(user.id, now, tz))
 
 
