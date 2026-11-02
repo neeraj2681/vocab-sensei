@@ -3,7 +3,7 @@ from datetime import date, datetime
 from typing import Annotated, Self
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -302,15 +302,36 @@ def next_questions(
     }
 
 
-@router.post("/questions/{question_id}/know", status_code=status.HTTP_204_NO_CONTENT)
-def know(question_id: int, user: CurrentUser, quiz: QuizServiceDep, now: Now) -> None:
-    """Marks the word known ("I know this"); fetch the next question afterwards."""
+class NextQuestionsResponse(BaseModel):
+    next: QuestionResponse | None  # the question now on screen
+    after_next: QuestionResponse | None = None  # and the one kept ready after it
+
+
+@router.post("/questions/{question_id}/know", response_model=None)
+def know(
+    question_id: int,
+    user: CurrentUser,
+    quiz: QuizServiceDep,
+    documents: DocumentServiceDep,
+    now: Now,
+    include_next: Annotated[bool, Query(description="also send the next questions")] = False,
+    document_id: Annotated[
+        int | None, Query(description="with `chapter`: study one chapter")
+    ] = None,
+    chapter: Annotated[int | None, Query(ge=0)] = None,
+) -> Response | NextQuestionsResponse:
+    """Marks the word known ("I know this"). With include_next, the next questions come along
+    (like an answer); without it, 204 and the screen asks for the next question itself."""
+    focus = get_focus(user.id, documents, document_id, chapter)
     try:
         quiz.know(user.id, question_id, now)
     except QuestionNotFoundError as exc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from None
     except AlreadyAnsweredError as exc:
         raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from None
+    if not include_next:
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+    return NextQuestionsResponse(**next_questions(quiz, user.id, now, focus))
 
 
 @router.get("/stats")

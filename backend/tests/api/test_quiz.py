@@ -448,6 +448,19 @@ def test_the_next_question_is_kept_ready(
     assert answer(user_client, session)["next"] is None  # only when asked for
 
 
+def test_i_know_this_can_bring_the_next_questions(
+    user_client: TestClient, session: Session, book: Document, clock: Clock
+) -> None:
+    first = user_client.get("/api/quiz/question?include_next=true").json()
+
+    known = user_client.post(f"/api/quiz/questions/{first['id']}/know?include_next=true")
+
+    assert known.status_code == 200
+    body = known.json()
+    assert body["next"]["id"] == first["next"]["id"]  # the kept question is now on screen
+    assert body["after_next"]["id"] not in {first["id"], first["next"]["id"]}
+
+
 @pytest.mark.usefixtures("book")
 class TestStats:
     def test_streak_counts_days_that_met_the_goal(
