@@ -124,28 +124,28 @@ class LearningRepository:
         Ahead: its first appearance from `from_chapter` on. Earlier: words used only before
         `from_chapter`, at their first appearance.
         """
+        # One grouped pass over the book's appearances (not a subquery per row): the chapter
+        # to place each word at.
         other, other_chapter = aliased(ChapterWord), aliased(Chapter)
-        same_word = (other.document_id == ChapterWord.document_id) & (
-            other.word_id == ChapterWord.word_id
-        )
-        indexes = (
-            select(func.min(other_chapter.index))
-            .select_from(other)
+        by_word = (
+            select(other.word_id, func.min(other_chapter.index).label("chapter_index"))
             .join(other_chapter, other_chapter.id == other.chapter_id)
+            .where(other.document_id == document_id)
+            .group_by(other.word_id)
         )
         if earlier:
-            first = indexes.where(same_word).scalar_subquery()
-            later = (
-                exists()
-                .where(same_word, other_chapter.id == other.chapter_id)
-                .where(other_chapter.index >= from_chapter)
-            )
-            placed = and_(Chapter.index == first, ~later)
+            by_word = by_word.having(func.max(other_chapter.index) < from_chapter)
         else:
-            next_one = indexes.where(same_word, other_chapter.index >= from_chapter)
-            placed = Chapter.index == next_one.scalar_subquery()
-        return self._appearances(user_id, document_id, and_(condition, placed)).order_by(
-            Chapter.index, ChapterWord.first_position
+            by_word = by_word.where(other_chapter.index >= from_chapter)
+        placement = by_word.subquery()
+        return (
+            self._appearances(user_id, document_id, condition)
+            .join(
+                placement,
+                (placement.c.word_id == ChapterWord.word_id)
+                & (placement.c.chapter_index == Chapter.index),
+            )
+            .order_by(Chapter.index, ChapterWord.first_position)
         )
 
     def in_library(self, user_id: int, word_id: int) -> bool:
