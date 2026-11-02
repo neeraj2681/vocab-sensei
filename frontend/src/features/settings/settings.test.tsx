@@ -17,7 +17,8 @@ const SETTINGS: ReminderSettings = {
   enabled: true,
   time: '20:00',
   timezone: 'UTC',
-  channel: 'push',
+  push: true,
+  email: false,
   devices: 0,
   push_public_key: 'BPublicKey',
 }
@@ -51,13 +52,13 @@ describe('daily reminder settings', () => {
 
     await waitFor(() => {
       expect(api.calls('PUT /api/reminders')).toEqual([
-        { enabled: true, time: '20:00', timezone: 'UTC', channel: 'push' },
+        { enabled: true, time: '20:00', timezone: 'UTC', push: true, email: false },
       ])
     })
     expect(screen.getByLabelText('Remind me every day')).toBeChecked()
   })
 
-  it('changes the time and the channel', async () => {
+  it('changes the time, and can remind by notification and email together', async () => {
     const api = settingsPage()
     const user = renderApp('/settings')
 
@@ -70,9 +71,20 @@ describe('daily reminder settings', () => {
         enabled: true,
         time: '07:30',
         timezone: 'UTC',
-        channel: 'email',
+        push: true,
+        email: true,
       })
     })
+    expect(screen.getByLabelText('Notification')).toBeChecked()
+    expect(screen.getByLabelText('Email')).toBeChecked()
+  })
+
+  it("doesn't let the last way be unticked", async () => {
+    settingsPage()
+    renderApp('/settings')
+
+    expect(await screen.findByLabelText('Notification')).toBeDisabled() // the only one on
+    expect(screen.getByLabelText('Email')).toBeEnabled()
   })
 
   it('turns on notifications on this device', async () => {

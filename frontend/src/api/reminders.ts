@@ -6,7 +6,9 @@ export interface ReminderSettings {
   enabled: boolean
   time: string // HH:MM in `timezone`
   timezone: string
-  channel: ReminderChannel
+  push: boolean // notifications on this person's devices
+  email: boolean
+  channel?: ReminderChannel // older servers: one of the two
   devices: number // devices with notifications turned on
   push_public_key: string
 }
@@ -18,7 +20,7 @@ export interface DeviceSubscription {
 
 export const remindersApi = {
   get: () => apiGet<ReminderSettings>('/reminders'),
-  save: (settings: Pick<ReminderSettings, 'enabled' | 'time' | 'timezone' | 'channel'>) =>
+  save: (settings: Pick<ReminderSettings, 'enabled' | 'time' | 'timezone' | 'push' | 'email'>) =>
     apiPut<ReminderSettings>('/reminders', settings),
   addDevice: (device: DeviceSubscription) => apiPost('/reminders/devices', device),
   test: () => apiPost<{ sent: boolean }>('/reminders/test'),

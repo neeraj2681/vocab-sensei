@@ -188,6 +188,35 @@ class TestSending:
         assert "10 more answers" in mailer.outbox[-1].body
         assert mailer.outbox[-1].body.count("/quiz") == 1
 
+    def test_both_notifications_and_email_at_once(
+        self,
+        user_client: TestClient,
+        session: Session,
+        settings: Settings,
+        mailer: FakeEmailSender,
+        pusher: FakePushSender,
+    ) -> None:
+        saved = configure(user_client, push=True, email=True)
+
+        assert (saved["push"], saved["email"]) == (True, True)
+        assert service(session, settings, mailer, pusher).send_due(at_kolkata(20, 1)) == 1
+        assert len(pusher.sent) == 1
+        assert mailer.outbox[-1].to == "reader@example.com"
+
+    def test_at_least_one_way_must_be_chosen(self, user_client: TestClient) -> None:
+        body = {
+            "enabled": True,
+            "time": "20:00",
+            "timezone": KOLKATA,
+            "push": False,
+            "email": False,
+        }
+
+        response = user_client.put("/api/reminders", json=body)
+
+        assert response.status_code == 422
+        assert response.json()["detail"] == "Choose notifications, email or both"
+
     def test_unsubscribed_devices_are_forgotten(
         self, session: Session, settings: Settings, mailer: FakeEmailSender, pusher: FakePushSender
     ) -> None:
