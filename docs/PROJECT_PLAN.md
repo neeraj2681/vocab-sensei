@@ -336,6 +336,18 @@ because git and the workflow files carry over.
     light/dark" and replaces today's Light / Dark / Sepia picker.
   - **Saving it**: kept with the account so it follows you across devices, not just per browser. Some
     themes could later be sold in the Shop for coins.
+- [ ] **Easter eggs** (requested 2 Nov 2026, next phase): small hidden surprises that reward curiosity.
+  They never get in the way of learning and never change scores.
+  - **Hidden taps**: tap the camel in the Shop five times and it spits a coin. Long-press the logo for a
+    sensei quote. Tap the moon to make it a full moon.
+  - **Word-based**: learning certain words triggers a little animation, e.g. *ebullient* (confetti),
+    *melancholy* (rain), *serendipity* (a four-leaf clover).
+  - **Dates and milestones**: festival decorations (Diwali lamps, New Year fireworks), your sign-up
+    anniversary, the 100th and 1,000th word learned.
+  - **Secret code**: typing a hidden word (or the Konami code on a laptop) unlocks a secret look.
+  - **Collection**: found eggs go into a "Secrets found: 3 / 12" corner on the Me page, with no hints beyond a
+    silhouette. Some could pay a few coins once the Shop opens.
+  - Stored as a list of found egg ids on the account. Animations respect "reduce motion".
 
 ### Phase 3 — Multi-user (future plan items 1–2)
 - [x] Accounts & auth (pulled forward into Phase 1)
