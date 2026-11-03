@@ -399,7 +399,7 @@ months (belts, garden, badges). None of it changes how words are scored.
   exists); "water" = a quick review of the wilting ones. Garden grows with belts.
 - [ ] **Daily quests**: three a day, e.g. "Learn 5 words from Dracula", "10 right in a row", "Finish your goal
   before noon"; each pays coins; a small chest when all three are done.
-- [ ] **Combo meter**: right answers in a row fill a meter; at 5 the coins double until a mistake. A short sound
+- [x] **Combo meter** (built 3 Nov 2026 as **Ninja Mode**, #95–#97): right answers in a row fill a meter; at 5 the coins double until a mistake. A short sound
   and phone vibration (`navigator.vibrate`), both switchable off in Settings.
 - [ ] **Word of the day**: a push/email with one of your own words and the sentence from your book; tapping it
   opens that word's card.
@@ -418,9 +418,9 @@ months (belts, garden, badges). None of it changes how words are scored.
 
 ### Phase 3 — Multi-user (future plan items 1–2)
 - [x] Accounts & auth (pulled forward into Phase 1)
-- [ ] Login rate limiting, account deletion / data export per user
-- [ ] Personal profiles & settings
-- [ ] Move to PostgreSQL; Docker deployment
+- [x] Login rate limiting, account deletion / data export per user
+- [x] Personal profiles & settings (photo, username once, gender icon, email/password; #78)
+- [x] Move to PostgreSQL; Docker deployment (on the Mac; a real server is still to come)
 - [ ] Per-user privacy of uploaded files
 - [ ] **Affiliate book links in the Shop** (requested 2 Nov 2026): the merchant sells real books. Each classic and
   each book on someone's shelf links to buy it, e.g. "Buy the paperback" / "Get it on Kindle".
