@@ -5,7 +5,18 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import auth, backup, documents, health, learning, quiz, readings, reminders, triage
+from app.api import (
+    auth,
+    backup,
+    documents,
+    health,
+    learning,
+    quests,
+    quiz,
+    readings,
+    reminders,
+    triage,
+)
 from app.core.config import get_settings
 from app.core.email import SmtpEmailSender
 from app.core.push import WebPushSender, load_or_create_keys
@@ -51,6 +62,7 @@ def create_app() -> FastAPI:
     app.include_router(readings.router, prefix="/api")
     app.include_router(learning.router, prefix="/api")
     app.include_router(quiz.router, prefix="/api")
+    app.include_router(quests.router, prefix="/api")
     app.include_router(triage.router, prefix="/api")
     app.include_router(backup.router, prefix="/api")
     app.include_router(reminders.router, prefix="/api")

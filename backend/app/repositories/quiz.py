@@ -1,5 +1,5 @@
 from collections.abc import Collection
-from datetime import datetime
+from datetime import date, datetime
 
 from sqlalchemy import and_, exists, func, or_, select
 from sqlalchemy.orm import Session, aliased, selectinload
@@ -12,6 +12,7 @@ from app.db.models import (
     Definition,
     Document,
     DocumentWord,
+    QuestClaim,
     Question,
     QuizAnswer,
     UserWord,
@@ -67,10 +68,22 @@ class QuizRepository:
     # Scores
 
     def total_points(self, user_id: int) -> int:
-        total = self._session.scalar(
+        """Lifetime coins: every answer's points plus claimed quest rewards."""
+        answers = self._session.scalar(
             select(func.sum(QuizAnswer.points)).where(QuizAnswer.user_id == user_id)
         )
-        return int(total or 0)
+        quests = self._session.scalar(
+            select(func.sum(QuestClaim.coins)).where(QuestClaim.user_id == user_id)
+        )
+        return int(answers or 0) + int(quests or 0)
+
+    def quest_coins_by_day(self, user_id: int, since: date) -> dict[date, int]:
+        rows = self._session.execute(
+            select(QuestClaim.day, func.sum(QuestClaim.coins))
+            .where(QuestClaim.user_id == user_id, QuestClaim.day >= since)
+            .group_by(QuestClaim.day)
+        )
+        return {day: int(coins) for day, coins in rows}
 
     def answers(self, user_id: int, since: datetime | None = None) -> list[QuizAnswer]:
         """Real answers ("I know this" excluded), oldest first."""

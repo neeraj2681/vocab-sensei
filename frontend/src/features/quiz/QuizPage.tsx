@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { ApiError } from '../../api/client'
 import { documentsApi, type ChapterReadiness } from '../../api/documents'
+import { questsApi } from '../../api/quests'
 import { quizApi, type QuizQuestion, type QuizStats } from '../../api/quiz'
 import { chapterLabel } from '../library/labels'
 import { type Pop, ScoreBar } from './ScoreBar'
@@ -654,6 +655,7 @@ function SessionSummary({
           </dd>
         </div>
       </dl>
+      <QuestsReady />
       {ninja(combo) && (
         <p className="ninja-note ninja-note--start">
           <Icon name="ninja" size={32} /> <strong>{NINJA}</strong> carries on: {combo.run} right in
@@ -667,6 +669,33 @@ function SessionSummary({
         Done for today
       </button>
     </div>
+  )
+}
+
+/** "2 quests ready to claim" at the end of a session, linking to Today where they're claimed. */
+function QuestsReady() {
+  const [ready, setReady] = useState(0)
+
+  useEffect(() => {
+    let current = true
+    questsApi
+      .today()
+      .then((daily) => {
+        const done = daily.quests.filter((q) => q.progress >= q.target && !q.claimed).length
+        if (current) setReady(done + (daily.chest_ready ? 1 : 0))
+      })
+      .catch(() => undefined)
+    return () => {
+      current = false
+    }
+  }, [])
+
+  if (ready === 0) return null
+  return (
+    <Link className="quests-ready" to="/">
+      <Icon name="wrapped_gift" size={28} /> {ready} {ready === 1 ? 'reward' : 'rewards'} ready to
+      claim on Today
+    </Link>
   )
 }
 
