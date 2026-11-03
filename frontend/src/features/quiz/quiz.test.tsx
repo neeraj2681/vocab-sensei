@@ -560,4 +560,34 @@ describe('ninja mode', () => {
     expect(api.calls('POST /api/quiz/combo/end')).toHaveLength(1)
     expect(screen.queryByRole('progressbar', { name: 'Session progress' })).not.toBeInTheDocument()
   })
+
+  it('warns about the run and today’s goal before stopping', async () => {
+    const api = run(STATS, {
+      'POST /api/quiz/combo/end': () => new Response(null, { status: 204 }),
+    })
+    const user = renderApp('/quiz')
+    for (let i = 0; i < 3; i++) {
+      await answer(user)
+      await next(user)
+    }
+
+    await user.click(screen.getByRole('button', { name: 'End session' }))
+
+    const warning = screen.getByRole('alertdialog', { name: 'Stop your run?' })
+    expect(warning).toHaveTextContent('3 right in a row: 2 more start Ninja Mode')
+    expect(warning).toHaveTextContent('7 more answers today keep your 4-day streak') // the server's 3 of 10
+    await user.click(within(warning).getByRole('button', { name: 'Stop anyway' }))
+    expect(api.calls('POST /api/quiz/combo/end')).toHaveLength(1)
+  })
+
+  it('leaves without a warning when there is nothing to lose', async () => {
+    run({ ...STATS, today: 10 })
+    const user = renderApp('/quiz')
+    await screen.findByRole('meter', { name: /towards Ninja Mode/ })
+
+    await user.click(screen.getByRole('button', { name: 'End session' }))
+
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+    expect(screen.queryByRole('progressbar', { name: 'Session progress' })).not.toBeInTheDocument()
+  })
 })

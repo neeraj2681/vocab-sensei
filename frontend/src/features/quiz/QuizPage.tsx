@@ -179,9 +179,11 @@ export function QuizPage() {
     void save(question, index)
   }
 
-  /** Done for today / ✕: in Ninja Mode, warn first; stopping ends the run (on the server too). */
+  /** Done for today / ✕: if stopping costs something (the run of right answers, Ninja Mode, or
+  today's goal for the streak), warn first; stopping ends the run (on the server too). */
   function leave(confirmed = false) {
-    if (ninja(combo) && !confirmed) {
+    const goalLeft = stats ? stats.daily_goal - stats.today : 0
+    if (!confirmed && (combo.run > 0 || goalLeft > 0)) {
       setLeaving(true)
       return
     }
@@ -317,8 +319,10 @@ export function QuizPage() {
         />
       )}
       {leaving && (
-        <NinjaWarning
+        <StopWarning
           combo={combo}
+          goalLeft={stats ? Math.max(stats.daily_goal - stats.today, 0) : 0}
+          streak={stats?.streak ?? 0}
           onStay={() => {
             setLeaving(false)
           }}
@@ -666,30 +670,54 @@ function SessionSummary({
   )
 }
 
-/** Stopping in Ninja Mode ends it: say so before it happens. */
-function NinjaWarning({
+/** What stopping now would cost (Ninja Mode, the run towards it, today's goal), before it happens. */
+function StopWarning({
   combo,
+  goalLeft,
+  streak,
   onStay,
   onStop,
 }: {
   combo: Combo
+  goalLeft: number // answers still needed today for the streak
+  streak: number
   onStay: () => void
   onStop: () => void
 }) {
+  const inNinja = ninja(combo)
+  const title = inNinja
+    ? `Leave ${NINJA}?`
+    : combo.run > 0
+      ? 'Stop your run?'
+      : 'Stop before today’s goal?'
   return (
     <div className="word-card__backdrop">
-      <div className="word-card ninja-warning" role="alertdialog" aria-labelledby="ninja-warning">
-        <Icon name="ninja" size={72} />
-        <h3 id="ninja-warning">Leave {NINJA}?</h3>
-        <p>
-          You’re on {combo.run} right in a row, earning double coins. Stopping now ends {NINJA}; it
-          comes back after {combo.after} right answers in a row.
-        </p>
+      <div className="word-card ninja-warning" role="alertdialog" aria-labelledby="stop-warning">
+        <Icon name={inNinja || combo.run > 0 ? 'ninja' : 'fire'} size={72} />
+        <h3 id="stop-warning">{title}</h3>
+        {inNinja && (
+          <p>
+            You’re on {combo.run} right in a row, earning double coins. Stopping now ends {NINJA};
+            it comes back after {combo.after} right answers in a row.
+          </p>
+        )}
+        {!inNinja && combo.run > 0 && (
+          <p>
+            You’re on {combo.run} right in a row: {combo.after - combo.run} more start {NINJA}{' '}
+            (double coins). Stopping now resets your run to 0.
+          </p>
+        )}
+        {goalLeft > 0 && (
+          <p className="ninja-warning__goal">
+            <Icon name="fire" size={22} /> {goalLeft} more {goalLeft === 1 ? 'answer' : 'answers'}{' '}
+            today {streak > 0 ? `keep your ${String(streak)}-day streak` : 'start a streak'}.
+          </p>
+        )}
         <button type="button" className="primary" onClick={onStay} autoFocus>
           Keep going
         </button>
         <button type="button" className="raised ninja-warning__stop" onClick={onStop}>
-          Stop and end {NINJA}
+          {inNinja ? `Stop and end ${NINJA}` : 'Stop anyway'}
         </button>
       </div>
     </div>
