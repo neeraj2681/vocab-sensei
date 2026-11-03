@@ -2645,19 +2645,24 @@ a.secondary {
 /* Cards have a fixed size, so two rows have a known height; more rows scroll inside. */
 .shelf {
   --card-width: 9.5rem;
-  /* cover (2:3) + title, author and count + the buttons; every card the same, so rows line up */
+  /* cover (2:3) + title, author and count + the buttons; every card the same, so they line up */
   --card-height: calc(var(--card-width) * 1.5 + 10rem);
-  --row-gap: 1.25rem;
   display: grid;
-  grid-template-columns: repeat(auto-fill, var(--card-width));
-  grid-auto-rows: var(--card-height);
-  gap: var(--row-gap) 1rem;
-  justify-content: space-between;
-  max-height: calc(2 * var(--card-height) + var(--row-gap));
+  grid-auto-flow: column; /* one row; swipe or scroll sideways for more */
+  grid-auto-columns: var(--card-width);
+  grid-template-rows: var(--card-height);
+  gap: 1rem;
   margin: 1rem 0 0;
-  padding: 0 0.25rem 0 0;
-  overflow-y: auto;
+  padding: 0 0 0.75rem; /* room for the scrollbar */
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  scroll-padding-inline: 0.25rem;
   list-style: none;
+}
+
+.shelf > li {
+  scroll-snap-align: start;
 }
 
 .book-card {
@@ -2777,11 +2782,11 @@ a.book-card__cover:hover {
   --card-height: calc(var(--card-width) * 1.5 + 12.5rem);
 }
 
-/* Phones: smaller covers than on a laptop, three to a row */
+/* Phones: smaller covers than on a laptop */
 @media (max-width: 640px) {
   .shelf {
     --card-width: 6.6rem;
-    gap: var(--row-gap) 0.5rem;
+    gap: 0.75rem;
   }
 
   .book-card__text {
