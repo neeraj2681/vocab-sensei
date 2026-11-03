@@ -1022,15 +1022,11 @@ button {
   color: var(--on-accent);
 }
 
-/* Narrow phones: "Known" instead of "Already known", so the three tabs fit on one line */
+/* Narrow phones: the three tabs still fit on one line */
 @media (max-width: 400px) {
   .word-tab {
     padding: 0.4rem 0.35rem;
     font-size: 0.85rem;
-  }
-
-  .word-tabs__extra {
-    display: none;
   }
 }
 
@@ -1079,10 +1075,17 @@ button {
   white-space: nowrap;
 }
 
-.progress-ring {
+.progress-ring,
+.word-row__known {
   flex: none;
   width: 2.75rem;
   height: 2.75rem;
+}
+
+/* The ✓ of a known word takes the ring's place, so rows keep the same height and spacing */
+.word-row__known {
+  display: grid;
+  place-items: center;
 }
 
 .progress-ring circle {

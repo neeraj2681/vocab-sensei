@@ -212,16 +212,14 @@ describe('Me tab', () => {
     progress(HISTORY, { 'GET /api/quiz/words?include_known=true': () => json([...WORDS, known]) })
     const user = renderApp('/words')
 
-    await user.click(await screen.findByRole('button', { name: 'Already known · 1' }))
+    await user.click(await screen.findByRole('button', { name: 'Known · 1' }))
 
     const rows = within(screen.getByRole('list')).getAllByRole('listitem')
     expect(rows).toHaveLength(1)
-    expect(
-      within(rows[0] as HTMLElement).getByRole('img', { name: 'Already known' }),
-    ).toBeInTheDocument()
+    expect(within(rows[0] as HTMLElement).getByRole('img', { name: 'Known' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Learning · 2' })).toBeInTheDocument() // not counted there
     await user.click(screen.getByRole('button', { name: /quaint/ }))
-    expect(screen.getByRole('dialog', { name: 'quaint' })).toHaveTextContent('Already known')
+    expect(screen.getByRole('dialog', { name: 'quaint' })).toHaveTextContent('Known')
   })
 
   it('takes a known word back into learning', async () => {
@@ -244,7 +242,7 @@ describe('Me tab', () => {
       },
     })
     const user = renderApp('/words')
-    await user.click(await screen.findByRole('button', { name: 'Already known · 1' }))
+    await user.click(await screen.findByRole('button', { name: 'Known · 1' }))
     await user.click(screen.getByRole('button', { name: /quaint/ }))
 
     await user.click(screen.getByRole('button', { name: 'Learn it again' }))
@@ -253,14 +251,14 @@ describe('Me tab', () => {
     expect(api.calls('POST /api/quiz/words/quaint/learn')).toHaveLength(1)
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(await screen.findByRole('button', { name: 'Learning · 3' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Already known · 0' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Known · 0' })).toBeInTheDocument()
   })
 
   it('explains the known tab when it is empty', async () => {
     progress()
     const user = renderApp('/words')
 
-    await user.click(await screen.findByRole('button', { name: 'Already known · 0' }))
+    await user.click(await screen.findByRole('button', { name: 'Known · 0' }))
 
     expect(screen.getByText(/The quiz won’t ask them again/)).toBeInTheDocument()
   })

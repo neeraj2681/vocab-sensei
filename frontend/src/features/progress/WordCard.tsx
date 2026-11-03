@@ -49,11 +49,7 @@ export function WordCard({
           <span style={{ width: `${String(word.progress)}%` }} />
         </span>
         <p className="muted">
-          {word.known
-            ? 'Already known'
-            : word.learned
-              ? 'Learned'
-              : `${String(word.progress)}% learned`}
+          {word.known ? 'Known' : word.learned ? 'Learned' : `${String(word.progress)}% learned`}
           {word.book && ` · from ${word.book}`}
         </p>
         {word.known && (
