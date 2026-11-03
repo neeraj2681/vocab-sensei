@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useSearchParams } from 'react-router'
+import { Link, useNavigate, useSearchParams } from 'react-router'
 import { ApiError } from '../../api/client'
 import { documentsApi, type ChapterReadiness } from '../../api/documents'
 import { quizApi, type QuizQuestion, type QuizStats } from '../../api/quiz'
@@ -12,12 +12,21 @@ import { SpeakButton } from '../../components/SpeakButton'
 const RECENT_ANSWERS = 20 // how many answers the sparkline shows
 export const SESSION_LENGTH = 10 // answers in a session, then a summary
 const STREAK_MILESTONES = [7, 30, 100, 365]
+export const NINJA = 'Ninja Mode' // the combo: right answers in a row multiply the coins
+
+/** The run of right answers and when it turns into Ninja Mode (the server's rules). */
+interface Combo {
+  run: number // right answers in a row, kept between sessions
+  after: number // Ninja Mode from this many in a row...
+  multiplier: number // ...multiplying right answers' coins by this
+}
+
+const ninja = (combo: Combo) => combo.run >= combo.after
 
 interface Session {
   answered: number
   right: number
   points: number
-  combo: number // right answers in a row
   todayAtStart: number | null // answers already given today when the session began
 }
 
@@ -25,7 +34,6 @@ const newSession = (todayAtStart: number | null): Session => ({
   answered: 0,
   right: 0,
   points: 0,
-  combo: 0,
   todayAtStart,
 })
 
@@ -50,6 +58,9 @@ type Phase =
       question: QuizQuestion
       chosen: number
       correct: boolean // known at once from the question
+      points: number // coins it earned, Ninja Mode included
+      doubled: boolean // Ninja Mode multiplied them
+      ninja?: 'started' | 'ended' // this answer started or ended Ninja Mode
     }
   | { kind: 'error'; message: string; noWords: boolean }
   | { kind: 'summary' }
@@ -77,6 +88,9 @@ export function QuizPage() {
   const [session, setSession] = useState<Session>(newSession(null))
   const [continueQueued, setContinueQueued] = useState(false) // Continue tapped while saving
   const [questionVersion, setQuestionVersion] = useState(0) // bump to fetch the next question
+  const [combo, setCombo] = useState<Combo>({ run: 0, after: 5, multiplier: 2 })
+  const [leaving, setLeaving] = useState(false) // "stop now?" warning while in Ninja Mode
+  const navigate = useNavigate()
   // "Study this chapter": /quiz?book=1&chapter=4 asks only that chapter's words.
   const [params] = useSearchParams()
   const focusBook = params.has('book') ? Number(params.get('book')) : null
@@ -111,6 +125,11 @@ export function QuizPage() {
         if (!current) return
         setStats(loaded)
         setRecent([loaded.total])
+        setCombo((c) => ({
+          run: loaded.combo ?? c.run,
+          after: loaded.combo_after ?? c.after,
+          multiplier: loaded.combo_multiplier ?? c.multiplier,
+        }))
         setSession((s) => (s.todayAtStart === null ? { ...s, todayAtStart: loaded.today } : s))
       })
       .catch(() => undefined) // the question request reports connection problems
@@ -139,21 +158,36 @@ export function QuizPage() {
   function choose(question: QuizQuestion, index: number) {
     const correct = index === question.correct_index
     const outcome = correct ? question.if_right : question.if_wrong
-    setPhase({ kind: 'answered', question, chosen: index, correct })
+    // The same rule as the server: right answers in Ninja Mode earn more; a wrong one ends it.
+    const doubled = correct && ninja(combo) && outcome.points > 0
+    const points = doubled ? outcome.points * combo.multiplier : outcome.points
+    const next = { ...combo, run: correct ? combo.run + 1 : 0 }
+    const change =
+      !ninja(combo) && ninja(next) ? 'started' : ninja(combo) && !correct ? 'ended' : undefined
+    setCombo(next)
+    setPhase({ kind: 'answered', question, chosen: index, correct, points, doubled, ninja: change })
     buzz(correct)
     setSession((s) => ({
       ...s,
       answered: s.answered + 1,
       right: s.right + (correct ? 1 : 0),
-      points: s.points + outcome.points,
-      combo: correct ? s.combo + 1 : 0,
+      points: s.points + points,
     }))
-    setStats((s) => s && { ...s, total: s.total + outcome.points, today: s.today + 1 })
-    setRecent((values) =>
-      [...values, (values.at(-1) ?? 0) + outcome.points].slice(-(RECENT_ANSWERS + 1)),
-    )
-    setPop((previous) => ({ id: (previous?.id ?? 0) + 1, delta: outcome.points, correct }))
+    setStats((s) => s && { ...s, total: s.total + points, today: s.today + 1 })
+    setRecent((values) => [...values, (values.at(-1) ?? 0) + points].slice(-(RECENT_ANSWERS + 1)))
+    setPop((previous) => ({ id: (previous?.id ?? 0) + 1, delta: points, correct }))
     void save(question, index)
+  }
+
+  /** Done for today / ✕: in Ninja Mode, warn first; stopping ends the run (on the server too). */
+  function leave(confirmed = false) {
+    if (ninja(combo) && !confirmed) {
+      setLeaving(true)
+      return
+    }
+    if (combo.run > 0) void quizApi.endCombo().catch(() => undefined)
+    setCombo((c) => ({ ...c, run: 0 }))
+    void navigate('/')
   }
 
   async function save(question: QuizQuestion, index: number) {
@@ -263,10 +297,36 @@ export function QuizPage() {
 
   return (
     <section className="quiz">
-      <SessionBar session={session} />
+      <SessionBar
+        session={session}
+        combo={combo}
+        onLeave={() => {
+          leave()
+        }}
+      />
       {stats && <ScoreBar stats={stats} pop={pop} recent={recent} />}
       {phase.kind === 'summary' && stats && (
-        <SessionSummary session={session} stats={stats} onKeepGoing={keepGoing} />
+        <SessionSummary
+          session={session}
+          stats={stats}
+          combo={combo}
+          onKeepGoing={keepGoing}
+          onDone={() => {
+            leave()
+          }}
+        />
+      )}
+      {leaving && (
+        <NinjaWarning
+          combo={combo}
+          onStay={() => {
+            setLeaving(false)
+          }}
+          onStop={() => {
+            setLeaving(false)
+            leave(true)
+          }}
+        />
       )}
       {focused && (
         <FocusBanner documentId={focusBook} chapter={focusChapter} refresh={pop?.id ?? 0} />
@@ -361,7 +421,7 @@ function QuestionCard({ phase, busy, continueQueued, onChoose, onKnow, onNext }:
       {answered ? (
         <Feedback
           question={question}
-          correct={answered.correct}
+          answered={answered}
           continueQueued={continueQueued}
           onNext={onNext}
         />
@@ -400,16 +460,17 @@ function Prompt({ question }: { question: QuizQuestion }) {
 
 function Feedback({
   question,
-  correct,
+  answered,
   continueQueued,
   onNext,
 }: {
   question: QuizQuestion
-  correct: boolean
+  answered: Extract<Phase, { kind: 'answered' }>
   continueQueued: boolean
   onNext: () => void
 }) {
   // All of this came with the question, so it shows the moment an option is tapped.
+  const { correct } = answered
   const learned = correct && question.if_right.learned
 
   return (
@@ -439,6 +500,21 @@ function Feedback({
           </>
         )}
       </p>
+      {answered.ninja === 'started' && (
+        <p className="ninja-note ninja-note--start">
+          <Icon name="ninja" size={32} /> <strong>{NINJA}!</strong> Double coins until a miss.
+        </p>
+      )}
+      {answered.doubled && answered.ninja !== 'started' && (
+        <p className="ninja-note">
+          <Icon name="ninja" size={24} /> {NINJA}: +{answered.points} coins (×2)
+        </p>
+      )}
+      {answered.ninja === 'ended' && (
+        <p className="ninja-note ninja-note--end">
+          <Icon name="ninja" size={24} /> {NINJA} ended. Five right in a row brings it back.
+        </p>
+      )}
       {!question.counted && (
         <p className="muted">This word came back too soon to score; it’s practice.</p>
       )}
@@ -459,13 +535,26 @@ function Feedback({
 }
 
 /** ✕ to leave, how far into the session you are, and your run of right answers. */
-function SessionBar({ session }: { session: Session }) {
+function SessionBar({
+  session,
+  combo,
+  onLeave,
+}: {
+  session: Session
+  combo: Combo
+  onLeave: () => void
+}) {
   const done = Math.min(session.answered, SESSION_LENGTH)
   return (
     <div className="session-bar">
-      <Link className="session-bar__quit" to="/" aria-label="End session">
+      <button
+        type="button"
+        className="session-bar__quit"
+        aria-label="End session"
+        onClick={onLeave}
+      >
         ✕
-      </Link>
+      </button>
       <div
         className="session-bar__progress"
         role="progressbar"
@@ -476,9 +565,26 @@ function SessionBar({ session }: { session: Session }) {
       >
         <span style={{ width: `${String((done / SESSION_LENGTH) * 100)}%` }} />
       </div>
-      <span className="stat-pill" title="Right answers in a row">
-        <Icon name="sparkles" size={20} /> {session.combo}
-      </span>
+      {ninja(combo) ? (
+        <span
+          className="stat-pill stat-pill--ninja"
+          title={`${String(combo.run)} right in a row: double coins until a miss`}
+        >
+          <Icon name="ninja" size={22} /> ×{combo.multiplier}
+          <span className="sr-only">
+            {' '}
+            {NINJA}, {combo.run} in a row
+          </span>
+        </span>
+      ) : (
+        <span
+          className="stat-pill"
+          title={`Right answers in a row: ${String(combo.after)} start ${NINJA} (double coins)`}
+        >
+          <Icon name="sparkles" size={20} /> {combo.run}
+          <span className="sr-only"> of {combo.after} right in a row</span>
+        </span>
+      )}
     </div>
   )
 }
@@ -487,11 +593,15 @@ function SessionBar({ session }: { session: Session }) {
 function SessionSummary({
   session,
   stats,
+  combo,
   onKeepGoing,
+  onDone,
 }: {
   session: Session
   stats: QuizStats
+  combo: Combo
   onKeepGoing: () => void
+  onDone: () => void
 }) {
   const goalMet = stats.today >= stats.daily_goal
   const metThisSession =
@@ -528,12 +638,48 @@ function SessionSummary({
           </dd>
         </div>
       </dl>
+      {ninja(combo) && (
+        <p className="ninja-note ninja-note--start">
+          <Icon name="ninja" size={32} /> <strong>{NINJA}</strong> carries on: {combo.run} right in
+          a row, double coins until a miss.
+        </p>
+      )}
       <button type="button" className="primary" onClick={onKeepGoing}>
         Keep going
       </button>
-      <Link className="button-link secondary" to="/">
+      <button type="button" className="raised" onClick={onDone}>
         Done for today
-      </Link>
+      </button>
+    </div>
+  )
+}
+
+/** Stopping in Ninja Mode ends it: say so before it happens. */
+function NinjaWarning({
+  combo,
+  onStay,
+  onStop,
+}: {
+  combo: Combo
+  onStay: () => void
+  onStop: () => void
+}) {
+  return (
+    <div className="word-card__backdrop">
+      <div className="word-card ninja-warning" role="alertdialog" aria-labelledby="ninja-warning">
+        <Icon name="ninja" size={72} />
+        <h3 id="ninja-warning">Leave {NINJA}?</h3>
+        <p>
+          You’re on {combo.run} right in a row, earning double coins. Stopping now ends {NINJA}; it
+          comes back after {combo.after} right answers in a row.
+        </p>
+        <button type="button" className="primary" onClick={onStay} autoFocus>
+          Keep going
+        </button>
+        <button type="button" className="raised ninja-warning__stop" onClick={onStop}>
+          Stop and end {NINJA}
+        </button>
+      </div>
     </div>
   )
 }

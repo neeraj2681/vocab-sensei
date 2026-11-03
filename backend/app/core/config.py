@@ -19,6 +19,10 @@ class ScoringSettings(BaseModel):
     weekly_decay: int = 5
     unsure_start: int = 50
     floor: int = 0
+    # Ninja Mode: after `combo_after` right answers in a row, right answers earn `combo_multiplier`
+    # times the coins until a wrong one (or the player stops after a session).
+    combo_after: int = 5
+    combo_multiplier: int = 2
 
 
 class QuizSettings(BaseModel):

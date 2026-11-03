@@ -89,3 +89,9 @@ def answer_points(
         return 0
     delta = rules.correct_delta if correct else rules.wrong_delta
     return max(delta, rules.floor - total_before)
+
+
+def combo_multiplier(run: int, rules: ScoringSettings) -> int:
+    """Ninja Mode: once `run` right answers in a row reach `combo_after`, the next right answers
+    earn `combo_multiplier` times the coins."""
+    return rules.combo_multiplier if run >= rules.combo_after else 1

@@ -21,6 +21,9 @@ class User(Base):
     display_name: Mapped[str] = mapped_column(String(100))
     is_active: Mapped[bool] = mapped_column(default=True)
     daily_goal: Mapped[int] = mapped_column(default=20, server_default="20")  # answers a day
+    # Right answers in a row (Ninja Mode); kept between sessions until a wrong answer or the
+    # player stops after a session.
+    combo: Mapped[int] = mapped_column(default=0, server_default="0")
     onboarded_at: Mapped[datetime | None] = mapped_column(UTCDateTime)  # finished the tour
     name_changed_at: Mapped[datetime | None] = mapped_column(UTCDateTime)  # one change allowed
     gender: Mapped[Gender] = mapped_column(
