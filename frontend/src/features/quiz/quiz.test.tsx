@@ -445,7 +445,7 @@ describe('sessions', () => {
     const progress = await screen.findByRole('progressbar', { name: 'Session progress' })
     expect(progress).toHaveAttribute('aria-valuenow', '0')
     expect(screen.queryByRole('navigation', { name: 'Main' })).not.toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'End session' })).toHaveAttribute('href', '/')
+    expect(screen.getByRole('button', { name: 'End session' })).toBeInTheDocument()
 
     await answerRight(user)
 
@@ -460,9 +460,9 @@ describe('sessions', () => {
 
     expect(await screen.findByRole('heading', { name: 'Session complete!' })).toBeInTheDocument()
     expect(screen.getByText('Daily goal reached. Your streak is 4 days.')).toBeInTheDocument()
-    expect(screen.getByText('+50')).toBeInTheDocument()
+    expect(screen.getByText('+75')).toBeInTheDocument() // answers 6-10 in Ninja Mode: 5×5 + 5×10
     expect(screen.getByText('100%')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Done for today' })).toHaveAttribute('href', '/')
+    expect(screen.getByRole('button', { name: 'Done for today' })).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Keep going' }))
 
@@ -484,5 +484,76 @@ describe('sessions', () => {
 
     expect(vibrate.mock.calls).toEqual([[30], [[60, 40, 60]]])
     Reflect.deleteProperty(navigator, 'vibrate')
+  })
+})
+
+describe('ninja mode', () => {
+  function run(stats: QuizStats = STATS, extra: Routes = {}) {
+    const items = Array.from({ length: 12 }, (_, i) => question(i + 1, `word${String(i + 1)}`))
+    const answers: Routes = {}
+    for (const item of items) answers[ANSWER_URL(item.id)] = () => json(result({ stats }))
+    return quiz({
+      [STATS_URL]: () => json(stats),
+      'GET /api/quiz/question?include_next=true': questions(...items),
+      'GET /api/readings': () => json([]),
+      ...answers,
+      ...extra,
+    })
+  }
+
+  async function answer(user: ReturnType<typeof renderApp>, right = true) {
+    const option = right ? /wet with light rain/ : /a small bag/
+    await user.click(await screen.findByRole('button', { name: option }))
+  }
+
+  async function next(user: ReturnType<typeof renderApp>) {
+    await user.click(await screen.findByRole('button', { name: 'Continue' }))
+  }
+
+  it('starts after five right in a row and doubles the coins until a miss', async () => {
+    run()
+    const user = renderApp('/quiz')
+
+    for (let i = 0; i < 4; i++) {
+      await answer(user)
+      await next(user)
+    }
+    expect(screen.queryByText(/Ninja Mode!/)).not.toBeInTheDocument()
+    await answer(user) // the fifth
+    expect(await screen.findByText(/Double coins until a miss/)).toBeInTheDocument()
+    expect(screen.getByText(/Ninja Mode, 5 in a row/)).toBeInTheDocument()
+    await next(user)
+
+    await answer(user) // the sixth: doubled
+    expect(screen.getByText('Ninja Mode: +10 coins (×2)')).toBeInTheDocument()
+    await next(user)
+
+    await answer(user, false)
+    expect(screen.getByText(/Ninja Mode ended/)).toBeInTheDocument()
+    expect(screen.getByText(/of 5 right in a row/).parentElement).toHaveTextContent(
+      '0 of 5 right in a row',
+    )
+  })
+
+  it('carries on from the last visit, and warns before stopping ends it', async () => {
+    const api = run(
+      { ...STATS, combo: 7, combo_after: 5, combo_multiplier: 2 },
+      { 'POST /api/quiz/combo/end': () => new Response(null, { status: 204 }) },
+    )
+    const user = renderApp('/quiz')
+    expect(await screen.findByText(/Ninja Mode, 7 in a row/)).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'End session' }))
+    const warning = screen.getByRole('alertdialog', { name: 'Leave Ninja Mode?' })
+    expect(warning).toHaveTextContent('7 right in a row')
+    await user.click(within(warning).getByRole('button', { name: 'Keep going' }))
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+    expect(api.calls('POST /api/quiz/combo/end')).toHaveLength(0)
+
+    await user.click(screen.getByRole('button', { name: 'End session' }))
+    await user.click(screen.getByRole('button', { name: 'Stop and end Ninja Mode' }))
+
+    expect(api.calls('POST /api/quiz/combo/end')).toHaveLength(1)
+    expect(screen.queryByRole('progressbar', { name: 'Session progress' })).not.toBeInTheDocument()
   })
 })

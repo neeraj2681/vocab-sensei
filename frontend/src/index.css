@@ -1637,10 +1637,83 @@ button.raised:disabled {
   place-items: center;
   width: 2.25rem;
   height: 2.25rem;
+  padding: 0;
+  border: 0;
   border-radius: 12px;
+  background: none;
   color: var(--muted);
   font-size: 1.3rem;
   text-decoration: none;
+  cursor: pointer;
+}
+
+/* Ninja Mode: five right in a row double the coins until a miss */
+.stat-pill--ninja {
+  border-color: #3b3f58;
+  background: linear-gradient(135deg, #2d3047, #50557a);
+  color: #fff;
+  box-shadow: 0 0 0 3px rgb(80 85 122 / 25%);
+  animation: ninja-glow 1.6s ease-in-out infinite alternate;
+}
+
+@keyframes ninja-glow {
+  to {
+    box-shadow: 0 0 0 6px rgb(80 85 122 / 10%);
+  }
+}
+
+.ninja-note {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.5rem 0;
+  font-weight: 600;
+}
+
+.ninja-note--start {
+  padding: 0.6rem 0.8rem;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #2d3047, #50557a);
+  color: #fff;
+  animation: ninja-in 0.35s ease-out;
+}
+
+.ninja-note--end {
+  color: var(--muted);
+}
+
+@keyframes ninja-in {
+  from {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+}
+
+.ninja-warning {
+  display: grid;
+  justify-items: center;
+  gap: 0.75rem;
+  text-align: center;
+}
+
+.ninja-warning h3,
+.ninja-warning p {
+  margin: 0;
+}
+
+.ninja-warning button {
+  width: 100%;
+}
+
+button.raised.ninja-warning__stop {
+  color: var(--bad);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stat-pill--ninja,
+  .ninja-note--start {
+    animation: none;
+  }
 }
 
 .session-bar__progress {
@@ -1743,7 +1816,8 @@ a.secondary {
 }
 
 .summary > .primary,
-.summary > .secondary {
+.summary > .secondary,
+.summary > .raised {
   width: 100%;
   box-sizing: border-box;
   min-height: 3rem;

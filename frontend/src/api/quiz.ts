@@ -31,6 +31,9 @@ export interface QuizStats {
   daily_goal: number
   streak: number // days in a row that reached the goal
   week?: Day[] // the last seven days, today last; each judged by that day's goal
+  combo?: number // right answers in a row, kept between sessions
+  combo_after?: number // Ninja Mode (more coins for right answers) after this many in a row
+  combo_multiplier?: number
 }
 
 export interface Day {
@@ -112,5 +115,6 @@ export const quizApi = {
     apiPut<QuizStats>(`/quiz/goal?${tz()}`, { daily_goal: dailyGoal }),
   history: () => apiGet<HistoryPoint[]>('/quiz/history'),
   words: () => apiGet<PractisedWord[]>('/quiz/words?include_known=true'),
+  endCombo: () => apiPost('/quiz/combo/end'),
   learnAgain: (word: string) => apiPost(`/quiz/words/${encodeURIComponent(word)}/learn`),
 }

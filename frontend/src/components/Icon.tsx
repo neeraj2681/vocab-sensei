@@ -10,6 +10,7 @@ export type IconName =
   | 'gear'
   | 'hourglass'
   | 'man'
+  | 'ninja'
   | 'palm_tree'
   | 'person'
   | 'pot'

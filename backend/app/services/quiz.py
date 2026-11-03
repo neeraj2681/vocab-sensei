@@ -15,7 +15,7 @@ from any book, so stopping a book doesn't mean forgetting its words.
 from collections import Counter
 from collections.abc import Callable
 from contextlib import suppress
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date, datetime, timedelta
 from random import Random
 from zoneinfo import ZoneInfo
@@ -44,6 +44,7 @@ from app.scoring.rules import (
     WordProgress,
     answer_points,
     apply_answer,
+    combo_multiplier,
     current_status,
     effective_score,
     mark_known,
@@ -101,6 +102,9 @@ class Stats:
     daily_goal: int
     streak: int  # days in a row with at least `daily_goal` answers
     week: list[Day]  # the last seven days, oldest first, today last
+    combo: int = 0  # right answers in a row
+    combo_after: int = 5  # Ninja Mode starts after this many in a row...
+    combo_multiplier: int = 2  # ...and multiplies the coins of right answers by this
 
 
 @dataclass(frozen=True)
@@ -126,7 +130,7 @@ class Preview:
     meaning: str | None
     sentence: str | None
     counted: bool  # False when the word came back too soon to score
-    points_if_right: int
+    points_if_right: int  # before Ninja Mode: the screen doubles it while its run is long enough
     points_if_wrong: int
     learned_if_right: bool
 
@@ -180,6 +184,7 @@ def quiz_stats(repo: QuizRepository, user: User, now: datetime, tz: ZoneInfo) ->
         daily_goal=goal.on(today),
         streak=streak(per_day, today, goal),
         week=[Day(day, per_day[day], per_day[day] >= goal.on(day), points[day]) for day in days],
+        combo=user.combo,
     )
 
 
@@ -400,6 +405,12 @@ class QuizService:
             counted=counted,
             rules=self._settings.scoring,
         )
+        user = self._user(user_id)
+        if correct:  # Ninja Mode: doubled coins once the run is long enough, then the run grows
+            points *= combo_multiplier(user.combo, self._settings.scoring)
+            user.combo += 1
+        else:
+            user.combo = 0
 
         self._repo.add(
             QuizAnswer(
@@ -486,6 +497,11 @@ class QuizService:
         )
         self._session.commit()
 
+    def end_combo(self, user_id: int) -> None:
+        """The player stopped after a session: Ninja Mode (and the run of right answers) ends."""
+        self._user(user_id).combo = 0
+        self._session.commit()
+
     def learn_again(self, user_id: int, lemma: str) -> None:
         """Undoes "I know this": the word goes back to learning from 0 and the quiz asks it again
         (soon, while one of the user's current reads uses it)."""
@@ -514,7 +530,12 @@ class QuizService:
     # Progress
 
     def stats(self, user_id: int, now: datetime, tz: ZoneInfo) -> Stats:
-        return quiz_stats(self._repo, self._user(user_id), now, tz)
+        rules = self._settings.scoring
+        return replace(
+            quiz_stats(self._repo, self._user(user_id), now, tz),
+            combo_after=rules.combo_after,
+            combo_multiplier=rules.combo_multiplier,
+        )
 
     def set_daily_goal(self, user_id: int, goal: int, now: datetime, tz: ZoneInfo) -> None:
         """Changes the goal from today on; earlier days keep the goal they had (see DailyGoal)."""

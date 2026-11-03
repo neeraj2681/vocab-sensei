@@ -194,6 +194,9 @@ class TestAnswering:
             "daily_goal": 10,
             "streak": 0,
             "week": result["stats"]["week"],
+            "combo": 1,
+            "combo_after": 5,
+            "combo_multiplier": 2,
         }
 
     def test_a_wrong_answer_always_takes_ten_from_the_total(
@@ -773,6 +776,55 @@ def test_only_known_words_can_be_learned_again(user_client: TestClient, lemma: s
     response = user_client.post(f"/api/quiz/words/{lemma}/learn")
 
     assert response.status_code == 404
+
+
+@pytest.mark.usefixtures("book", "clock")
+class TestNinjaMode:
+    """Five right answers in a row double the coins of every right answer after, until a miss."""
+
+    def test_doubles_coins_after_five_right_in_a_row(
+        self, user_client: TestClient, session: Session
+    ) -> None:
+        points = [answer(user_client, session)["points"] for _ in range(7)]
+
+        assert points == [5, 5, 5, 5, 5, 10, 10]
+        stats = user_client.get("/api/quiz/stats").json()
+        assert (stats["combo"], stats["combo_after"], stats["combo_multiplier"]) == (7, 5, 2)
+
+    def test_a_wrong_answer_ends_it(self, user_client: TestClient, session: Session) -> None:
+        for _ in range(6):
+            answer(user_client, session)
+
+        wrong = answer(user_client, session, right=False)
+        after = answer(user_client, session)
+
+        assert (wrong["points"], after["points"]) == (-10, 5)
+        assert wrong["stats"]["combo"] == 0
+        assert after["stats"]["combo"] == 1
+
+    def test_carries_on_into_the_next_session_until_the_player_stops(
+        self, user_client: TestClient, session: Session
+    ) -> None:
+        for _ in range(5):
+            answer(user_client, session)
+        assert answer(user_client, session)["points"] == 10  # a new session: still on
+
+        assert user_client.post("/api/quiz/combo/end").status_code == 204
+
+        assert user_client.get("/api/quiz/stats").json()["combo"] == 0
+        assert answer(user_client, session)["points"] == 5
+
+    def test_i_know_this_neither_breaks_nor_extends_it(
+        self, user_client: TestClient, session: Session
+    ) -> None:
+        for _ in range(5):
+            answer(user_client, session)
+
+        asked = question(user_client)
+        user_client.post(f"/api/quiz/questions/{asked['id']}/know")
+
+        assert user_client.get("/api/quiz/stats").json()["combo"] == 5
+        assert answer(user_client, session)["points"] == 10
 
 
 def test_words_is_empty_before_any_answer(user_client: TestClient, book: Document) -> None:

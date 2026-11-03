@@ -128,6 +128,9 @@ class StatsResponse(BaseModel):
     daily_goal: int
     streak: int
     week: list[DayResponse]  # the last seven days, today last
+    combo: int  # right answers in a row; Ninja Mode (double coins) from `combo_after`
+    combo_after: int
+    combo_multiplier: int
 
     @classmethod
     def of(cls, stats: Stats) -> Self:
@@ -136,6 +139,9 @@ class StatsResponse(BaseModel):
             today=stats.today,
             daily_goal=stats.daily_goal,
             streak=stats.streak,
+            combo=stats.combo,
+            combo_after=stats.combo_after,
+            combo_multiplier=stats.combo_multiplier,
             week=[
                 DayResponse(date=d.date, answers=d.answers, met=d.met, points=d.points)
                 for d in stats.week
@@ -384,6 +390,12 @@ def words(
         for w in quiz.practised_words(user.id, now)
         if include_known or not w.known
     ]
+
+
+@router.post("/combo/end", status_code=status.HTTP_204_NO_CONTENT)
+def end_combo(user: CurrentUser, quiz: QuizServiceDep) -> None:
+    """The player chose to stop after a session: Ninja Mode ends (the screen warned them)."""
+    quiz.end_combo(user.id)
 
 
 @router.post("/words/{lemma}/learn", status_code=status.HTTP_204_NO_CONTENT)
