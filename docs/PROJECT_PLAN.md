@@ -386,6 +386,36 @@ because git and the workflow files carry over.
   - Weekly points come from the answers table (as for the score graph). Cache the global board for a few
     minutes.
 
+#### Fun and coming back (requested 3 Nov 2026, next phase)
+Goal: a reason to return today (quests, combo, word of the day), this week (boss rounds, recaps, duels) and for
+months (belts, garden, badges). None of it changes how words are scored.
+
+- [ ] **Sensei belts**: levels from words learned, white → yellow → orange → green → blue → brown → black (e.g. 0,
+  50, 150, 300, 600, 1,000, 2,000 words). A small sensei mascot wears your belt on the Me page and cheers in the
+  quiz; a belt ceremony screen when you move up. Original art (Fluent-style), no existing characters.
+- [ ] **Chapter boss round**: before reading a chapter, an optional timed challenge (e.g. 10 of its words, 60 s).
+  Win → the chapter is stamped "Ready to read ✓" with a celebration and bonus coins; lose → try again tomorrow.
+- [ ] **Word garden**: each learned word is a plant; as its score decays it wilts (the weekly decay already
+  exists); "water" = a quick review of the wilting ones. Garden grows with belts.
+- [ ] **Daily quests**: three a day, e.g. "Learn 5 words from Dracula", "10 right in a row", "Finish your goal
+  before noon"; each pays coins; a small chest when all three are done.
+- [ ] **Combo meter**: right answers in a row fill a meter; at 5 the coins double until a mistake. A short sound
+  and phone vibration (`navigator.vibrate`), both switchable off in Settings.
+- [ ] **Word of the day**: a push/email with one of your own words and the sentence from your book; tapping it
+  opens that word's card.
+- [ ] **Playful reminders**: the daily reminder in the sensei's voice, from a rotating set of lines ("Your words
+  miss you…"), never guilt-tripping; same opt-in and times as today.
+- [ ] **Badges**: first 100 words, 7/30/100-day streaks, a whole book learned, night owl, early bird, combo of 20,
+  boss rounds won…; a badge shelf on the Me page, locked ones shown as silhouettes.
+- [ ] **Weekly and monthly recaps**: "Your week / your month": words learned, best day, favourite book, toughest
+  word, streak; shown on Monday / the 1st, also by email if reminders are on; shareable as a card.
+- [ ] **Duels**: challenge a friend to the same 10 questions from a book; each plays when they like; the result
+  screen shows both scores (needs Friends).
+- [ ] **Share cards**: an image made on our server (Pillow, no outside service) like "I learned *ebullient* from
+  *Digital Minimalism*" or a recap, shared with the phone's share sheet (Web Share API) to WhatsApp / Instagram.
+- [ ] **Privacy-friendly analytics** to see what actually brings people back (D1/D7 return): Umami (MIT),
+  self-hosted; not Plausible (AGPL).
+
 ### Phase 3 — Multi-user (future plan items 1–2)
 - [x] Accounts & auth (pulled forward into Phase 1)
 - [ ] Login rate limiting, account deletion / data export per user
