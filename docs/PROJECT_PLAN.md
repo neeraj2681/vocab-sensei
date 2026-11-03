@@ -309,7 +309,17 @@ because git and the workflow files carry over.
 - [ ] Spaced-repetition option (FSRS) alongside the point system
 - [x] Mobile-friendly layout + installable PWA (`feat/mobile-pwa`)
 - [x] Daily reminder by push notification or email at a chosen time, only if the goal isn't met (`feat/reminders`, `feat/reminders-ui`)
-- [ ] OCR for scanned PDFs (Tesseract)
+- [ ] **OCR for scanned PDFs** (requested again 3 Nov 2026): a PDF made of page photos has no text to read, so
+  today its upload fails. Read the text from the page images instead.
+  - **Tools** (all free, run on our server, nothing sent elsewhere): render each page with **pypdfium2** (already
+    used for covers), read it with **Tesseract** (Apache-2.0) through `pytesseract`. Not `ocrmypdf`: it needs
+    Ghostscript, which is AGPL.
+  - **When**: only if a PDF has (almost) no text layer; text PDFs keep the fast path.
+  - **Speed**: ~1–3 s a page on this CPU, so a 300-page book takes several minutes. Run in the background with
+    the book showing "Reading the scanned pages… 40%", and a page limit (e.g. 600) to protect the server.
+  - **Quality**: OCR noise is mostly dropped by the existing "only dictionary words" filter; chapter headings
+    are still found by the heading rules. English first (`tesseract-ocr-eng`); more languages later.
+  - **Docker**: adds the `tesseract-ocr` package to the API image (~30 MB).
 - [x] Hear a word: speaker button using the browser's speech (Web Speech `speechSynthesis`) (#51)
 - [ ] **Pronunciation practice** (requested 2 Nov 2026): a mic button beside the word; the learner says
   it and gets feedback (✓ / try again, then which sound was off).
