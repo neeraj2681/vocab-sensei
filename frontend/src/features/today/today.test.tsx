@@ -154,3 +154,75 @@ describe('this week', () => {
     expect(within(table).getByRole('row', { name: 'Today +10' })).toBeInTheDocument()
   })
 })
+
+describe('daily quests', () => {
+  const quest = (key: string, extra: object) => ({
+    key,
+    kind: 'answer',
+    tier: 'easy',
+    title: 'Answer 10 questions',
+    target: 10,
+    progress: 4,
+    reward: 10,
+    claimed: false,
+    ...extra,
+  })
+  const DAILY = {
+    quests: [
+      quest('answer-10', { progress: 10 }),
+      quest('ninja-5', {
+        kind: 'ninja',
+        tier: 'medium',
+        title: 'Reach Ninja Mode',
+        target: 5,
+        progress: 2,
+        reward: 15,
+      }),
+      quest('early-1', {
+        kind: 'early',
+        tier: 'hard',
+        title: 'Meet your goal before noon',
+        target: 1,
+        progress: 0,
+        reward: 20,
+      }),
+    ],
+    chest_reward: 25,
+    chest_ready: false,
+    chest_claimed: false,
+  }
+
+  it('shows today’s three quests with their progress on the home screen', async () => {
+    today([READING], { 'GET /api/quests?tz=UTC': () => json(DAILY) })
+    renderApp('/')
+
+    const panel = await screen.findByRole('region', { name: 'Daily quests' })
+    const rows = within(panel).getAllByRole('listitem')
+    expect(rows).toHaveLength(4) // three quests and the chest
+    expect(rows[1]).toHaveTextContent('Reach Ninja Mode')
+    expect(rows[1]).toHaveTextContent('2/5')
+    expect(rows[1]).toHaveTextContent('+15')
+    expect(within(panel).getAllByRole('button', { name: /Claim/ })).toHaveLength(1) // only the finished one
+    expect(rows[3]).toHaveTextContent('Claim all three quests to open it')
+  })
+
+  it('claims a finished quest and adds its coins', async () => {
+    const claimed = {
+      ...DAILY,
+      quests: [{ ...DAILY.quests[0], claimed: true }, ...DAILY.quests.slice(1)],
+    }
+    const api = today([READING], {
+      'GET /api/quests?tz=UTC': () => json(DAILY),
+      'POST /api/quests/answer-10/claim?tz=UTC': () =>
+        json({ coins: 10, total: 280, quests: claimed }),
+    })
+    const user = renderApp('/')
+
+    await user.click(await screen.findByRole('button', { name: /Claim/ }))
+
+    expect(await screen.findByText('Claimed')).toBeInTheDocument()
+    expect(api.calls('POST /api/quests/answer-10/claim?tz=UTC')).toHaveLength(1)
+    expect(screen.getByRole('link', { name: /280/ })).toBeInTheDocument() // the coins pill
+    expect(screen.queryByRole('button', { name: /Claim/ })).not.toBeInTheDocument()
+  })
+})

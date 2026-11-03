@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import JSON, ForeignKey, String, Text
+from sqlalchemy import JSON, Date, ForeignKey, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.enums import QuestionType, WordStatus
@@ -91,3 +91,17 @@ class QuizAnswer(Base):
     score_delta: Mapped[int]  # change in the word's score
     points: Mapped[int] = mapped_column(server_default="0")  # change in the lifetime score
     answered_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+
+
+class QuestClaim(Base):
+    """A daily quest's coins, claimed (the quests themselves are worked out, not stored)."""
+
+    __tablename__ = "quest_claims"
+    __table_args__ = (UniqueConstraint("user_id", "day", "quest"),)  # each reward once
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    day: Mapped[date] = mapped_column(Date)  # the quest's day, in the user's time zone
+    quest: Mapped[str] = mapped_column(String(40))  # e.g. "answer-20", or "chest"
+    coins: Mapped[int]
+    claimed_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)

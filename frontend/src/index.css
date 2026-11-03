@@ -1345,6 +1345,121 @@ a.primary:active {
   max-width: 34rem;
 }
 
+/* Daily quests on Today */
+.quests__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.25rem 1rem;
+}
+
+.quests__head h3 {
+  margin: 0;
+}
+
+.quests__list {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.quest {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+
+.quest--done {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.quest--chest {
+  border-style: dashed;
+}
+
+.quest__text {
+  display: grid;
+  flex: 1;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.quest__progress {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.quest__progress .bar {
+  flex: 1;
+}
+
+.quest__reward {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 0.25rem;
+  font-weight: 700;
+}
+
+.quests-ready {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.8rem;
+  border-radius: 14px;
+  background: linear-gradient(#fff4cc, #ffe08a);
+  color: #4a2e00;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+/* A shiny 3D gold button, so a finished quest is hard to miss */
+.quest__claim {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.45rem 0.8rem;
+  border: 0;
+  border-radius: 12px;
+  background: linear-gradient(#ffd34d, #f5a623);
+  box-shadow: 0 4px 0 #c47f0a;
+  color: #4a2e00;
+  font: inherit;
+  font-family: var(--display);
+  font-weight: 600;
+  cursor: pointer;
+  animation: quest-shine 1.4s ease-in-out infinite alternate;
+}
+
+.quest__claim:active:not(:disabled) {
+  transform: translateY(4px);
+  box-shadow: 0 0 0 #c47f0a;
+}
+
+@keyframes quest-shine {
+  to {
+    filter: brightness(1.12);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .quest__claim {
+    animation: none;
+  }
+}
+
 .week-chart__head {
   display: flex;
   flex-wrap: wrap;

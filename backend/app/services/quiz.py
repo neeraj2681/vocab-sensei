@@ -178,6 +178,7 @@ def quiz_stats(repo: QuizRepository, user: User, now: datetime, tz: ZoneInfo) ->
         points[answer.answered_at.astimezone(tz).date()] += answer.points
     goal = daily_goal(user, tz)
     days = [today - timedelta(days=back) for back in range(6, -1, -1)]
+    points.update(repo.quest_coins_by_day(user.id, days[0]))  # quest rewards count on their day
     return Stats(
         total=repo.total_points(user.id),
         today=per_day[today],

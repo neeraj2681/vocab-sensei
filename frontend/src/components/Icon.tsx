@@ -15,6 +15,7 @@ export type IconName =
   | 'person'
   | 'pot'
   | 'shopping_bags'
+  | 'sunrise'
   | 'woman'
   | 'bar_chart'
   | 'books'
@@ -33,6 +34,7 @@ export type IconName =
   | 'speaker_high_volume'
   | 'star'
   | 'trophy'
+  | 'wrapped_gift'
 
 /** A decorative 3D icon; the text next to it (or the button's label) carries the meaning. */
 export function Icon({ name, size = 24 }: { name: IconName; size?: number }) {
