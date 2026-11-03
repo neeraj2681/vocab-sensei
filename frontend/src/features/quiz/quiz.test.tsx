@@ -514,10 +514,13 @@ describe('ninja mode', () => {
     run()
     const user = renderApp('/quiz')
 
+    const meter = await screen.findByRole('meter', { name: /towards Ninja Mode/ })
+    expect(meter).toHaveAttribute('aria-valuemax', '5')
     for (let i = 0; i < 4; i++) {
       await answer(user)
       await next(user)
     }
+    expect(meter).toHaveAttribute('aria-valuenow', '4') // four of five segments filled
     expect(screen.queryByText(/Ninja Mode!/)).not.toBeInTheDocument()
     await answer(user) // the fifth
     expect(await screen.findByText(/Double coins until a miss/)).toBeInTheDocument()
@@ -530,8 +533,9 @@ describe('ninja mode', () => {
 
     await answer(user, false)
     expect(screen.getByText(/Ninja Mode ended/)).toBeInTheDocument()
-    expect(screen.getByText(/of 5 right in a row/).parentElement).toHaveTextContent(
-      '0 of 5 right in a row',
+    expect(screen.getByRole('meter', { name: /towards Ninja Mode/ })).toHaveAttribute(
+      'aria-valuenow',
+      '0',
     )
   })
 

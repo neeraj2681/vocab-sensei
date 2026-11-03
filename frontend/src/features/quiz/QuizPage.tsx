@@ -578,11 +578,23 @@ function SessionBar({
         </span>
       ) : (
         <span
-          className="stat-pill"
-          title={`Right answers in a row: ${String(combo.after)} start ${NINJA} (double coins)`}
+          className="stat-pill ninja-meter"
+          role="meter"
+          aria-label={`Right answers in a row towards ${NINJA}`}
+          aria-valuemin={0}
+          aria-valuemax={combo.after}
+          aria-valuenow={combo.run}
+          title={`${String(combo.after)} right in a row start ${NINJA} (double coins)`}
         >
-          <Icon name="sparkles" size={20} /> {combo.run}
-          <span className="sr-only"> of {combo.after} right in a row</span>
+          <Icon name="ninja" size={20} />
+          <span className="ninja-meter__segments" aria-hidden="true">
+            {Array.from({ length: combo.after }, (_, i) => (
+              <span key={i} className={i < combo.run ? 'ninja-meter__on' : undefined} />
+            ))}
+          </span>
+          <span className="sr-only">
+            {combo.run} of {combo.after} right in a row
+          </span>
         </span>
       )}
     </div>
