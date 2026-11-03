@@ -1731,6 +1731,16 @@ button.raised:disabled {
   width: 100%;
 }
 
+.ninja-warning__goal {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 12px;
+  background: var(--surface-2);
+  font-weight: 600;
+}
+
 button.raised.ninja-warning__stop {
   color: var(--bad);
 }
