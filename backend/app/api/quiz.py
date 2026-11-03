@@ -25,6 +25,7 @@ from app.services.quiz import (
     QuestionNotFoundError,
     QuizService,
     Stats,
+    WordNotKnownError,
 )
 
 logger = logging.getLogger(__name__)
@@ -366,6 +367,29 @@ def history(user: CurrentUser, quiz: QuizServiceDep) -> list[HistoryPointRespons
 
 
 @router.get("/words")
-def words(user: CurrentUser, quiz: QuizServiceDep, now: Now) -> list[PractisedWordResponse]:
-    """Words the user has answered, with their progress towards "learned" (progress page)."""
-    return [PractisedWordResponse.of(w) for w in quiz.practised_words(user.id, now)]
+def words(
+    user: CurrentUser,
+    quiz: QuizServiceDep,
+    now: Now,
+    include_known: Annotated[
+        bool, Query(description='also the words marked "I know this"')
+    ] = False,
+) -> list[PractisedWordResponse]:
+    """Words the user has answered, with their progress towards "learned" (progress page).
+
+    Known words only come when asked for: an app cached from before they existed would show
+    them as learning at 100%."""
+    return [
+        PractisedWordResponse.of(w)
+        for w in quiz.practised_words(user.id, now)
+        if include_known or not w.known
+    ]
+
+
+@router.post("/words/{lemma}/learn", status_code=status.HTTP_204_NO_CONTENT)
+def learn_again(lemma: str, user: CurrentUser, quiz: QuizServiceDep) -> None:
+    """Takes a word marked "I know this" back into learning, so the quiz asks it again."""
+    try:
+        quiz.learn_again(user.id, lemma)
+    except WordNotKnownError as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from None

@@ -38,7 +38,7 @@ function progress(history: HistoryPoint[] = HISTORY, extra: Routes = {}) {
     'GET /api/auth/me': () => json(USER),
     'GET /api/quiz/stats?tz=UTC': () => json(STATS),
     'GET /api/quiz/history': () => json(history),
-    'GET /api/quiz/words': () => json(WORDS),
+    'GET /api/quiz/words?include_known=true': () => json(WORDS),
     ...extra,
   })
 }
@@ -186,7 +186,7 @@ describe('Me tab', () => {
   })
 
   it('opens on the learning tab when nothing is learned yet', async () => {
-    progress(HISTORY, { 'GET /api/quiz/words': () => json(WORDS.slice(1)) })
+    progress(HISTORY, { 'GET /api/quiz/words?include_known=true': () => json(WORDS.slice(1)) })
     renderApp('/words')
 
     expect(await screen.findByRole('button', { name: 'Learning · 2' })).toHaveAttribute(
@@ -209,7 +209,7 @@ describe('Me tab', () => {
       learned: false,
       known: true,
     }
-    progress(HISTORY, { 'GET /api/quiz/words': () => json([...WORDS, known]) })
+    progress(HISTORY, { 'GET /api/quiz/words?include_known=true': () => json([...WORDS, known]) })
     const user = renderApp('/words')
 
     await user.click(await screen.findByRole('button', { name: 'Already known · 1' }))
@@ -222,6 +222,38 @@ describe('Me tab', () => {
     expect(screen.getByRole('button', { name: 'Learning · 2' })).toBeInTheDocument() // not counted there
     await user.click(screen.getByRole('button', { name: /quaint/ }))
     expect(screen.getByRole('dialog', { name: 'quaint' })).toHaveTextContent('Already known')
+  })
+
+  it('takes a known word back into learning', async () => {
+    const known = {
+      word: 'quaint',
+      book: 'Moby-Dick',
+      meaning: 'attractively old-fashioned',
+      sentence: null,
+      progress: 100,
+      learned: false,
+      known: true,
+    }
+    let relearned = false
+    const api = progress(HISTORY, {
+      'GET /api/quiz/words?include_known=true': () =>
+        json([...WORDS, relearned ? { ...known, progress: 0, known: false } : known]),
+      'POST /api/quiz/words/quaint/learn': () => {
+        relearned = true
+        return noContent()
+      },
+    })
+    const user = renderApp('/words')
+    await user.click(await screen.findByRole('button', { name: 'Already known · 1' }))
+    await user.click(screen.getByRole('button', { name: /quaint/ }))
+
+    await user.click(screen.getByRole('button', { name: 'Learn it again' }))
+
+    expect(await screen.findByText('“quaint” is back in your quiz.')).toBeInTheDocument()
+    expect(api.calls('POST /api/quiz/words/quaint/learn')).toHaveLength(1)
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Learning · 3' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Already known · 0' })).toBeInTheDocument()
   })
 
   it('explains the known tab when it is empty', async () => {

@@ -111,5 +111,6 @@ export const quizApi = {
   setGoal: (dailyGoal: number) =>
     apiPut<QuizStats>(`/quiz/goal?${tz()}`, { daily_goal: dailyGoal }),
   history: () => apiGet<HistoryPoint[]>('/quiz/history'),
-  words: () => apiGet<PractisedWord[]>('/quiz/words'),
+  words: () => apiGet<PractisedWord[]>('/quiz/words?include_known=true'),
+  learnAgain: (word: string) => apiPost(`/quiz/words/${encodeURIComponent(word)}/learn`),
 }
