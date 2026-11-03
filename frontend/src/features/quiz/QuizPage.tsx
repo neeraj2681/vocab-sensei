@@ -7,6 +7,7 @@ import { quizApi, type QuizQuestion, type QuizStats } from '../../api/quiz'
 import { chapterLabel } from '../library/labels'
 import { type Pop, ScoreBar } from './ScoreBar'
 import { Burst } from '../../components/Burst'
+import { buzz } from '../../components/haptics'
 import { Icon } from '../../components/Icon'
 import { SpeakButton } from '../../components/SpeakButton'
 
@@ -40,15 +41,6 @@ const newSession = (todayAtStart: number | null): Session => ({
 
 function focusOf(book: number | null, chapter: number | null) {
   return book !== null && chapter !== null ? { documentId: book, chapter } : undefined
-}
-
-/** A short buzz for right, a double one for wrong, on phones that can (Android). */
-function buzz(correct: boolean) {
-  try {
-    navigator.vibrate(correct ? 30 : [60, 40, 60])
-  } catch {
-    // no vibration here (iPhone, desktop): the colours carry the result
-  }
 }
 
 type Phase =

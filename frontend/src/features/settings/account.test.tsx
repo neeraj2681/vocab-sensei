@@ -1,5 +1,5 @@
 import { screen, within } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { User } from '../../api/auth'
 import { fail, fakeApi, json, noContent, type Routes } from '../../test/fakeApi'
 import { renderApp } from '../../test/renderApp'
@@ -200,5 +200,25 @@ describe('me page', () => {
     await user.click(screen.getByRole('button', { name: 'Log out' }))
 
     expect(await screen.findByRole('heading', { name: 'Log in' })).toBeInTheDocument()
+  })
+})
+
+describe('vibration', () => {
+  it('can be turned off in Settings', async () => {
+    const stored = new Map<string, string>()
+    vi.stubGlobal('localStorage', {
+      getItem: (key: string) => stored.get(key) ?? null,
+      setItem: (key: string, value: string) => stored.set(key, value),
+    })
+    account()
+    const user = renderApp('/settings')
+
+    const toggle = await screen.findByLabelText(/Vibrate on answers/)
+    expect(toggle).toBeChecked()
+    await user.click(toggle)
+
+    expect(toggle).not.toBeChecked()
+    expect(stored.get('vs-haptics')).toBe('off')
+    vi.unstubAllGlobals()
   })
 })
