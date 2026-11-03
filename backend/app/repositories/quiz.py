@@ -138,6 +138,9 @@ class QuizRepository:
     def word(self, word_id: int) -> Word | None:
         return self._session.get(Word, word_id)
 
+    def word_by_lemma(self, lemma: str) -> Word | None:
+        return self._session.scalars(select(Word).where(Word.lemma == lemma)).one_or_none()
+
     def occurrence(self, user_id: int, word_id: int) -> tuple[ChapterWord, Document] | None:
         """Where the user's books use the word: their current reads first, by priority, and in a
         book, the next chapter the reader meets it in (else its first appearance)."""

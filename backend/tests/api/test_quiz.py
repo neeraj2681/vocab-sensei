@@ -731,7 +731,7 @@ def test_words_puts_learned_first_then_learning_then_known(
     progress("word05", 0, WordStatus.KNOWN)  # "I know it" when sorting the chapter
     session.commit()
 
-    words = user_client.get("/api/quiz/words").json()
+    words = user_client.get("/api/quiz/words?include_known=true").json()
 
     assert [(w["word"], w["progress"], w["learned"], w["known"]) for w in words] == [
         ("word01", 100, True, False),
@@ -740,6 +740,39 @@ def test_words_puts_learned_first_then_learning_then_known(
         ("word04", 100, False, True),
         ("word05", 100, False, True),
     ]
+    # Without asking, known words are left out (for apps cached from before they were listed).
+    assert [w["word"] for w in user_client.get("/api/quiz/words").json()] == [
+        "word01",
+        "word02",
+        "word00",
+    ]
+
+
+@pytest.mark.usefixtures("book", "clock")
+def test_a_known_word_can_be_learned_again(user_client: TestClient, session: Session) -> None:
+    asked = question(user_client)
+    user_client.post(f"/api/quiz/questions/{asked['id']}/know")
+
+    response = user_client.post(f"/api/quiz/words/{asked['prompt']}/learn")
+
+    assert response.status_code == 204, response.text
+    word = session.scalars(select(Word).where(Word.lemma == asked["prompt"])).one()
+    progress = session.get(UserWord, (reader(session).id, word.id))
+    assert progress is not None
+    session.refresh(progress)
+    assert (progress.status, progress.score) == (WordStatus.LEARNING, 0)
+    listed = {w["word"]: w for w in user_client.get("/api/quiz/words").json()}
+    assert (listed[asked["prompt"]]["known"], listed[asked["prompt"]]["progress"]) == (False, 0)
+    asked_again = [answer(user_client, session)["word"] for _ in range(25)]
+    assert asked["prompt"] in asked_again
+
+
+@pytest.mark.usefixtures("book")
+@pytest.mark.parametrize("lemma", ["word00", "nosuchword"])
+def test_only_known_words_can_be_learned_again(user_client: TestClient, lemma: str) -> None:
+    response = user_client.post(f"/api/quiz/words/{lemma}/learn")
+
+    assert response.status_code == 404
 
 
 def test_words_is_empty_before_any_answer(user_client: TestClient, book: Document) -> None:

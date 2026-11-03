@@ -1,10 +1,22 @@
 import { useEffect, useRef } from 'react'
-import type { PractisedWord } from '../../api/quiz'
+import { quizApi, type PractisedWord } from '../../api/quiz'
+import { FormError } from '../../components/Form'
 import { SpeakButton } from '../../components/SpeakButton'
+import { useSubmit } from '../../components/useSubmit'
 
-/** One word up close: meaning, how the book uses it, and how far along it is. */
-export function WordCard({ word, onClose }: { word: PractisedWord; onClose: () => void }) {
+/** One word up close: meaning, how the book uses it, and how far along it is. A word marked
+"I know this" can go back into learning from here. */
+export function WordCard({
+  word,
+  onClose,
+  onLearnAgain,
+}: {
+  word: PractisedWord
+  onClose: () => void
+  onLearnAgain?: () => void
+}) {
   const close = useRef<HTMLButtonElement>(null)
+  const { busy, error, run } = useSubmit()
 
   useEffect(() => {
     close.current?.focus()
@@ -44,6 +56,25 @@ export function WordCard({ word, onClose }: { word: PractisedWord; onClose: () =
               : `${String(word.progress)}% learned`}
           {word.book && ` · from ${word.book}`}
         </p>
+        {word.known && (
+          <>
+            <p className="muted">The quiz doesn’t ask this word. Changed your mind?</p>
+            <button
+              type="button"
+              className="raised"
+              disabled={busy}
+              onClick={() => {
+                void run(async () => {
+                  await quizApi.learnAgain(word.word)
+                  onLearnAgain?.()
+                })
+              }}
+            >
+              Learn it again
+            </button>
+            <FormError message={error} />
+          </>
+        )}
         <button ref={close} type="button" className="primary" onClick={onClose}>
           Close
         </button>

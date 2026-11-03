@@ -20,6 +20,9 @@ export function WordsPanel() {
   const [filter, setFilter] = useState('')
   const [open, setOpen] = useState<string | null>(null)
 
+  const [notice, setNotice] = useState<string | null>(null)
+  const [reloads, setReloads] = useState(0)
+
   useEffect(() => {
     let current = true
     quizApi
@@ -33,7 +36,7 @@ export function WordsPanel() {
     return () => {
       current = false
     }
-  }, [])
+  }, [reloads])
 
   if (error) return <p className="muted">Couldn&apos;t load your words.</p>
   if (!words) return null
@@ -74,6 +77,11 @@ export function WordsPanel() {
           }}
         />
       </div>
+      {notice && (
+        <p role="status" className="notice">
+          {notice}
+        </p>
+      )}
       {shown.length === 0 ? (
         <p className="muted">
           {query
@@ -116,6 +124,11 @@ export function WordsPanel() {
           word={opened}
           onClose={() => {
             setOpen(null)
+          }}
+          onLearnAgain={() => {
+            setOpen(null)
+            setNotice(`“${opened.word}” is back in your quiz.`)
+            setReloads((n) => n + 1)
           }}
         />
       )}

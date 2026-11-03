@@ -1001,6 +1001,8 @@ button {
 .word-tab {
   flex: 1;
   white-space: nowrap;
+  font: inherit;
+  font-weight: 600; /* like the other pill buttons */
   padding: 0.4rem 0.6rem;
   border: 1px solid var(--border);
   border-radius: 999px;

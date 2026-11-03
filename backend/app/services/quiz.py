@@ -74,6 +74,10 @@ class InvalidChoiceError(QuizError):
     pass
 
 
+class WordNotKnownError(QuizError):
+    pass
+
+
 @dataclass(frozen=True)
 class Focus:
     """Quiz only the words of one chapter ("Study this chapter")."""
@@ -480,6 +484,16 @@ class QuizService:
                 answered_at=now,
             )
         )
+        self._session.commit()
+
+    def learn_again(self, user_id: int, lemma: str) -> None:
+        """Undoes "I know this": the word goes back to learning from 0 and the quiz asks it again
+        (soon, while one of the user's current reads uses it)."""
+        word = self._repo.word_by_lemma(lemma)
+        user_word = self._repo.user_word(user_id, word.id) if word else None
+        if user_word is None or user_word.status is not WordStatus.KNOWN:
+            raise WordNotKnownError(f"{lemma!r} isn't one of your known words")
+        user_word.status, user_word.score, user_word.learned_at = WordStatus.LEARNING, 0, None
         self._session.commit()
 
     def _unanswered(self, user_id: int, question_id: int) -> Question:
