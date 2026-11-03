@@ -994,11 +994,14 @@ button {
 
 .word-tabs {
   display: flex;
+  flex: 1 1 100%; /* a row of its own, the search box below */
   gap: 0.25rem;
 }
 
-.word-tabs button {
-  padding: 0.4rem 0.8rem;
+.word-tab {
+  flex: 1;
+  white-space: nowrap;
+  padding: 0.4rem 0.6rem;
   border: 1px solid var(--border);
   border-radius: 999px;
   background: var(--surface);
@@ -1006,10 +1009,27 @@ button {
   cursor: pointer;
 }
 
-.word-tabs button[aria-pressed='true'] {
+.word-tab:hover:not([aria-pressed='true']) {
+  border-color: var(--accent);
+}
+
+/* Its own class: the plain-button hover colour would stick after a tap on phones (green on green) */
+.word-tab[aria-pressed='true'] {
   border-color: var(--accent);
   background: var(--accent);
   color: var(--on-accent);
+}
+
+/* Narrow phones: "Known" instead of "Already known", so the three tabs fit on one line */
+@media (max-width: 400px) {
+  .word-tab {
+    padding: 0.4rem 0.35rem;
+    font-size: 0.85rem;
+  }
+
+  .word-tabs__extra {
+    display: none;
+  }
 }
 
 .word-list {

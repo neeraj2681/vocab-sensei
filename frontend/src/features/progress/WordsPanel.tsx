@@ -1,11 +1,18 @@
 import { useEffect, useState } from 'react'
 import { quizApi, type PractisedWord } from '../../api/quiz'
+import { Icon } from '../../components/Icon'
 import { SpeakButton } from '../../components/SpeakButton'
 import { WordCard } from './WordCard'
 
-type Tab = 'learned' | 'learning'
+type Tab = 'learned' | 'learning' | 'known'
 
-/** The words you've answered, learned ones and those still on their way, with their progress. */
+const TAB_LABEL: Record<Exclude<Tab, 'known'>, string> = {
+  learned: 'Learned',
+  learning: 'Learning',
+}
+
+/** The words you've answered (learned, or on their way, with their progress) and the ones you said
+you already know, which the quiz never asks. */
 export function WordsPanel() {
   const [words, setWords] = useState<PractisedWord[] | null>(null)
   const [error, setError] = useState(false)
@@ -38,21 +45,24 @@ export function WordsPanel() {
     )
   }
 
-  const learned = words.filter((w) => w.learned)
-  const learning = words.filter((w) => !w.learned)
-  const shownTab = tab ?? (learned.length ? 'learned' : 'learning')
+  const byTab: Record<Tab, PractisedWord[]> = {
+    learned: words.filter((w) => w.learned),
+    learning: words.filter((w) => !w.learned && !w.known),
+    known: words.filter((w) => w.known),
+  }
+  const shownTab =
+    tab ?? (['learned', 'learning', 'known'] as const).find((t) => byTab[t].length) ?? 'learning'
   const query = filter.trim().toLowerCase()
   const opened = words.find((w) => w.word === open)
-  const shown = (shownTab === 'learned' ? learned : learning).filter((w) =>
-    w.word.toLowerCase().includes(query),
-  )
+  const shown = byTab[shownTab].filter((w) => w.word.toLowerCase().includes(query))
 
   return (
     <div className="panel">
       <div className="word-tools">
         <div className="word-tabs" role="group" aria-label="Show">
-          <TabButton tab="learned" shown={shownTab} count={learned.length} onPick={setTab} />
-          <TabButton tab="learning" shown={shownTab} count={learning.length} onPick={setTab} />
+          {(['learned', 'learning', 'known'] as const).map((t) => (
+            <TabButton key={t} tab={t} shown={shownTab} count={byTab[t].length} onPick={setTab} />
+          ))}
         </div>
         <input
           type="search"
@@ -68,9 +78,11 @@ export function WordsPanel() {
         <p className="muted">
           {query
             ? 'No words match.'
-            : shownTab === 'learned'
-              ? 'No learned words yet: a word is learned when its progress reaches 100%.'
-              : 'Nothing in progress right now.'}
+            : {
+                learned: 'No learned words yet: a word is learned when its progress reaches 100%.',
+                learning: 'Nothing in progress right now.',
+                known: 'Words you mark “I know this” appear here. The quiz won’t ask them again.',
+              }[shownTab]}
         </p>
       ) : (
         <ul className="word-list">
@@ -84,7 +96,13 @@ export function WordsPanel() {
                   setOpen(word.word)
                 }}
               >
-                <ProgressRing percent={word.progress} />
+                {word.known ? (
+                  <span className="word-row__known" role="img" aria-label="Already known">
+                    <Icon name="check_mark_button" size={28} />
+                  </span>
+                ) : (
+                  <ProgressRing percent={word.progress} />
+                )}
                 <span className="word-row__word">{word.word}</span>
                 {word.book && <span className="word-row__book muted">{word.book}</span>}
               </button>
@@ -119,12 +137,15 @@ function TabButton({
   return (
     <button
       type="button"
+      className="word-tab"
       aria-pressed={tab === shown}
+      aria-label={`${tab === 'known' ? 'Already known' : TAB_LABEL[tab]} · ${String(count)}`}
       onClick={() => {
         onPick(tab)
       }}
     >
-      {tab === 'learned' ? 'Learned' : 'Learning'} · {count}
+      {tab === 'known' && <span className="word-tabs__extra">Already </span>}
+      {tab === 'known' ? 'known' : TAB_LABEL[tab]} · {count}
     </button>
   )
 }

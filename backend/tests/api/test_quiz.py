@@ -707,7 +707,7 @@ def test_words_lists_answered_words_with_their_progress(
     assert all(w["sentence"] == f"A sentence with {w['word']}." for w in words)
 
 
-def test_words_puts_learned_first_and_leaves_out_unanswered_and_known(
+def test_words_puts_learned_first_then_learning_then_known(
     user_client: TestClient, session: Session, book: Document, clock: Clock
 ) -> None:
     user = reader(session)
@@ -728,14 +728,17 @@ def test_words_puts_learned_first_and_leaves_out_unanswered_and_known(
     )
     progress("word03", 30, WordStatus.LEARNING)  # "unsure" on triage, never answered
     progress("word04", 0, WordStatus.KNOWN, last_reviewed_at=reviewed)  # "I know this"
+    progress("word05", 0, WordStatus.KNOWN)  # "I know it" when sorting the chapter
     session.commit()
 
     words = user_client.get("/api/quiz/words").json()
 
-    assert [(w["word"], w["progress"], w["learned"]) for w in words] == [
-        ("word01", 100, True),
-        ("word02", 85, False),
-        ("word00", 40, False),
+    assert [(w["word"], w["progress"], w["learned"], w["known"]) for w in words] == [
+        ("word01", 100, True, False),
+        ("word02", 85, False, False),
+        ("word00", 40, False, False),
+        ("word04", 100, False, True),
+        ("word05", 100, False, True),
     ]
 
 

@@ -198,4 +198,38 @@ describe('Me tab', () => {
       'false',
     )
   })
+
+  it('lists the words marked as already known on their own tab', async () => {
+    const known = {
+      word: 'quaint',
+      book: 'Moby-Dick',
+      meaning: 'attractively old-fashioned',
+      sentence: null,
+      progress: 100,
+      learned: false,
+      known: true,
+    }
+    progress(HISTORY, { 'GET /api/quiz/words': () => json([...WORDS, known]) })
+    const user = renderApp('/words')
+
+    await user.click(await screen.findByRole('button', { name: 'Already known · 1' }))
+
+    const rows = within(screen.getByRole('list')).getAllByRole('listitem')
+    expect(rows).toHaveLength(1)
+    expect(
+      within(rows[0] as HTMLElement).getByRole('img', { name: 'Already known' }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Learning · 2' })).toBeInTheDocument() // not counted there
+    await user.click(screen.getByRole('button', { name: /quaint/ }))
+    expect(screen.getByRole('dialog', { name: 'quaint' })).toHaveTextContent('Already known')
+  })
+
+  it('explains the known tab when it is empty', async () => {
+    progress()
+    const user = renderApp('/words')
+
+    await user.click(await screen.findByRole('button', { name: 'Already known · 0' }))
+
+    expect(screen.getByText(/The quiz won’t ask them again/)).toBeInTheDocument()
+  })
 })

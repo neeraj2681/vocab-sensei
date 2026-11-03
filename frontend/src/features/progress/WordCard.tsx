@@ -37,7 +37,11 @@ export function WordCard({ word, onClose }: { word: PractisedWord; onClose: () =
           <span style={{ width: `${String(word.progress)}%` }} />
         </span>
         <p className="muted">
-          {word.learned ? 'Learned' : `${String(word.progress)}% learned`}
+          {word.known
+            ? 'Already known'
+            : word.learned
+              ? 'Learned'
+              : `${String(word.progress)}% learned`}
           {word.book && ` · from ${word.book}`}
         </p>
         <button ref={close} type="button" className="primary" onClick={onClose}>

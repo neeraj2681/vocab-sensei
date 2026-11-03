@@ -150,6 +150,7 @@ class PractisedWord:
     sentence: str | None  # where the book uses it
     progress: int  # 0-100: how far the word's score is towards "learned"
     learned: bool
+    known: bool = False  # marked "I know this": never asked again
 
 
 def daily_goal(user: User, tz: ZoneInfo) -> DailyGoal:
@@ -525,12 +526,13 @@ class QuizService:
         return user
 
     def practised_words(self, user_id: int, now: datetime) -> list[PractisedWord]:
-        """Learned words first, then the rest by progress."""
+        """Learned words first, then the rest by progress, then the ones already known."""
         rules = self._settings.scoring
         words = []
         for user_word, word in self._repo.practised_words(user_id):
             progress = _progress(user_word)
             in_book = self._in_book(user_id, word)
+            known = user_word.status is WordStatus.KNOWN
             score = effective_score(progress, now, rules)
             words.append(
                 PractisedWord(
@@ -538,11 +540,13 @@ class QuizService:
                     book=in_book.book,
                     meaning=in_book.meaning,
                     sentence=in_book.sentence,
-                    progress=min(100, score * 100 // rules.learned_threshold),
-                    learned=current_status(progress, now, rules) is WordStatus.LEARNED,
+                    progress=100 if known else min(100, score * 100 // rules.learned_threshold),
+                    learned=not known
+                    and current_status(progress, now, rules) is WordStatus.LEARNED,
+                    known=known,
                 )
             )
-        return sorted(words, key=lambda w: (not w.learned, -w.progress, w.lemma))
+        return sorted(words, key=lambda w: (w.known, not w.learned, -w.progress, w.lemma))
 
     def history(self, user_id: int) -> list[HistoryPoint]:
         points: list[HistoryPoint] = []
