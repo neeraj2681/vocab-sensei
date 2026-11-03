@@ -1719,6 +1719,14 @@ button.raised:disabled {
   opacity: 0.6;
 }
 
+.settings__volume input[type='range'] {
+  max-width: 20rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  accent-color: var(--accent);
+}
+
 .settings__actions {
   display: flex;
   flex-wrap: wrap;

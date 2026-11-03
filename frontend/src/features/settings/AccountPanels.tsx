@@ -4,6 +4,7 @@ import { Avatar } from '../../components/Avatar'
 import { Field, FormError } from '../../components/Form'
 import { MIN_PASSWORD_LENGTH } from '../auth/RegisterPage'
 import { hapticsOn, setHapticsOn } from '../../components/haptics'
+import { setSoundOn, setVolume, soundOn, sounds, volume } from '../../components/sounds'
 import { chooseTheme, currentTheme, THEMES, type Theme } from '../../components/theme'
 import { useSubmit } from '../../components/useSubmit'
 import { useAuth } from '../auth/AuthContext'
@@ -36,6 +37,53 @@ export function ThemePanel() {
           </button>
         ))}
       </div>
+    </section>
+  )
+}
+
+/** Sound effects on answers, quests and rounds, with a volume slider. */
+export function SoundPanel() {
+  const [on, setOn] = useState(soundOn)
+  const [level, setLevel] = useState(() => Math.round(volume() * 100))
+
+  return (
+    <section aria-labelledby="sound-heading" className="panel">
+      <h3 id="sound-heading">Sound</h3>
+      <label className="check">
+        <input
+          type="checkbox"
+          checked={on}
+          onChange={(event) => {
+            setSoundOn(event.target.checked)
+            setOn(event.target.checked)
+            if (event.target.checked) sounds.right()
+          }}
+        />{' '}
+        Sound effects (right, wrong, Ninja Mode, coins)
+      </label>
+      <div className="field settings__volume">
+        <label htmlFor="volume">Volume: {level}%</label>
+        <input
+          id="volume"
+          type="range"
+          min={0}
+          max={100}
+          step={5}
+          value={level}
+          disabled={!on}
+          onChange={(event) => {
+            setLevel(Number(event.target.value))
+            setVolume(Number(event.target.value) / 100)
+          }}
+          onPointerUp={() => {
+            sounds.right() // hear the new level
+          }}
+          onKeyUp={() => {
+            sounds.right()
+          }}
+        />
+      </div>
+      <p className="muted">On iPhone, the silent switch may mute these sounds.</p>
     </section>
   )
 }
