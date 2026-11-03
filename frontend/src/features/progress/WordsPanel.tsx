@@ -6,10 +6,7 @@ import { WordCard } from './WordCard'
 
 type Tab = 'learned' | 'learning' | 'known'
 
-const TAB_LABEL: Record<Exclude<Tab, 'known'>, string> = {
-  learned: 'Learned',
-  learning: 'Learning',
-}
+const TAB_LABEL: Record<Tab, string> = { learned: 'Learned', learning: 'Learning', known: 'Known' }
 
 /** The words you've answered (learned, or on their way, with their progress) and the ones you said
 you already know, which the quiz never asks. */
@@ -105,7 +102,7 @@ export function WordsPanel() {
                 }}
               >
                 {word.known ? (
-                  <span className="word-row__known" role="img" aria-label="Already known">
+                  <span className="word-row__known" role="img" aria-label="Known">
                     <Icon name="check_mark_button" size={28} />
                   </span>
                 ) : (
@@ -152,13 +149,11 @@ function TabButton({
       type="button"
       className="word-tab"
       aria-pressed={tab === shown}
-      aria-label={`${tab === 'known' ? 'Already known' : TAB_LABEL[tab]} · ${String(count)}`}
       onClick={() => {
         onPick(tab)
       }}
     >
-      {tab === 'known' && <span className="word-tabs__extra">Already </span>}
-      {tab === 'known' ? 'known' : TAB_LABEL[tab]} · {count}
+      {TAB_LABEL[tab]} · {count}
     </button>
   )
 }
