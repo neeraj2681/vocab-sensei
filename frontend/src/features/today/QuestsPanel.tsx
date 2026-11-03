@@ -3,6 +3,7 @@ import { questsApi, type DailyQuests, type Quest, type QuestKind } from '../../a
 import { Burst } from '../../components/Burst'
 import { FormError } from '../../components/Form'
 import { Icon, type IconName } from '../../components/Icon'
+import { sounds } from '../../components/sounds'
 import { useSubmit } from '../../components/useSubmit'
 
 const KIND_ICON: Record<QuestKind, IconName> = {
@@ -39,6 +40,8 @@ export function QuestsPanel({ onClaimed }: { onClaimed: (total: number) => void 
   function claim(key: string) {
     void run(async () => {
       const result = await questsApi.claim(key)
+      if (key === 'chest') sounds.chest()
+      else sounds.coin()
       setDaily(result.quests)
       setPopped({ key, coins: result.coins })
       onClaimed(result.total)

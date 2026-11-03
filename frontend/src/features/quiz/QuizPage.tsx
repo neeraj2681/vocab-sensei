@@ -8,6 +8,7 @@ import { chapterLabel } from '../library/labels'
 import { type Pop, ScoreBar } from './ScoreBar'
 import { Burst } from '../../components/Burst'
 import { buzz } from '../../components/haptics'
+import { sounds } from '../../components/sounds'
 import { Icon } from '../../components/Icon'
 import { SpeakButton } from '../../components/SpeakButton'
 
@@ -41,6 +42,22 @@ const newSession = (todayAtStart: number | null): Session => ({
 
 function focusOf(book: number | null, chapter: number | null) {
   return book !== null && chapter !== null ? { documentId: book, chapter } : undefined
+}
+
+/** The sound of an answer: a chime that climbs with the run, Ninja Mode's own, or a soft bonk. */
+function playAnswer(
+  correct: boolean,
+  run: number,
+  doubled: boolean,
+  change: 'started' | 'ended' | undefined,
+  learned: boolean,
+) {
+  if (!correct) sounds.wrong()
+  else if (change === 'started') sounds.ninjaStart()
+  else if (doubled) sounds.rightNinja()
+  else sounds.right(run)
+  if (change === 'ended') sounds.ninjaEnd()
+  if (learned) sounds.learned()
 }
 
 type Phase =
@@ -160,6 +177,7 @@ export function QuizPage() {
     setCombo(next)
     setPhase({ kind: 'answered', question, chosen: index, correct, points, doubled, ninja: change })
     buzz(correct)
+    playAnswer(correct, next.run, doubled, change, correct && question.if_right.learned)
     setSession((s) => ({
       ...s,
       answered: s.answered + 1,
@@ -235,6 +253,7 @@ export function QuizPage() {
   function next() {
     if (phase.kind === 'answered' && session.answered >= SESSION_LENGTH) {
       setContinueQueued(false)
+      sounds.roundDone()
       setPhase({ kind: 'summary' })
       return
     }

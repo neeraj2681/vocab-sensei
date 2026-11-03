@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react'
+import { fireEvent, screen, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { User } from '../../api/auth'
 import { fail, fakeApi, json, noContent, type Routes } from '../../test/fakeApi'
@@ -219,6 +219,30 @@ describe('vibration', () => {
 
     expect(toggle).not.toBeChecked()
     expect(stored.get('vs-haptics')).toBe('off')
+    vi.unstubAllGlobals()
+  })
+})
+
+describe('sound', () => {
+  it('can be turned off, and its volume changed, in Settings', async () => {
+    const stored = new Map<string, string>()
+    vi.stubGlobal('localStorage', {
+      getItem: (key: string) => stored.get(key) ?? null,
+      setItem: (key: string, value: string) => stored.set(key, value),
+    })
+    account()
+    const user = renderApp('/settings')
+
+    const slider = await screen.findByRole('slider', { name: /Volume/ })
+    expect(slider).toHaveValue('50')
+    fireEvent.change(slider, { target: { value: '80' } })
+    expect(stored.get('vs-volume')).toBe('0.8')
+    expect(screen.getByText('Volume: 80%')).toBeInTheDocument()
+
+    await user.click(screen.getByLabelText(/Sound effects/))
+
+    expect(stored.get('vs-sound')).toBe('off')
+    expect(slider).toBeDisabled()
     vi.unstubAllGlobals()
   })
 })

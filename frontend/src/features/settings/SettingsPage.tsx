@@ -7,6 +7,7 @@ import {
   EmailPanel,
   PasswordPanel,
   ProfilePanel,
+  SoundPanel,
   ThemePanel,
   VibrationPanel,
 } from './AccountPanels'
@@ -97,6 +98,7 @@ export function SettingsPage() {
       <h2>Settings</h2>
       <ProfilePanel />
       <ThemePanel />
+      <SoundPanel />
       <VibrationPanel />
       <GoalPanel />
       <section aria-labelledby="reminder-heading" className="panel">
