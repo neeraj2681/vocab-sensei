@@ -3,6 +3,7 @@ import { authApi, type Gender } from '../../api/auth'
 import { Avatar } from '../../components/Avatar'
 import { Field, FormError } from '../../components/Form'
 import { MIN_PASSWORD_LENGTH } from '../auth/RegisterPage'
+import { hapticsOn, setHapticsOn } from '../../components/haptics'
 import { chooseTheme, currentTheme, THEMES, type Theme } from '../../components/theme'
 import { useSubmit } from '../../components/useSubmit'
 import { useAuth } from '../auth/AuthContext'
@@ -35,6 +36,29 @@ export function ThemePanel() {
           </button>
         ))}
       </div>
+    </section>
+  )
+}
+
+/** Buzz on answers: on Android phones, and on iPhones with iOS 18 or newer. */
+export function VibrationPanel() {
+  const [on, setOn] = useState(hapticsOn)
+
+  return (
+    <section aria-labelledby="vibration-heading" className="panel">
+      <h3 id="vibration-heading">Vibration</h3>
+      <label className="check">
+        <input
+          type="checkbox"
+          checked={on}
+          onChange={(event) => {
+            setHapticsOn(event.target.checked)
+            setOn(event.target.checked)
+          }}
+        />{' '}
+        Vibrate on answers (a tap when right, two when wrong)
+      </label>
+      <p className="muted">Works on Android phones, and on iPhones with iOS 18 or newer.</p>
     </section>
   )
 }
