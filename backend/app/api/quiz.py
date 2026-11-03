@@ -173,6 +173,7 @@ class PractisedWordResponse(BaseModel):
     sentence: str | None  # where the book uses it
     progress: int  # 0-100
     learned: bool
+    known: bool  # marked "I know this": never asked again
 
     @classmethod
     def of(cls, word: PractisedWord) -> Self:
@@ -183,6 +184,7 @@ class PractisedWordResponse(BaseModel):
             sentence=word.sentence,
             progress=word.progress,
             learned=word.learned,
+            known=word.known,
         )
 
 

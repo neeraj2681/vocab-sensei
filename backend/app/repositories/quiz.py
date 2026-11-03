@@ -1,7 +1,7 @@
 from collections.abc import Collection
 from datetime import datetime
 
-from sqlalchemy import exists, func, select
+from sqlalchemy import and_, exists, func, or_, select
 from sqlalchemy.orm import Session, aliased, selectinload
 
 from app.core.enums import WordStatus
@@ -114,15 +114,21 @@ class QuizRepository:
         )
 
     def practised_words(self, user_id: int) -> list[tuple[UserWord, Word]]:
-        """Words the user has answered at least once and is learning or has learned."""
+        """Words the user is learning or has learned (answered at least once), and every word they
+        marked as already known (in the quiz or when sorting a chapter)."""
         rows = self._session.execute(
             select(UserWord, Word)
             .join(Word, Word.id == UserWord.word_id)
             .options(selectinload(Word.definitions))
             .where(
                 UserWord.user_id == user_id,
-                UserWord.status.in_((WordStatus.LEARNING, WordStatus.LEARNED)),
-                UserWord.last_reviewed_at.is_not(None),
+                or_(
+                    and_(
+                        UserWord.status.in_((WordStatus.LEARNING, WordStatus.LEARNED)),
+                        UserWord.last_reviewed_at.is_not(None),
+                    ),
+                    UserWord.status == WordStatus.KNOWN,
+                ),
             )
         )
         return [(row[0], row[1]) for row in rows]

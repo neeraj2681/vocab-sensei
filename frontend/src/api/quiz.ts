@@ -70,6 +70,7 @@ export interface PractisedWord {
   sentence: string | null // where the book uses it
   progress: number // 0-100: how far the word is towards "learned"
   learned: boolean
+  known?: boolean // marked "I know this": never asked again
 }
 
 /** The browser's time zone decides when "today" starts for the daily goal. */
