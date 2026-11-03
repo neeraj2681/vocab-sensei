@@ -1647,6 +1647,32 @@ button.raised:disabled {
   cursor: pointer;
 }
 
+/* The meter towards Ninja Mode: one segment per right answer in a row */
+.ninja-meter .icon {
+  filter: grayscale(1);
+  opacity: 0.6;
+}
+
+.ninja-meter__segments {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.ninja-meter__segments > span {
+  width: 10px;
+  height: 14px;
+  border-radius: 4px;
+  background: var(--surface-2);
+  box-shadow: inset 0 0 0 1px var(--border);
+  transition: background 0.2s;
+}
+
+.ninja-meter__segments > span.ninja-meter__on {
+  background: #50557a;
+  box-shadow: none;
+  animation: ninja-in 0.25s ease-out;
+}
+
 /* Ninja Mode: five right in a row double the coins until a miss */
 .stat-pill--ninja {
   border-color: #3b3f58;
