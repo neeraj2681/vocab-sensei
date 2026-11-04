@@ -286,10 +286,20 @@ export function QuizPage() {
     }
   }
 
-  // Keyboard: 1-4 pick an option, Enter (or →) goes to the next question.
+  // Keyboard: 1-4 pick an option; ↓ / ↑ move between options and Enter picks the one selected;
+  // after answering, Enter (or →) goes to the next question.
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
       if (event.metaKey || event.ctrlKey || event.altKey) return
+      if (phase.kind === 'asking' && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
+        event.preventDefault() // move between options, not scroll the page
+        const options = [...document.querySelectorAll<HTMLButtonElement>('.options .option')]
+        const at = options.findIndex((option) => option === document.activeElement)
+        const step = event.key === 'ArrowDown' ? 1 : -1
+        const start = at === -1 ? (step === 1 ? -1 : 0) : at
+        options[(start + step + options.length) % options.length]?.focus()
+        return // Enter on the selected option then picks it (a focused button's own click)
+      }
       if (phase.kind === 'asking') {
         const index = Number(event.key) - 1
         if (index >= 0 && index < phase.question.options.length) {

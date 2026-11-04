@@ -854,6 +854,16 @@ button {
   border-color: var(--accent);
 }
 
+/* Chosen with the ↓ / ↑ keys (or Tab): Enter picks it */
+.option:focus-visible:not(:disabled) {
+  outline: none;
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  box-shadow:
+    0 0 0 3px var(--accent-soft),
+    0 4px 0 var(--accent);
+}
+
 .option:disabled {
   cursor: default;
 }
