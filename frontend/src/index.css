@@ -2159,6 +2159,59 @@ a.secondary {
   text-align: center;
 }
 
+/* The bubble under a tapped chapter, with its Practice button */
+.path__nodes li {
+  display: grid;
+  justify-items: center;
+}
+
+.practice-bubble {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 0.35rem;
+  width: min(15rem, 80vw);
+  margin-top: 0.75rem;
+  padding: 0.9rem 1rem 1rem;
+  border: 2px solid var(--border);
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: 0 4px 0 var(--border);
+  text-align: center;
+  animation: ninja-in 0.2s ease-out;
+  scroll-margin-bottom: 6.5rem; /* clear of the tab bar along the bottom on phones */
+}
+
+/* the little pointer up to the chapter */
+.practice-bubble::before {
+  content: '';
+  position: absolute;
+  top: -0.6rem;
+  left: 50%;
+  width: 1rem;
+  height: 1rem;
+  border-top: 2px solid var(--border);
+  border-left: 2px solid var(--border);
+  background: var(--surface);
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.practice-bubble__go {
+  gap: 0.4rem;
+  box-sizing: border-box;
+  width: 100%;
+  margin-top: 0.35rem;
+  font-family: var(--display);
+  font-weight: 600;
+}
+
+.practice-bubble__done {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-weight: 600;
+}
+
 .path__more {
   margin: 0;
   font-size: 0.85rem;
