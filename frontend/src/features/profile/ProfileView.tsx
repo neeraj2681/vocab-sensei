@@ -4,6 +4,7 @@ import { goodreadsUrl, leaderboardApi, type Profile } from '../../api/leaderboar
 import { Avatar } from '../../components/Avatar'
 import { Icon } from '../../components/Icon'
 import { useAuth } from '../auth/AuthContext'
+import { BookCover } from '../library/BookCover'
 import { ScoreChart } from '../progress/ScoreChart'
 import { WeekChart } from '../today/WeekChart'
 
@@ -75,9 +76,14 @@ export function ProfileView({ profile }: { profile: Profile }) {
         ) : (
           <ul className="profile-view__books">
             {profile.books.map((book) => (
-              <li key={book.title}>
+              <li key={book.id}>
                 <a href={goodreadsUrl(book)} target="_blank" rel="noopener noreferrer">
-                  <Icon name="open_book" size={28} />
+                  <span className="thumb">
+                    <BookCover
+                      book={book}
+                      src={leaderboardApi.coverUrl(profile.user_id, book.id)}
+                    />
+                  </span>
                   <span>
                     <strong>{book.title}</strong>
                     {book.author && <span className="muted"> · {book.author}</span>}

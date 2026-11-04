@@ -48,8 +48,10 @@ class HistoryPointResponse(BaseModel):
 
 
 class BookResponse(BaseModel):
+    id: int
     title: str
     author: str | None
+    has_cover: bool  # GET /profiles/{user}/books/{id}/cover has a picture
 
 
 class ProfileResponse(BaseModel):
@@ -93,7 +95,10 @@ class ProfileResponse(BaseModel):
                 )
                 for h in p.history
             ],
-            books=[BookResponse(title=b.title, author=b.author) for b in p.books],
+            books=[
+                BookResponse(id=b.id, title=b.title, author=b.author, has_cover=b.has_cover)
+                for b in p.books
+            ],
             books_hidden=p.books_hidden,
         )
 
@@ -136,3 +141,17 @@ def avatar(user_id: int, user: CurrentUser, board: LeaderboardServiceDep) -> Fil
     if path is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "No picture")
     return FileResponse(path, media_type="image/jpeg", headers={"Cache-Control": "no-cache"})
+
+
+@router.get("/profiles/{user_id}/books/{document_id}/cover", response_class=FileResponse)
+def book_cover(
+    user_id: int, document_id: int, user: CurrentUser, board: LeaderboardServiceDep
+) -> FileResponse:
+    """The cover of a book shown on a profile (works for others' uploads too)."""
+    try:
+        path = board.book_cover(user.id, user_id, document_id)
+    except ProfileNotFoundError as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from None
+    if path is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "This book has no cover picture")
+    return FileResponse(path, media_type="image/jpeg")

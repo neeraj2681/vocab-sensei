@@ -25,7 +25,7 @@ export interface Profile {
   right: number
   week: Day[]
   history: HistoryPoint[]
-  books: { title: string; author: string | null }[]
+  books: { id: number; title: string; author: string | null; has_cover: boolean }[]
   books_hidden?: boolean // they keep their books private
 }
 
@@ -35,6 +35,8 @@ export const leaderboardApi = {
   today: () => apiGet<LeaderboardRow[]>(`/leaderboard?${tz()}`),
   profile: (userId: number) => apiGet<Profile>(`/profiles/${String(userId)}?${tz()}`),
   avatarUrl: (userId: number) => `/api/profiles/${String(userId)}/avatar`,
+  coverUrl: (userId: number, bookId: number) =>
+    `/api/profiles/${String(userId)}/books/${String(bookId)}/cover`,
 }
 
 /** Goodreads has no free API any more: its search finds the book from its title and author. */

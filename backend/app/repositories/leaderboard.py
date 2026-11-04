@@ -45,12 +45,13 @@ class LeaderboardRepository:
         )
         return int(count or 0)
 
-    def reading(self, user_id: int) -> list[tuple[str, str | None]]:
-        """Titles and authors of the books the user is reading, their first read first."""
-        rows = self._session.execute(
-            select(Document.title, Document.author)
-            .join(CurrentReading, CurrentReading.document_id == Document.id)
-            .where(CurrentReading.user_id == user_id)
-            .order_by(CurrentReading.priority, Document.id)
+    def reading(self, user_id: int) -> list[Document]:
+        """The books the user is reading, their first read first."""
+        return list(
+            self._session.scalars(
+                select(Document)
+                .join(CurrentReading, CurrentReading.document_id == Document.id)
+                .where(CurrentReading.user_id == user_id)
+                .order_by(CurrentReading.priority, Document.id)
+            )
         )
-        return [(row[0], row[1]) for row in rows]

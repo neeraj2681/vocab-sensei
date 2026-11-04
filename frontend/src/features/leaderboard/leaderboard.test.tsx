@@ -28,7 +28,7 @@ const ASHA: Profile = {
   right: 240,
   week: [],
   history: [],
-  books: [{ title: 'Dracula', author: 'Bram Stoker' }],
+  books: [{ id: 7, title: 'Dracula', author: 'Bram Stoker', has_cover: true }],
 }
 
 function app(extra: Routes = {}) {
@@ -69,9 +69,14 @@ describe('leaderboard', () => {
 
     expect(await screen.findByRole('heading', { name: 'Asha' })).toBeInTheDocument()
     expect(screen.getByText('Coins', { selector: 'dt' }).closest('.tile')).toHaveTextContent('900')
-    expect(screen.getByRole('link', { name: /Dracula/ })).toHaveAttribute(
+    const dracula = screen.getByRole('link', { name: /Dracula/ })
+    expect(dracula).toHaveAttribute(
       'href',
       'https://www.goodreads.com/search?q=Dracula%20Bram%20Stoker',
+    )
+    expect(dracula.querySelector('img.cover')).toHaveAttribute(
+      'src',
+      '/api/profiles/2/books/7/cover', // their cover, even for a book they uploaded
     )
     expect(screen.queryByText(/@/)).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Log out' })).not.toBeInTheDocument()
