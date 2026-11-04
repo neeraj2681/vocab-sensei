@@ -30,8 +30,8 @@ self.addEventListener('push', (event) => {
   event.waitUntil(
     self.registration.showNotification(payload.title ?? 'Vocab Sensei', {
       body: payload.body,
-      icon: '/icon-192.png',
-      badge: '/icon-192.png',
+      icon: '/icon-green-192.png',
+      badge: '/icon-green-192.png',
       data: { url: payload.url ?? '/quiz' },
     }),
   )
