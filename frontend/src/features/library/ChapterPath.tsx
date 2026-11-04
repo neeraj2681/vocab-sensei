@@ -21,6 +21,24 @@ interface Props {
 export function ChapterPath({ documentId, chapters, current, selected, onSelect }: Props) {
   const [all, setAll] = useState(false)
   const [open, setOpen] = useState<number | null>(null) // the chapter whose bubble is showing
+
+  // A tap anywhere else on the page (or Esc) closes the bubble; chapters handle their own taps.
+  useEffect(() => {
+    if (open === null) return
+    function onPointerDown(event: PointerEvent) {
+      const target = event.target as Element | null
+      if (!target?.closest('.practice-bubble, .path__node')) setOpen(null)
+    }
+    function onKey(event: KeyboardEvent) {
+      if (event.key === 'Escape') setOpen(null)
+    }
+    document.addEventListener('pointerdown', onPointerDown)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [open])
   const anchor = current ?? selected
   const from = all ? 0 : Math.max(0, anchor - BEFORE)
   const to = all ? chapters.length : Math.min(chapters.length, anchor + AFTER + 1)

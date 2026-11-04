@@ -178,6 +178,22 @@ describe('chapter path', () => {
     expect(within(done).queryByRole('link', { name: 'Practice' })).not.toBeInTheDocument()
   })
 
+  it('a tap elsewhere on the page, or Esc, closes the bubble', async () => {
+    bookPage([reading(1)])
+    const user = renderApp('/books/1')
+    const loomings = await screen.findByRole('button', { name: /Chapter 2, CHAPTER 1\. Loomings/ })
+
+    await user.click(loomings)
+    await user.click(screen.getByRole('group', { name: 'Chapter 2' })) // inside: stays open
+    expect(screen.getByRole('group', { name: 'Chapter 2' })).toBeInTheDocument()
+    await user.click(screen.getByRole('heading', { name: 'Moby-Dick' })) // a blank part of the page
+
+    expect(screen.queryByRole('group', { name: 'Chapter 2' })).not.toBeInTheDocument()
+    await user.click(loomings)
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('group', { name: 'Chapter 2' })).not.toBeInTheDocument()
+  })
+
   it('shows chapters around the current one in a long book, and all on request', async () => {
     const many: ChapterReadiness[] = Array.from({ length: 30 }, (_, i) => ({
       index: i,
