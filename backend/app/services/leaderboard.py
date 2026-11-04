@@ -31,8 +31,10 @@ class Row:
 
 @dataclass(frozen=True)
 class Book:
+    id: int
     title: str
     author: str | None
+    has_cover: bool
 
 
 @dataclass(frozen=True)
@@ -93,7 +95,14 @@ class LeaderboardService:
             history.append(HistoryPoint(number, total, answer.correct, answer.answered_at))
         me = user.id == viewer_id
         hidden = not me and not user.show_books
-        books = [] if hidden else [Book(t, a) for t, a in self._repo.reading(user.id)]
+        books = (
+            []
+            if hidden
+            else [
+                Book(d.id, d.title, d.author, d.cover_path is not None)
+                for d in self._repo.reading(user.id)
+            ]
+        )
         return PublicProfile(
             user_id=user.id,
             display_name=user.display_name,
@@ -117,6 +126,19 @@ class LeaderboardService:
         if not user.avatar_path:
             return None
         path = self._settings.data_dir / user.avatar_path
+        return path if path.is_file() else None
+
+    def book_cover(self, viewer_id: int, user_id: int, document_id: int) -> Path | None:
+        """The cover of a book on a profile: one they're reading, if they share their books."""
+        user = self._visible(viewer_id, user_id)
+        if user.id != viewer_id and not user.show_books:
+            raise ProfileNotFoundError("No such book")
+        book = next((d for d in self._repo.reading(user.id) if d.id == document_id), None)
+        if book is None:
+            raise ProfileNotFoundError("No such book")
+        if not book.cover_path:
+            return None
+        path = self._settings.data_dir / book.cover_path
         return path if path.is_file() else None
 
     def _visible(self, viewer_id: int, user_id: int) -> User:

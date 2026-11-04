@@ -59,7 +59,7 @@ const PROFILE: Profile = {
   right: 3,
   week: [],
   history: HISTORY,
-  books: [{ title: 'Moby-Dick', author: 'Herman Melville' }],
+  books: [{ id: 10, title: 'Moby-Dick', author: 'Herman Melville', has_cover: false }],
 }
 
 describe('Me page', () => {

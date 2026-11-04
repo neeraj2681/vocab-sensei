@@ -2,9 +2,10 @@ from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import QuestClaim, User
+from app.db.models import CurrentReading, Document, QuestClaim, User
 from tests.api.test_quiz import NOW, answer, book, clock, reader  # noqa: F401 (fixtures)
 from tests.conftest import make_user
 
@@ -70,7 +71,7 @@ def test_a_profile_shows_stats_graphs_and_books_never_the_email(
     assert (own["me"], own["answers"], own["right"], own["coins"]) == (True, 3, 2, 0)
     assert len(own["history"]) == 3
     assert len(own["week"]) == 7
-    assert own["books"] == [{"title": "Moby-Dick", "author": None}]
+    assert [(b["title"], b["author"]) for b in own["books"]] == [("Moby-Dick", None)]
     assert theirs.status_code == 200
     assert theirs.json()["me"] is False
     assert theirs.json()["coins_today"] == 40
@@ -89,4 +90,26 @@ def test_books_can_be_kept_private(user_client: TestClient, session: Session) ->
 
     assert (theirs["books"], theirs["books_hidden"]) == ([], True)
     assert switched.json()["show_books"] is False
-    assert (own["books"], own["books_hidden"]) == ([{"title": "Moby-Dick", "author": None}], False)
+    assert ([b["title"] for b in own["books"]], own["books_hidden"]) == (["Moby-Dick"], False)
+
+
+def test_book_covers_on_a_profile(user_client: TestClient, session: Session, settings: Any) -> None:
+    moby = session.scalars(select(Document)).one()  # from the book fixture
+    other = friend(session, "asha@example.com", "Asha", 0)
+    session.add(CurrentReading(user_id=other.id, document_id=moby.id, priority=0))
+    moby.cover_path = f"covers/{moby.id}.jpg"
+    cover = settings.data_dir / moby.cover_path
+    cover.parent.mkdir(parents=True, exist_ok=True)
+    cover.write_bytes(b"jpeg bytes")
+    session.commit()
+
+    listed = user_client.get(f"/api/profiles/{other.id}?tz=UTC").json()["books"]
+    response = user_client.get(f"/api/profiles/{other.id}/books/{moby.id}/cover")
+
+    assert [(b["id"], b["has_cover"]) for b in listed] == [(moby.id, True)]
+    assert response.status_code == 200
+    assert response.content == b"jpeg bytes"
+    assert user_client.get(f"/api/profiles/{other.id}/books/99999/cover").status_code == 404
+    other.show_books = False
+    session.commit()
+    assert user_client.get(f"/api/profiles/{other.id}/books/{moby.id}/cover").status_code == 404
