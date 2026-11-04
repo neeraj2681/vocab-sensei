@@ -175,6 +175,27 @@ describe('quiz', () => {
     expect(api.calls(ANSWER_URL(1))).toEqual([{ chosen_index: 1 }])
   })
 
+  it('on the summary, Keep going is selected; ↓ selects Done for today', async () => {
+    const items = Array.from({ length: 12 }, (_, i) => question(i + 1, `word${String(i + 1)}`))
+    const routes: Routes = { 'GET /api/quiz/question?include_next=true': questions(...items) }
+    for (const item of items) routes[ANSWER_URL(item.id)] = () => json(result({}))
+    quiz(routes)
+    const user = renderApp('/quiz')
+    await screen.findByRole('heading', { name: 'word1' })
+    for (let i = 0; i < 10; i++) {
+      await user.keyboard('1')
+      await screen.findByRole('status')
+      await user.keyboard('{Enter}')
+    }
+
+    expect(await screen.findByRole('button', { name: 'Keep going' })).toHaveFocus()
+    await user.keyboard('{ArrowDown}')
+    expect(screen.getByRole('button', { name: 'Done for today' })).toHaveFocus()
+    await user.keyboard('{ArrowUp}{Enter}')
+
+    expect(await screen.findByRole('heading', { name: 'word11' })).toBeInTheDocument()
+  })
+
   it('the sparkline appears once there are answers to draw', async () => {
     quiz({
       'GET /api/quiz/question?include_next=true': questions(question(1, 'drizzly')),
