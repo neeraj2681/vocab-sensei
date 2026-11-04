@@ -156,6 +156,28 @@ describe('chapter path', () => {
     expect(screen.getByLabelText('Chapter')).toHaveValue('0')
   })
 
+  it('tapping a chapter shows a Practice button for a quiz on its words only', async () => {
+    bookPage([reading(1)])
+    const user = renderApp('/books/1')
+    const loomings = await screen.findByRole('button', { name: /Chapter 2, CHAPTER 1\. Loomings/ })
+
+    await user.click(loomings)
+
+    const bubble = screen.getByRole('group', { name: 'Chapter 2' })
+    expect(bubble).toHaveTextContent('179 words · 61% ready')
+    expect(within(bubble).getByRole('link', { name: 'Practice' })).toHaveAttribute(
+      'href',
+      '/quiz?book=1&chapter=1',
+    )
+    await user.click(loomings) // tap again: the bubble closes
+    expect(screen.queryByRole('group', { name: 'Chapter 2' })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /Chapter 1, ETYMOLOGY/ }))
+    const done = screen.getByRole('group', { name: 'Chapter 1' })
+    expect(done).toHaveTextContent('Every word here is ready')
+    expect(within(done).queryByRole('link', { name: 'Practice' })).not.toBeInTheDocument()
+  })
+
   it('shows chapters around the current one in a long book, and all on request', async () => {
     const many: ChapterReadiness[] = Array.from({ length: 30 }, (_, i) => ({
       index: i,

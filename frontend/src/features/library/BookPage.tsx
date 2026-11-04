@@ -116,6 +116,7 @@ export function BookPage() {
         <>
           {readiness && (
             <ChapterPath
+              documentId={documentId}
               chapters={readiness}
               current={reading?.current_chapter_index ?? null}
               selected={chapter}

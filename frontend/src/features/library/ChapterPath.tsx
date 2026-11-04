@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router'
 import type { ChapterReadiness } from '../../api/documents'
 import { Icon, type IconName } from '../../components/Icon'
 import { chapterLabel } from './labels'
@@ -9,6 +10,7 @@ const BEFORE = 2 // chapters shown before the current one until "Show all"
 const AFTER = 7
 
 interface Props {
+  documentId: number
   chapters: ChapterReadiness[]
   current: number | null // the chapter being read, if this is a current read
   selected: number
@@ -16,8 +18,9 @@ interface Props {
 }
 
 /** The book as a path of chapters, each ring filled by how ready you are for it. */
-export function ChapterPath({ chapters, current, selected, onSelect }: Props) {
+export function ChapterPath({ documentId, chapters, current, selected, onSelect }: Props) {
   const [all, setAll] = useState(false)
+  const [open, setOpen] = useState<number | null>(null) // the chapter whose bubble is showing
   const anchor = current ?? selected
   const from = all ? 0 : Math.max(0, anchor - BEFORE)
   const to = all ? chapters.length : Math.min(chapters.length, anchor + AFTER + 1)
@@ -38,8 +41,10 @@ export function ChapterPath({ chapters, current, selected, onSelect }: Props) {
               ].join(' ')}
               aria-pressed={chapter.index === selected}
               aria-label={`Chapter ${String(chapter.index + 1)}, ${chapterLabel(chapter.index, chapter.title)}, ${String(chapter.readiness)}% ready`}
+              aria-expanded={open === chapter.index}
               onClick={() => {
                 onSelect(chapter.index)
+                setOpen((shown) => (shown === chapter.index ? null : chapter.index)) // tap again: close
               }}
             >
               <span className="path__disc">
@@ -64,6 +69,7 @@ export function ChapterPath({ chapters, current, selected, onSelect }: Props) {
                 {chapter.readiness}%
               </span>
             </button>
+            {open === chapter.index && <PracticeBubble documentId={documentId} chapter={chapter} />}
           </li>
         ))}
       </ol>
@@ -77,6 +83,55 @@ export function ChapterPath({ chapters, current, selected, onSelect }: Props) {
         >
           Show all {chapters.length} chapters
         </button>
+      )}
+    </div>
+  )
+}
+
+/** Under a tapped chapter: what it holds and a 3D Practice button for a quiz on its words only. */
+function PracticeBubble({
+  documentId,
+  chapter,
+}: {
+  documentId: number
+  chapter: ChapterReadiness
+}) {
+  const ready = chapter.readiness >= 100
+  const bubble = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    // Bring all of it into view (above the phone's tab bar; see scroll-margin in index.css).
+    const node = bubble.current
+    if (node && typeof node.scrollIntoView === 'function') {
+      node.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+    }
+  }, [])
+
+  return (
+    <div
+      ref={bubble}
+      className="practice-bubble"
+      role="group"
+      aria-label={`Chapter ${String(chapter.index + 1)}`}
+    >
+      <strong>
+        {chapter.index + 1}. {chapterLabel(chapter.index, chapter.title)}
+      </strong>
+      <span className="muted">
+        {chapter.words.toLocaleString()} {chapter.words === 1 ? 'word' : 'words'} ·{' '}
+        {chapter.readiness}% ready
+      </span>
+      {ready ? (
+        <span className="practice-bubble__done">
+          <Icon name="star" size={22} /> Every word here is ready
+        </span>
+      ) : (
+        <Link
+          className="button-link primary practice-bubble__go"
+          to={`/quiz?book=${String(documentId)}&chapter=${String(chapter.index)}`}
+        >
+          <Icon name="direct_hit" size={22} /> Practice
+        </Link>
       )}
     </div>
   )
