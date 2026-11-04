@@ -7,6 +7,7 @@ import { quizApi, type QuizQuestion, type QuizStats } from '../../api/quiz'
 import { chapterLabel } from '../library/labels'
 import { type Pop, ScoreBar } from './ScoreBar'
 import { Burst } from '../../components/Burst'
+import { resumingQuiz } from './visit'
 import { buzz } from '../../components/haptics'
 import { sounds } from '../../components/sounds'
 import { Icon } from '../../components/Icon'
@@ -143,8 +144,11 @@ export function QuizPage() {
         if (!current) return
         setStats(loaded)
         setRecent([loaded.total])
+        // A new visit starts the run (and Ninja Mode) from scratch; only a reload continues it.
+        const carried = loaded.combo ?? 0
+        if (carried > 0 && !resumingQuiz()) void quizApi.endCombo().catch(() => undefined)
         setCombo((c) => ({
-          run: loaded.combo ?? c.run,
+          run: resumingQuiz() ? carried : 0,
           after: loaded.combo_after ?? c.after,
           multiplier: loaded.combo_multiplier ?? c.multiplier,
         }))

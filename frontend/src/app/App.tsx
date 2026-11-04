@@ -1,4 +1,6 @@
+import { useEffect } from 'react'
 import { BrowserRouter, Link, Navigate, Route, Routes, useLocation } from 'react-router'
+import { noteLocation } from '../features/quiz/visit'
 import { useAuth } from '../features/auth/AuthContext'
 import { AuthProvider } from '../features/auth/AuthProvider'
 import { ForgotPasswordPage } from '../features/auth/ForgotPasswordPage'
@@ -147,6 +149,11 @@ function Header() {
 
 /** Everything inside the router and auth provider; tests render this with a MemoryRouter. */
 export function AppShell() {
+  const { pathname } = useLocation()
+  useEffect(() => {
+    noteLocation(pathname) // leaving the quiz ends what a reload could continue (Ninja Mode)
+  }, [pathname])
+
   // With the navigation, wide screens put it in a side column (see "Laptops" in index.css).
   return (
     <div className={useShowsNav() ? 'app app--nav' : 'app'}>

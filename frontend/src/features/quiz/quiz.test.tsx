@@ -3,6 +3,10 @@ import { describe, expect, it, vi } from 'vitest'
 import type { AnswerResult, QuizQuestion, QuizStats } from '../../api/quiz'
 import { fail, fakeApi, json, type Routes } from '../../test/fakeApi'
 import { renderApp } from '../../test/renderApp'
+import { resumingQuiz } from './visit'
+
+// Whether this visit reloaded the quiz page (so Ninja Mode carries on) is decided per test.
+vi.mock('./visit', () => ({ resumingQuiz: vi.fn(() => false), noteLocation: vi.fn() }))
 
 const USER = { id: 1, email: 'reader@example.com', display_name: 'Reader', email_verified_at: 'x' }
 const STATS: QuizStats = { total: 120, today: 3, daily_goal: 10, streak: 4 }
@@ -584,7 +588,8 @@ describe('ninja mode', () => {
     )
   })
 
-  it('carries on from the last visit, and warns before stopping ends it', async () => {
+  it('carries on after reloading the quiz page, and warns before stopping ends it', async () => {
+    vi.mocked(resumingQuiz).mockReturnValue(true)
     const api = run(
       { ...STATS, combo: 7, combo_after: 5, combo_multiplier: 2 },
       { 'POST /api/quiz/combo/end': () => new Response(null, { status: 204 }) },
@@ -606,6 +611,25 @@ describe('ninja mode', () => {
     expect(screen.queryByRole('progressbar', { name: 'Session progress' })).not.toBeInTheDocument()
   })
 
+  it('starts from scratch on a new visit: Ninja Mode from last time is gone', async () => {
+    vi.mocked(resumingQuiz).mockReturnValue(false)
+    const api = run(
+      { ...STATS, combo: 9, combo_after: 5, combo_multiplier: 2 },
+      { 'POST /api/quiz/combo/end': () => new Response(null, { status: 204 }) },
+    )
+    renderApp('/quiz')
+
+    const meter = await screen.findByRole('meter', { name: /towards Ninja Mode/ })
+    expect(meter).toHaveAttribute('aria-valuenow', '0')
+    expect(screen.queryByText(/Ninja Mode, 9 in a row/)).not.toBeInTheDocument()
+    await waitFor(() => {
+      expect(api.calls('POST /api/quiz/combo/end')).toHaveLength(1) // ended on the server too
+    })
+    expect(screen.getByRole('progressbar', { name: 'Session progress' })).toHaveAttribute(
+      'aria-valuenow',
+      '0',
+    )
+  })
   it('warns about the run and today’s goal before stopping', async () => {
     const api = run(STATS, {
       'POST /api/quiz/combo/end': () => new Response(null, { status: 204 }),
