@@ -256,7 +256,21 @@ export function ProfilePanel() {
             })
           }}
         />{' '}
-        Show me on the leaderboard (others can open my profile: photo, username, stats and books)
+        Show me on the leaderboard (others can open my profile: photo, username and stats)
+      </label>
+      <label className="check">
+        <input
+          type="checkbox"
+          checked={user.show_books ?? true}
+          disabled={busy || user.show_on_leaderboard === false}
+          onChange={(event) => {
+            const show = event.target.checked
+            void run(async () => {
+              updateUser(await authApi.setShowBooks(show))
+            })
+          }}
+        />{' '}
+        Show the books I’m reading on my profile
       </label>
       <FormError message={error} />
     </section>

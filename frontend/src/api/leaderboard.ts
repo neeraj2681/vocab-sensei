@@ -26,6 +26,7 @@ export interface Profile {
   week: Day[]
   history: HistoryPoint[]
   books: { title: string; author: string | null }[]
+  books_hidden?: boolean // they keep their books private
 }
 
 const tz = () => `tz=${encodeURIComponent(timeZone())}`

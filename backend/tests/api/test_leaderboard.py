@@ -77,3 +77,16 @@ def test_a_profile_shows_stats_graphs_and_books_never_the_email(
     assert "email" not in theirs.json()
     assert user_client.get(f"/api/profiles/{other.id}/avatar").status_code == 404  # no picture
     assert user_client.get("/api/profiles/99999?tz=UTC").status_code == 404
+
+
+def test_books_can_be_kept_private(user_client: TestClient, session: Session) -> None:
+    private = friend(session, "kai@example.com", "Kai", 5, show_books=False)
+    me = reader(session)
+
+    theirs = user_client.get(f"/api/profiles/{private.id}?tz=UTC").json()
+    switched = user_client.put("/api/auth/me/books-visibility", json={"show": False})
+    own = user_client.get(f"/api/profiles/{me.id}?tz=UTC").json()
+
+    assert (theirs["books"], theirs["books_hidden"]) == ([], True)
+    assert switched.json()["show_books"] is False
+    assert (own["books"], own["books_hidden"]) == ([{"title": "Moby-Dick", "author": None}], False)

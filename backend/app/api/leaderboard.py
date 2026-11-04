@@ -67,6 +67,7 @@ class ProfileResponse(BaseModel):
     week: list[DayPoints]
     history: list[HistoryPointResponse]
     books: list[BookResponse]
+    books_hidden: bool  # they keep their books private
 
     @classmethod
     def of(cls, p: PublicProfile) -> Self:
@@ -93,6 +94,7 @@ class ProfileResponse(BaseModel):
                 for h in p.history
             ],
             books=[BookResponse(title=b.title, author=b.author) for b in p.books],
+            books_hidden=p.books_hidden,
         )
 
 

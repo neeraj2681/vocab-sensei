@@ -27,6 +27,7 @@ class User(Base):
     combo: Mapped[int] = mapped_column(default=0, server_default="0")
     # Listed on the leaderboard, with a profile others can open; can be turned off in Settings.
     show_on_leaderboard: Mapped[bool] = mapped_column(default=True, server_default=sa_true())
+    show_books: Mapped[bool] = mapped_column(default=True, server_default=sa_true())  # on profile
     onboarded_at: Mapped[datetime | None] = mapped_column(UTCDateTime)  # finished the tour
     name_changed_at: Mapped[datetime | None] = mapped_column(UTCDateTime)  # one change allowed
     gender: Mapped[Gender] = mapped_column(

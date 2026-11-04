@@ -85,4 +85,13 @@ describe('leaderboard', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Couldn’t load this profile')
   })
+
+  it('says when someone keeps their books private', async () => {
+    app({ 'GET /api/profiles/2?tz=UTC': () => json({ ...ASHA, books: [], books_hidden: true }) })
+
+    renderApp('/users/2')
+
+    expect(await screen.findByText(/Asha keeps their books private/)).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /Dracula/ })).not.toBeInTheDocument()
+  })
 })

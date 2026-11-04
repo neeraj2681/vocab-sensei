@@ -246,3 +246,21 @@ describe('sound', () => {
     vi.unstubAllGlobals()
   })
 })
+
+describe('privacy', () => {
+  it('keeps the books I read off my profile', async () => {
+    const api = account(USER, {
+      'PUT /api/auth/me/books-visibility': () => json({ ...USER, show_books: false }),
+    })
+    const user = renderApp('/settings')
+
+    const toggle = await screen.findByLabelText('Show the books I’m reading on my profile')
+    expect(toggle).toBeChecked()
+    await user.click(toggle)
+
+    expect(api.calls('PUT /api/auth/me/books-visibility')).toEqual([{ show: false }])
+    expect(
+      await screen.findByLabelText('Show the books I’m reading on my profile'),
+    ).not.toBeChecked()
+  })
+})

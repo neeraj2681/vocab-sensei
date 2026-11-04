@@ -66,7 +66,11 @@ export function ProfileView({ profile }: { profile: Profile }) {
 
       <section className="card" aria-labelledby="reading-heading">
         <h3 id="reading-heading">Reading</h3>
-        {profile.books.length === 0 ? (
+        {profile.books_hidden ? (
+          <p className="muted">
+            <Icon name="locked" size={20} /> {profile.display_name} keeps their books private.
+          </p>
+        ) : profile.books.length === 0 ? (
           <p className="muted">No books being read right now.</p>
         ) : (
           <ul className="profile-view__books">

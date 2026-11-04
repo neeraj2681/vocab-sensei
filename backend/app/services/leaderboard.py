@@ -52,7 +52,8 @@ class PublicProfile:
     right: int
     week: list[Day]
     history: list[HistoryPoint]
-    books: list[Book]
+    books: list[Book]  # empty when they keep them private (and it isn't you looking)
+    books_hidden: bool
 
 
 class LeaderboardService:
@@ -90,6 +91,9 @@ class LeaderboardService:
         for number, answer in enumerate(quiz.answers(user.id), start=1):
             total += answer.points
             history.append(HistoryPoint(number, total, answer.correct, answer.answered_at))
+        me = user.id == viewer_id
+        hidden = not me and not user.show_books
+        books = [] if hidden else [Book(t, a) for t, a in self._repo.reading(user.id)]
         return PublicProfile(
             user_id=user.id,
             display_name=user.display_name,
@@ -104,7 +108,8 @@ class LeaderboardService:
             right=sum(1 for point in history if point.correct),
             week=stats.week,
             history=history,
-            books=[Book(title, author) for title, author in self._repo.reading(user.id)],
+            books=books,
+            books_hidden=hidden,
         )
 
     def avatar(self, viewer_id: int, user_id: int) -> Path | None:
