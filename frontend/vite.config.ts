@@ -14,7 +14,7 @@ export default defineConfig({
       strategies: 'injectManifest',
       srcDir: 'src',
       filename: 'sw.ts',
-      includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
+      includeAssets: ['favicon-green.svg', 'apple-touch-icon-green.png'],
       injectManifest: {
         // The app, its Latin fonts and the 3D icons work offline.
         globPatterns: ['**/*.{js,css,html}', 'assets/*-latin-[0-9]*-normal-*.woff2', 'icons/*.png'],
@@ -28,8 +28,8 @@ export default defineConfig({
         display: 'standalone',
         start_url: '/',
         icons: [
-          { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
-          { src: 'icon-512.png', sizes: '512x512', type: 'image/png' },
+          { src: 'icon-green-192.png', sizes: '192x192', type: 'image/png' },
+          { src: 'icon-green-512.png', sizes: '512x512', type: 'image/png' },
         ],
       },
     }),

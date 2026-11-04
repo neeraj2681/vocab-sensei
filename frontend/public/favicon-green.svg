@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#43c074"/>
+      <stop offset="1" stop-color="#1c7340"/>
+    </linearGradient>
+    <linearGradient id="page" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#eef6ef"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.3" cy="0.1" r="0.8">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="14" stdDeviation="14" flood-color="#0b3d20" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <rect width="512" height="512" rx="112" fill="url(#glow)"/>
+  <!-- an open book: dark green cover under cream pages -->
+  <g filter="url(#shadow)">
+    <path d="M256 196c-48-30-110-38-170-30v220c60-8 122 0 170 30 48-30 110-38 170-30V166c-60-8-122 0-170 30z" fill="#145c30"/>
+    <path d="M256 184c-44-28-100-36-154-30v216c54-6 110 2 154 30 44-28 100-36 154-30V154c-54-6-110 2-154 30z" fill="url(#page)"/>
+  </g>
+  <path d="M256 186v212" stroke="#b9dcc4" stroke-width="8" stroke-linecap="round"/>
+  <path d="M136 214c30-2 58 4 86 16M136 260c30-2 58 4 86 16M136 306c30-2 58 4 86 16M376 214c-30-2-58 4-86 16M376 260c-30-2-58 4-86 16" stroke="#cfe6d5" stroke-width="12" stroke-linecap="round" fill="none"/>
+  <!-- a gold bookmark ribbon -->
+  <path d="M322 168h34v96l-17-14-17 14z" fill="#f5b82e"/>
+  <!-- sparkles: words flying out -->
+  <path d="M256 70l11 29 29 11-29 11-11 29-11-29-29-11 29-11z" fill="#ffe58a"/>
+  <path d="M168 104l6 15 15 6-15 6-6 15-6-15-15-6 15-6z" fill="#ffffff" opacity="0.9"/>
+  <path d="M352 96l7 17 17 7-17 7-7 17-7-17-17-7 17-7z" fill="#ffffff" opacity="0.9"/>
+</svg>
