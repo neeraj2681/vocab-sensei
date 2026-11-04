@@ -151,6 +151,30 @@ describe('quiz', () => {
     expect(api.calls(ANSWER_URL(1))).toEqual([{ chosen_index: 2 }])
   })
 
+  it('↓ and ↑ move between options, and Enter picks the selected one', async () => {
+    const api = quiz({
+      'GET /api/quiz/question?include_next=true': questions(question(1, 'drizzly')),
+      [ANSWER_URL(1)]: () => json(result({ correct: false, points: -10, score_delta: 0 })),
+    })
+    const user = renderApp('/quiz')
+    await screen.findByRole('heading', { name: 'drizzly' })
+    const options = screen.getAllByRole('button', {
+      name: /wet with light rain|excessively mournful|a small bag|confidently optimistic/,
+    })
+
+    await user.keyboard('{ArrowDown}')
+    expect(options[0]).toHaveFocus()
+    await user.keyboard('{ArrowDown}{ArrowDown}{ArrowUp}')
+    expect(options[1]).toHaveFocus()
+    await user.keyboard('{ArrowUp}{ArrowUp}')
+    expect(options[3]).toHaveFocus() // wraps round to the last
+
+    await user.keyboard('{ArrowDown}{ArrowDown}{Enter}') // the second: "excessively mournful"
+
+    expect(await screen.findByRole('status')).toBeInTheDocument()
+    expect(api.calls(ANSWER_URL(1))).toEqual([{ chosen_index: 1 }])
+  })
+
   it('the sparkline appears once there are answers to draw', async () => {
     quiz({
       'GET /api/quiz/question?include_next=true': questions(question(1, 'drizzly')),
