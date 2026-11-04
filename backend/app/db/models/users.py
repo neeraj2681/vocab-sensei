@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 
 from sqlalchemy import ForeignKey, String
+from sqlalchemy import true as sa_true
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.enums import EmailTokenPurpose, Gender
@@ -24,6 +25,8 @@ class User(Base):
     # Right answers in a row (Ninja Mode); kept between sessions until a wrong answer or the
     # player stops after a session.
     combo: Mapped[int] = mapped_column(default=0, server_default="0")
+    # Listed on the leaderboard, with a profile others can open; can be turned off in Settings.
+    show_on_leaderboard: Mapped[bool] = mapped_column(default=True, server_default=sa_true())
     onboarded_at: Mapped[datetime | None] = mapped_column(UTCDateTime)  # finished the tour
     name_changed_at: Mapped[datetime | None] = mapped_column(UTCDateTime)  # one change allowed
     gender: Mapped[Gender] = mapped_column(

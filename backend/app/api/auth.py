@@ -54,6 +54,10 @@ class GenderRequest(BaseModel):
     gender: Gender
 
 
+class LeaderboardRequest(BaseModel):
+    show: bool
+
+
 class ChangeEmailRequest(BaseModel):
     email: EmailStr
     password: Annotated[str, Field(max_length=128)]
@@ -84,6 +88,7 @@ class UserResponse(BaseModel):
     gender: Gender
     has_avatar: bool  # GET /auth/me/avatar has a picture
     pending_email: str | None  # a new address waiting for its link to be opened
+    show_on_leaderboard: bool
 
 
 class MessageResponse(BaseModel):
@@ -225,6 +230,15 @@ def change_name(body: NameRequest, user: CurrentUser, profile: ProfileServiceDep
 @router.put("/me/gender")
 def set_gender(body: GenderRequest, user: CurrentUser, profile: ProfileServiceDep) -> UserResponse:
     profile.set_gender(user, body.gender)
+    return UserResponse.model_validate(user)
+
+
+@router.put("/me/leaderboard")
+def set_on_leaderboard(
+    body: LeaderboardRequest, user: CurrentUser, profile: ProfileServiceDep
+) -> UserResponse:
+    """Whether others see this user on the leaderboard (and can open their profile)."""
+    profile.set_on_leaderboard(user, body.show)
     return UserResponse.model_validate(user)
 
 

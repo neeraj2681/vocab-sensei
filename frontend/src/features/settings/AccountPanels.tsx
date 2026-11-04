@@ -244,6 +244,20 @@ export function ProfilePanel() {
           ))}
         </select>
       </div>
+      <label className="check">
+        <input
+          type="checkbox"
+          checked={user.show_on_leaderboard ?? true}
+          disabled={busy}
+          onChange={(event) => {
+            const show = event.target.checked
+            void run(async () => {
+              updateUser(await authApi.setOnLeaderboard(show))
+            })
+          }}
+        />{' '}
+        Show me on the leaderboard (others can open my profile: photo, username, stats and books)
+      </label>
       <FormError message={error} />
     </section>
   )

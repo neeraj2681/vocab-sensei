@@ -20,6 +20,23 @@ function progressPage(extra: Routes = {}) {
     'GET /api/auth/me': () => json(USER),
     'GET /api/quiz/stats?tz=UTC': () => json({ total: 0, today: 0, daily_goal: 10, streak: 0 }),
     'GET /api/quiz/history': () => json([]),
+    'GET /api/profiles/1?tz=UTC': () =>
+      json({
+        user_id: 1,
+        display_name: 'Reader',
+        gender: 'unspecified',
+        has_avatar: false,
+        me: true,
+        coins: 0,
+        coins_today: 0,
+        streak: 0,
+        words_learned: 0,
+        answers: 0,
+        right: 0,
+        week: [],
+        history: [],
+        books: [],
+      }),
     ...extra,
   })
 }
@@ -30,7 +47,7 @@ describe('backup', () => {
   it('offers the backup as a download', async () => {
     progressPage()
 
-    renderApp('/progress')
+    renderApp('/me')
 
     const link = await screen.findByRole('link', { name: 'Download a backup' })
     expect(link).toHaveAttribute('href', '/api/backup')
@@ -39,7 +56,7 @@ describe('backup', () => {
 
   it('restores a backup file and says what came back', async () => {
     const api = progressPage({ 'POST /api/backup': () => json(SUMMARY) })
-    const user = renderApp('/progress')
+    const user = renderApp('/me')
 
     await user.upload(
       await screen.findByLabelText('Restore from a backup'),
@@ -56,7 +73,7 @@ describe('backup', () => {
     progressPage({
       'POST /api/backup': () => json({ ...SUMMARY, readings_added: 0, books_missing: ['Emma'] }),
     })
-    const user = renderApp('/progress')
+    const user = renderApp('/me')
 
     await user.upload(
       await screen.findByLabelText('Restore from a backup'),
@@ -70,7 +87,7 @@ describe('backup', () => {
 
   it('rejects files that are not JSON', async () => {
     const api = progressPage()
-    const user = renderApp('/progress')
+    const user = renderApp('/me')
 
     await user.upload(await screen.findByLabelText('Restore from a backup'), file('not json'))
 
@@ -80,7 +97,7 @@ describe('backup', () => {
 
   it('shows why the server refused a backup', async () => {
     progressPage({ 'POST /api/backup': () => fail(422, 'This backup is version 2; expected 1') })
-    const user = renderApp('/progress')
+    const user = renderApp('/me')
 
     await user.upload(
       await screen.findByLabelText('Restore from a backup'),

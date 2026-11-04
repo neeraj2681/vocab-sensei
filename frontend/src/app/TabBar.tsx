@@ -8,6 +8,7 @@ const TABS: { to: string; label: string; icon: IconName; end?: boolean }[] = [
   { to: '/books', label: 'Books', icon: 'books' },
   { to: '/words', label: 'Words', icon: 'input_latin_letters' },
   { to: '/shop', label: 'Shop', icon: 'shopping_bags' },
+  { to: '/leaderboard', label: 'Leaderboard', icon: 'trophy' },
 ]
 
 /** The main navigation: a bar along the bottom on phones, a row in the header on wider screens. */
