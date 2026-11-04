@@ -44,6 +44,14 @@ function focusOf(book: number | null, chapter: number | null) {
   return book !== null && chapter !== null ? { documentId: book, chapter } : undefined
 }
 
+/** Selects the next (or previous) of `selector`'s buttons, wrapping round at the ends. */
+function moveFocus(selector: string, step: 1 | -1) {
+  const buttons = [...document.querySelectorAll<HTMLButtonElement>(selector)]
+  const at = buttons.findIndex((button) => button === document.activeElement)
+  const start = at === -1 ? (step === 1 ? -1 : 0) : at
+  buttons[(start + step + buttons.length) % buttons.length]?.focus()
+}
+
 /** The sound of an answer: a chime that climbs with the run, Ninja Mode's own, or a soft bonk. */
 function playAnswer(
   correct: boolean,
@@ -291,14 +299,21 @@ export function QuizPage() {
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
       if (event.metaKey || event.ctrlKey || event.altKey) return
-      if (phase.kind === 'asking' && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
-        event.preventDefault() // move between options, not scroll the page
-        const options = [...document.querySelectorAll<HTMLButtonElement>('.options .option')]
-        const at = options.findIndex((option) => option === document.activeElement)
-        const step = event.key === 'ArrowDown' ? 1 : -1
-        const start = at === -1 ? (step === 1 ? -1 : 0) : at
-        options[(start + step + options.length) % options.length]?.focus()
-        return // Enter on the selected option then picks it (a focused button's own click)
+      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+        // ↓ / ↑ move between the choices on screen (the warning's, the summary's or the options);
+        // Enter then picks the selected one (a focused button's own click).
+        const choices = leaving
+          ? '.ninja-warning button'
+          : phase.kind === 'summary'
+            ? '.summary > button'
+            : phase.kind === 'asking'
+              ? '.options .option'
+              : null
+        if (choices) {
+          event.preventDefault() // not scroll the page
+          moveFocus(choices, event.key === 'ArrowDown' ? 1 : -1)
+          return
+        }
       }
       if (phase.kind === 'asking') {
         const index = Number(event.key) - 1
@@ -347,6 +362,10 @@ export function QuizPage() {
           streak={stats?.streak ?? 0}
           onStay={() => {
             setLeaving(false)
+            // Back on the summary: Keep going is selected again, so Enter still works.
+            requestAnimationFrame(() => {
+              document.querySelector<HTMLButtonElement>('.summary > button')?.focus()
+            })
           }}
           onStop={() => {
             setLeaving(false)
@@ -683,7 +702,8 @@ function SessionSummary({
           a row, double coins until a miss.
         </p>
       )}
-      <button type="button" className="primary" onClick={onKeepGoing}>
+      {/* Selected from the start: Enter keeps going, ↓ selects Done for today. */}
+      <button type="button" className="primary" onClick={onKeepGoing} autoFocus>
         Keep going
       </button>
       <button type="button" className="raised" onClick={onDone}>

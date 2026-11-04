@@ -854,6 +854,13 @@ button {
   border-color: var(--accent);
 }
 
+/* The summary's and the warning's buttons, selected with ↓ / ↑ (or Tab): Enter picks it */
+.summary > button:focus-visible,
+.ninja-warning button:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+
 /* Chosen with the ↓ / ↑ keys (or Tab): Enter picks it */
 .option:focus-visible:not(:disabled) {
   outline: none;
