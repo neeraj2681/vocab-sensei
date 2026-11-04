@@ -1625,6 +1625,113 @@ a.primary:active {
   box-shadow: 0 3px 0 var(--accent);
 }
 
+/* A profile (yours on Me, or someone's from the leaderboard): photo centred at the top */
+.profile-view {
+  display: grid;
+  gap: 1rem;
+}
+
+.profile-view .tiles {
+  grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
+  margin: 0;
+}
+
+.profile-view__head {
+  display: grid;
+  justify-items: center;
+  gap: 0.35rem;
+  text-align: center;
+}
+
+.profile-view__head h2,
+.profile-view__head p {
+  margin: 0;
+}
+
+.profile-view__books {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.profile-view__books a {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.profile-view__books li + li {
+  border-top: 1px solid var(--border);
+}
+
+.profile-view__goodreads {
+  margin-left: auto;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+/* Leaderboard */
+.leaderboard h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.leaderboard__list {
+  display: grid;
+  margin: 0;
+  padding: 0.25rem 0.75rem;
+  list-style: none;
+}
+
+.leaderboard__list li + li {
+  border-top: 1px solid var(--border);
+}
+
+.leaderboard__list a {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.25rem;
+  color: inherit;
+  text-decoration: none;
+}
+
+.leaderboard__row--me {
+  margin: 0 -0.75rem;
+  padding: 0 0.75rem;
+  background: var(--accent-soft);
+}
+
+.leaderboard__rank {
+  width: 2rem;
+  font-family: var(--display);
+  font-size: 1.15rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.leaderboard__name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.leaderboard__coins {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
 /* You in a circle: your photo, or a figure for the gender you picked */
 .avatar {
   display: inline-grid;
@@ -2669,10 +2776,10 @@ a.secondary {
     inset: auto 0 0;
     z-index: 10;
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(6, minmax(0, 1fr)); /* six tabs, one row */
     gap: 0;
     margin: 0;
-    padding: 0.35rem max(0.5rem, env(safe-area-inset-right))
+    padding: 0.35rem max(0.25rem, env(safe-area-inset-right))
       calc(0.35rem + env(safe-area-inset-bottom)) max(0.5rem, env(safe-area-inset-left));
     border-top: 1px solid var(--border);
     background: var(--surface);
@@ -2681,8 +2788,11 @@ a.secondary {
   .tabs__tab {
     flex-direction: column;
     gap: 0.1rem;
+    min-width: 0;
     padding: 0.3rem 0;
-    font-size: 0.75rem;
+    font-size: 0.68rem;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
   }
 
   .app__main {

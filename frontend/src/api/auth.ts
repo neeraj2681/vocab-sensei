@@ -10,6 +10,8 @@ export interface User {
   gender?: Gender
   has_avatar?: boolean
   pending_email?: string | null // a new address waiting for its link to be opened
+  show_on_leaderboard?: boolean
+  show_books?: boolean // others see the books being read on the profile
   avatar_stamp?: number // client-only: changes when the picture does, so the <img> reloads
 }
 
@@ -34,6 +36,8 @@ export const authApi = {
   finishOnboarding: () => apiPost('/auth/me/onboarded'),
   changeName: (display_name: string) => apiPatch<User>('/auth/me/name', { display_name }),
   setGender: (gender: Gender) => apiPut<User>('/auth/me/gender', { gender }),
+  setOnLeaderboard: (show: boolean) => apiPut<User>('/auth/me/leaderboard', { show }),
+  setShowBooks: (show: boolean) => apiPut<User>('/auth/me/books-visibility', { show }),
   setAvatar: (file: File) => {
     const form = new FormData()
     form.append('file', file)

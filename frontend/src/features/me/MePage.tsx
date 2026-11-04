@@ -1,34 +1,35 @@
 import { Link } from 'react-router'
-import { Avatar } from '../../components/Avatar'
 import { Icon } from '../../components/Icon'
 import { useAuth } from '../auth/AuthContext'
+import { ProfileView } from '../profile/ProfileView'
+import { useProfile } from '../profile/useProfile'
+import { BackupPanel } from '../progress/BackupPanel'
+import { DeleteAccountPanel } from '../progress/DeleteAccountPanel'
 
-/** Your account: progress, settings and logging out, in one place. */
+/** Your profile (as others see it on the leaderboard, plus your email), then your account:
+settings, backup, deleting it, and logging out. */
 export function MePage() {
   const { user, logout } = useAuth()
+  const { profile, error } = useProfile(user?.id)
 
   return (
     <section className="me">
-      <div className="me__who">
-        <Link to="/settings" aria-label="Your photo">
-          <Avatar user={user} size={72} />
-        </Link>
-        <div>
-          <h2>{user?.display_name}</h2>
-          <p className="muted">{user?.email}</p>
-        </div>
-      </div>
+      {error && (
+        <p role="alert" className="form-error">
+          Couldn’t load your progress. Is the backend running?
+        </p>
+      )}
+      {!error && !profile && <p className="muted">Loading…</p>}
+      {profile && <ProfileView profile={profile} />}
 
       <nav className="card me__links" aria-label="Your account">
-        <Link to="/progress">
-          <Icon name="bar_chart" size={32} />
-          <strong>Progress</strong>
-        </Link>
         <Link to="/settings">
           <Icon name="gear" size={32} />
           <strong>Settings</strong>
         </Link>
       </nav>
+      <BackupPanel />
+      <DeleteAccountPanel />
 
       <button
         type="button"

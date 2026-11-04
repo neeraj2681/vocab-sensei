@@ -42,6 +42,14 @@ class ProfileService:
         user.gender = gender
         self._session.commit()
 
+    def set_on_leaderboard(self, user: User, show: bool) -> None:
+        user.show_on_leaderboard = show
+        self._session.commit()
+
+    def set_show_books(self, user: User, show: bool) -> None:
+        user.show_books = show
+        self._session.commit()
+
     def set_avatar(self, user: User, data: bytes) -> None:
         if len(data) > MAX_AVATAR_BYTES:
             raise ProfileError("Pick a picture under 5 MB")

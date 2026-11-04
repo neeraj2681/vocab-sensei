@@ -1,0 +1,97 @@
+import { screen, within } from '@testing-library/react'
+import { describe, expect, it } from 'vitest'
+import type { LeaderboardRow, Profile } from '../../api/leaderboard'
+import { fail, fakeApi, json, type Routes } from '../../test/fakeApi'
+import { renderApp } from '../../test/renderApp'
+
+const USER = { id: 1, email: 'reader@example.com', display_name: 'Reader', email_verified_at: 'x' }
+const row = (user_id: number, display_name: string, coins_today: number): LeaderboardRow => ({
+  user_id,
+  display_name,
+  gender: 'unspecified',
+  has_avatar: false,
+  coins_today,
+  me: user_id === 1,
+})
+const ROWS = [row(2, 'Asha', 40), row(1, 'Reader', 15), row(3, 'Bo', 0)]
+const ASHA: Profile = {
+  user_id: 2,
+  display_name: 'Asha',
+  gender: 'female',
+  has_avatar: false,
+  me: false,
+  coins: 900,
+  coins_today: 40,
+  streak: 6,
+  words_learned: 120,
+  answers: 300,
+  right: 240,
+  week: [],
+  history: [],
+  books: [{ title: 'Dracula', author: 'Bram Stoker' }],
+}
+
+function app(extra: Routes = {}) {
+  return fakeApi({
+    'GET /api/auth/me': () => json(USER),
+    'GET /api/leaderboard?tz=UTC': () => json(ROWS),
+    'GET /api/profiles/2?tz=UTC': () => json(ASHA),
+    ...extra,
+  })
+}
+
+describe('leaderboard', () => {
+  it('ranks everyone by coins earned today, you highlighted', async () => {
+    app()
+    renderApp('/leaderboard')
+
+    const rows = within(await screen.findByRole('list')).getAllByRole('listitem')
+
+    expect(rows.map((r) => r.textContent)).toEqual(['🥇Asha 40', '🥈Reader (you) 15', '🥉Bo 0'])
+    expect(rows[1]).toHaveClass('leaderboard__row--me')
+  })
+
+  it('is a tab in the main menu', async () => {
+    app()
+    renderApp('/leaderboard')
+
+    expect(await screen.findByRole('link', { name: 'Leaderboard' })).toHaveAttribute(
+      'href',
+      '/leaderboard',
+    )
+  })
+
+  it('opens someone’s profile: stats and books, never their email', async () => {
+    app()
+    const user = renderApp('/leaderboard')
+
+    await user.click(await screen.findByRole('link', { name: /Asha/ }))
+
+    expect(await screen.findByRole('heading', { name: 'Asha' })).toBeInTheDocument()
+    expect(screen.getByText('Coins', { selector: 'dt' }).closest('.tile')).toHaveTextContent('900')
+    expect(screen.getByRole('link', { name: /Dracula/ })).toHaveAttribute(
+      'href',
+      'https://www.goodreads.com/search?q=Dracula%20Bram%20Stoker',
+    )
+    expect(screen.queryByText(/@/)).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Log out' })).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '← Leaderboard' })).toBeInTheDocument()
+  })
+
+  it('says so when a profile is hidden', async () => {
+    app({ 'GET /api/profiles/9?tz=UTC': () => fail(404, 'No such profile') })
+
+    renderApp('/users/9')
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Couldn’t load this profile')
+  })
+
+  it('says when someone keeps their books private', async () => {
+    app({ 'GET /api/profiles/2?tz=UTC': () => json({ ...ASHA, books: [], books_hidden: true }) })
+
+    renderApp('/users/2')
+
+    expect(await screen.findByText(/Asha keeps their books private/)).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /Dracula/ })).not.toBeInTheDocument()
+  })
+})

@@ -1,5 +1,6 @@
 import { screen, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
+import type { Profile } from '../../api/leaderboard'
 import type { HistoryPoint, PractisedWord, QuizStats } from '../../api/quiz'
 import { fail, fakeApi, json, noContent, type Routes } from '../../test/fakeApi'
 import { renderApp } from '../../test/renderApp'
@@ -39,35 +40,49 @@ function progress(history: HistoryPoint[] = HISTORY, extra: Routes = {}) {
     'GET /api/quiz/stats?tz=UTC': () => json(STATS),
     'GET /api/quiz/history': () => json(history),
     'GET /api/quiz/words?include_known=true': () => json(WORDS),
+    'GET /api/profiles/1?tz=UTC': () => json(PROFILE),
     ...extra,
   })
 }
 
-describe('progress page', () => {
-  it('shows score, streak, today, answers and accuracy', async () => {
+const PROFILE: Profile = {
+  user_id: 1,
+  display_name: 'Reader',
+  gender: 'unspecified',
+  has_avatar: false,
+  me: true,
+  coins: 15,
+  coins_today: 10,
+  streak: 2,
+  words_learned: 7,
+  answers: 4,
+  right: 3,
+  week: [],
+  history: HISTORY,
+  books: [{ title: 'Moby-Dick', author: 'Herman Melville' }],
+}
+
+describe('Me page', () => {
+  it('shows your photo, coins, streak, today, words learned and accuracy', async () => {
     progress()
 
-    renderApp('/progress')
+    renderApp('/me')
 
-    expect(await screen.findByRole('heading', { name: 'Your progress' })).toBeInTheDocument()
-    const tiles = screen.getByRole('heading', { name: 'Your progress' }).nextElementSibling
-    const tile = (label: string) =>
-      within(tiles as HTMLElement)
-        .getByText(label)
-        .closest('.tile')
-    expect(tile('Score')).toHaveTextContent('15')
+    expect(await screen.findByRole('heading', { name: 'Reader' })).toBeInTheDocument()
+    expect(screen.getByText('reader@example.com')).toBeInTheDocument() // only on your own
+    const tile = (label: string) => screen.getByText(label, { selector: 'dt' }).closest('.tile')
+    expect(tile('Coins')).toHaveTextContent('15')
     expect(tile('Streak')).toHaveTextContent('🔥 2 days')
-    expect(tile('Today')).toHaveTextContent('4 / 10')
-    expect(tile('Answers')).toHaveTextContent('4')
+    expect(tile('Today')).toHaveTextContent('+10')
+    expect(tile('Words learned')).toHaveTextContent('7')
     expect(tile('Right')).toHaveTextContent('75%')
   })
 
-  it('opens the score graph on click, with a table of the same numbers', async () => {
+  it('opens the score graph on click', async () => {
     progress()
-    const user = renderApp('/progress')
+    const user = renderApp('/me')
     const toggle = await screen.findByRole('button', { name: /Score over time/ })
     expect(toggle).toHaveAttribute('aria-expanded', 'false')
-    expect(screen.queryByRole('img', { name: /Score after each/ })).not.toBeInTheDocument()
 
     await user.click(toggle)
 
@@ -75,43 +90,53 @@ describe('progress page', () => {
     expect(
       screen.getByRole('img', { name: 'Score after each of your 4 answers' }),
     ).toBeInTheDocument()
-    const rows = within(screen.getByRole('table')).getAllByRole('row').slice(1)
-    expect(rows.map((row) => within(row).getAllByRole('cell')[0]?.textContent)).toEqual([
-      '4',
-      '3',
-      '2',
-      '1',
-    ])
-    expect(rows[1]).toHaveTextContent('✗ wrong')
+  })
+
+  it('lists the books being read, each opening Goodreads', async () => {
+    progress()
+    renderApp('/me')
+
+    const book = await screen.findByRole('link', { name: /Moby-Dick/ })
+
+    expect(book).toHaveAttribute(
+      'href',
+      'https://www.goodreads.com/search?q=Moby-Dick%20Herman%20Melville',
+    )
+    expect(book).toHaveAttribute('target', '_blank')
   })
 
   it('invites you to the quiz before the first answer', async () => {
-    progress([])
+    progress(HISTORY, {
+      'GET /api/profiles/1?tz=UTC': () => json({ ...PROFILE, history: [], answers: 0, right: 0 }),
+    })
 
-    renderApp('/progress')
+    renderApp('/me')
 
     expect(await screen.findByRole('link', { name: 'Start the quiz' })).toHaveAttribute(
       'href',
       '/quiz',
     )
-    expect(screen.queryByRole('button', { name: /Score over time/ })).not.toBeInTheDocument()
   })
 
   it('reports a failure', async () => {
-    fakeApi({
-      'GET /api/auth/me': () => json(USER),
-      'GET /api/quiz/stats?tz=UTC': () => fail(500, 'boom'),
-      'GET /api/quiz/history': () => json([]),
-    })
+    progress(HISTORY, { 'GET /api/profiles/1?tz=UTC': () => fail(500, 'boom') })
+
+    renderApp('/me')
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/Couldn.t load your progress/)
+  })
+
+  it('the old Progress address opens Me', async () => {
+    progress()
 
     renderApp('/progress')
 
-    expect(await screen.findByRole('alert')).toHaveTextContent("Couldn't load your progress")
+    expect(await screen.findByRole('heading', { name: 'Reader' })).toBeInTheDocument()
   })
 })
 
 describe('Me tab', () => {
-  it('leads to the progress page', async () => {
+  it('opens your profile', async () => {
     progress(HISTORY, {
       'GET /api/documents': () => json([]),
       'GET /api/readings': () => json([]),
@@ -120,9 +145,8 @@ describe('Me tab', () => {
     const user = renderApp('/')
 
     await user.click(await screen.findByRole('link', { name: 'Me' }))
-    await user.click(await screen.findByRole('link', { name: /Progress/ }))
 
-    expect(await screen.findByRole('heading', { name: 'Your progress' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Reader' })).toBeInTheDocument()
   })
 
   it('logs out', async () => {

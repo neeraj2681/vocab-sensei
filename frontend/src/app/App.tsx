@@ -13,7 +13,8 @@ import { VerifyEmailPage } from '../features/auth/VerifyEmailPage'
 import { BookPage } from '../features/library/BookPage'
 import { LibraryPage } from '../features/library/LibraryPage'
 import { MePage } from '../features/me/MePage'
-import { ProgressPage } from '../features/progress/ProgressPage'
+import { LeaderboardPage } from '../features/leaderboard/LeaderboardPage'
+import { UserProfilePage } from '../features/profile/UserProfilePage'
 import { QuizPage } from '../features/quiz/QuizPage'
 import { SettingsPage } from '../features/settings/SettingsPage'
 import { ShopPage } from '../features/shop/ShopPage'
@@ -98,11 +99,20 @@ function AppRoutes() {
           </RequireAuth>
         }
       />
+      <Route path="/progress" element={<Navigate to="/me" replace />} />
       <Route
-        path="/progress"
+        path="/leaderboard"
         element={
           <RequireAuth>
-            <ProgressPage />
+            <LeaderboardPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/users/:id"
+        element={
+          <RequireAuth>
+            <UserProfilePage />
           </RequireAuth>
         }
       />
