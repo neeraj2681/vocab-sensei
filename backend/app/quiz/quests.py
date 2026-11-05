@@ -121,7 +121,7 @@ def _named(quest: Quest, book: Book | None) -> Quest:
         QuestKind.IN_A_ROW: f"{quest.target} right in a row",
         QuestKind.NINJA: "Reach Ninja Mode",
         QuestKind.LEARN: (
-            "Learn a new word" if quest.target == 1 else f"Learn {quest.target} new words"
+            "Finish a word (to 100%)" if quest.target == 1 else f"Finish {quest.target} words"
         ),
         QuestKind.BOOK: f"Answer {quest.target} from {book.title if book else 'your book'}",
         QuestKind.EARLY: "Meet your goal before noon",

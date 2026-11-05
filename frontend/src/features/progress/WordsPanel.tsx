@@ -47,14 +47,21 @@ export function WordsPanel() {
 
   const byTab: Record<Tab, PractisedWord[]> = {
     learned: words.filter((w) => w.learned),
-    learning: words.filter((w) => !w.learned && !w.known),
+    learning: words.filter((w) => !w.learned && !w.known && !w.later),
     known: words.filter((w) => w.known),
   }
   const shownTab =
     tab ?? (['learned', 'learning', 'known'] as const).find((t) => byTab[t].length) ?? 'learning'
   const query = filter.trim().toLowerCase()
   const opened = words.find((w) => w.word === open)
-  const shown = byTab[shownTab].filter((w) => w.word.toLowerCase().includes(query))
+  const matches = (w: PractisedWord) => w.word.toLowerCase().includes(query)
+  const shown = byTab[shownTab].filter(matches)
+  const later = words.filter((w) => w.later && matches(w))
+  const almost = shownTab === 'learning' ? shown.filter((w) => w.progress >= ALMOST) : []
+  const rest = shownTab === 'learning' ? shown.filter((w) => w.progress < ALMOST) : shown
+  const openWord = (word: string) => {
+    setOpen(word)
+  }
 
   return (
     <div className="panel">
@@ -90,31 +97,29 @@ export function WordsPanel() {
               }[shownTab]}
         </p>
       ) : (
-        <ul className="word-list">
-          {shown.map((word) => (
-            <li key={word.word}>
-              <button
-                type="button"
-                className="word-row"
-                aria-haspopup="dialog"
-                onClick={() => {
-                  setOpen(word.word)
-                }}
-              >
-                {word.known ? (
-                  <span className="word-row__known" role="img" aria-label="Known">
-                    <Icon name="check_mark_button" size={28} />
-                  </span>
-                ) : (
-                  <ProgressRing percent={word.progress} />
-                )}
-                <span className="word-row__word">{word.word}</span>
-                {word.book && <span className="word-row__book muted">{word.book}</span>}
-              </button>
-              <SpeakButton word={word.word} />
-            </li>
-          ))}
-        </ul>
+        <>
+          {almost.length > 0 && (
+            <>
+              <h4 className="word-group">⭐ Almost there · {almost.length}</h4>
+              <WordRows words={almost} onOpen={openWord} />
+            </>
+          )}
+          {almost.length > 0 && rest.length > 0 && (
+            <h4 className="word-group">On the way · {rest.length}</h4>
+          )}
+          <WordRows words={rest} onOpen={openWord} />
+        </>
+      )}
+      {shownTab === 'learning' && later.length > 0 && (
+        <details className="word-later">
+          <summary>
+            Later · {later.length}{' '}
+            <span className="muted">
+              (waiting for a place: up to {LEARNING_CAP} words are practised at once)
+            </span>
+          </summary>
+          <WordRows words={later} onOpen={openWord} />
+        </details>
       )}
       {opened && (
         <WordCard
@@ -130,6 +135,40 @@ export function WordsPanel() {
         />
       )}
     </div>
+  )
+}
+
+const ALMOST = 70 // progress from which a word is "almost there"
+const LEARNING_CAP = 100 // the server's learning_cap
+
+function WordRows({ words, onOpen }: { words: PractisedWord[]; onOpen: (word: string) => void }) {
+  if (words.length === 0) return null
+  return (
+    <ul className="word-list">
+      {words.map((word) => (
+        <li key={word.word}>
+          <button
+            type="button"
+            className="word-row"
+            aria-haspopup="dialog"
+            onClick={() => {
+              onOpen(word.word)
+            }}
+          >
+            {word.known ? (
+              <span className="word-row__known" role="img" aria-label="Known">
+                <Icon name="check_mark_button" size={28} />
+              </span>
+            ) : (
+              <ProgressRing percent={word.progress} />
+            )}
+            <span className="word-row__word">{word.word}</span>
+            {word.book && <span className="word-row__book muted">{word.book}</span>}
+          </button>
+          <SpeakButton word={word.word} />
+        </li>
+      ))}
+    </ul>
   )
 }
 

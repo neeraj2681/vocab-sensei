@@ -62,7 +62,7 @@ def apply_answer(
     if progress.status is WordStatus.KNOWN:
         raise ValueError("known words are not quizzed")
 
-    delta = rules.correct_delta if correct else rules.wrong_delta
+    delta = rules.word_correct_delta if correct else rules.wrong_delta
     score = max(rules.floor, effective_score(progress, now, rules) + delta)
 
     if score >= rules.learned_threshold:

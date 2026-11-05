@@ -173,8 +173,11 @@ describe('Me tab', () => {
 
     await user.click(screen.getByRole('button', { name: 'Learning · 2' }))
 
-    const rows = within(screen.getByRole('list')).getAllByRole('listitem')
+    const rows = screen
+      .getAllByRole('list')
+      .flatMap((list) => within(list).getAllByRole('listitem'))
     expect(rows.map((row) => row.textContent)).toEqual(['85%spleenMoby-Dick', '5%hypos'])
+    expect(screen.getByRole('heading', { name: '⭐ Almost there · 1' })).toBeInTheDocument()
     expect(
       within(screen.getByRole('button', { name: /spleen/ })).getByRole('img', {
         name: '85% learned',
@@ -285,5 +288,24 @@ describe('Me tab', () => {
     await user.click(await screen.findByRole('button', { name: 'Known · 0' }))
 
     expect(screen.getByText(/The quiz won’t ask them again/)).toBeInTheDocument()
+  })
+
+  it('keeps words beyond the 100 being practised in a Later section', async () => {
+    const waiting = {
+      word: 'quaint',
+      book: null,
+      meaning: null,
+      sentence: null,
+      progress: 0,
+      learned: false,
+      later: true,
+    }
+    progress(HISTORY, { 'GET /api/quiz/words?include_known=true': () => json([...WORDS, waiting]) })
+    const user = renderApp('/words')
+
+    await user.click(await screen.findByRole('button', { name: 'Learning · 2' })) // not counted
+
+    const later = screen.getByText(/Later · 1/).closest('details')
+    expect(later).toHaveTextContent('quaint')
   })
 })

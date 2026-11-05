@@ -108,6 +108,7 @@ class Stats:
     combo_after: int = 5  # Ninja Mode starts after this many in a row...
     combo_multiplier: int = 2  # ...and multiplies the coins of right answers by this
     double_coins_until: datetime | None = None  # a Shop item doubling right answers' coins
+    learned_today: int = 0  # words that reached "learned" today
 
 
 @dataclass(frozen=True)
@@ -162,6 +163,7 @@ class PractisedWord:
     progress: int  # 0-100: how far the word's score is towards "learned"
     learned: bool
     known: bool = False  # marked "I know this": never asked again
+    later: bool = False  # in progress but waiting: beyond the words being practised now
 
 
 def daily_goal(user: User, tz: ZoneInfo) -> DailyGoal:
@@ -200,6 +202,7 @@ def quiz_stats(repo: QuizRepository, user: User, now: datetime, tz: ZoneInfo) ->
         ],
         combo=user.combo,
         double_coins_until=user.double_coins_until,
+        learned_today=repo.learned_since(user.id, datetime.combine(today, time.min, tz)),
     )
 
 
@@ -324,8 +327,14 @@ class QuizService:
         def usable(word_id: int) -> bool:
             return word_id not in exclude and (allowed is None or word_id in allowed)
 
+        # At most `learning_cap` words in progress: those ranked first (top book, then closest to
+        # learned) are practised; the rest wait with their progress. A new word comes in only
+        # when a place is free, except when studying one chapter.
+        ranked = self._repo.learning_by_priority(user_id)
+        cap = self._quiz.learning_cap
+        active = {w.word_id for w in ranked[:cap]}
         new = [word_id for word_id in new if usable(word_id)]
-        if new:
+        if new and (allowed is not None or len(ranked) < cap):
             pools[Pool.NEW] = new[0]
         learning = [
             w
@@ -333,7 +342,7 @@ class QuizService:
             for w in self._repo.words_with_status(
                 user_id, WordStatus.LEARNING, exclude, in_current_reads=True
             )
-            if usable(w.word_id)
+            if usable(w.word_id) and (allowed is not None or w.word_id in active)
         ]
         if learning:
             pools[Pool.LEARNING] = learning[0].word_id
@@ -651,6 +660,9 @@ class QuizService:
     def practised_words(self, user_id: int, now: datetime) -> list[PractisedWord]:
         """Learned words first, then the rest by progress, then the ones already known."""
         rules = self._settings.scoring
+        practised_now = {
+            w.word_id for w in self._repo.learning_by_priority(user_id)[: self._quiz.learning_cap]
+        }
         words = []
         for user_word, word in self._repo.practised_words(user_id):
             progress = _progress(user_word)
@@ -667,6 +679,8 @@ class QuizService:
                     learned=not known
                     and current_status(progress, now, rules) is WordStatus.LEARNED,
                     known=known,
+                    later=user_word.status is WordStatus.LEARNING
+                    and user_word.word_id not in practised_now,
                 )
             )
         return sorted(words, key=lambda w: (w.known, not w.learned, -w.progress, w.lemma))

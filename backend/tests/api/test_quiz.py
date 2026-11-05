@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_dictionary
 from app.api.quiz import get_now
+from app.core.config import Settings
 from app.core.enums import DocumentFormat, DocumentStatus, PartOfSpeech, QuestionType, WordStatus
 from app.db.models import (
     Chapter,
@@ -182,10 +183,10 @@ class TestAnswering:
         result = answer(user_client, session)
 
         assert result["correct"] is True
-        assert result["points"] == 5
-        assert result["score_delta"] == 5
+        assert result["points"] == 5  # coins
+        assert result["score_delta"] == 10  # the word's progress: 10 right answers to learn it
         assert result["counted"] is True
-        assert result["word_score"] == 5
+        assert result["word_score"] == 10
         assert result["word_status"] == "learning"
         assert result["context_sentence"] == "A sentence with word00."
         assert result["stats"] == {
@@ -198,6 +199,7 @@ class TestAnswering:
             "combo_after": 5,
             "combo_multiplier": 2,
             "double_coins_until": None,
+            "learned_today": 0,
         }
 
     def test_a_wrong_answer_always_takes_ten_from_the_total(
@@ -349,9 +351,9 @@ def test_learned_words_come_back_for_review_once_their_score_decays(
     result = answer(user_client, session)
 
     assert result["word"] == "word07"
-    assert result["score_delta"] == 5  # 85 after three weeks of decay, now 90
+    assert result["score_delta"] == 10  # 85 after three weeks of decay, now 95
     assert result["points"] == 5
-    assert result["word_score"] == 90
+    assert result["word_score"] == 95
 
 
 def only_word_in_progress(session: Session, lemma: str) -> None:
@@ -396,7 +398,7 @@ def test_words_in_progress_stay_if_another_current_read_uses_them(
     only_word_in_progress(session, "word03")
 
     assert answer(user_client, session)["word"] == "word03"
-    assert user_client.get("/api/quiz/words").json()[0]["progress"] == 45  # progress kept
+    assert user_client.get("/api/quiz/words").json()[0]["progress"] == 50  # progress kept
 
 
 def test_questions_carry_what_either_answer_would_show(
@@ -706,7 +708,7 @@ def test_words_lists_answered_words_with_their_progress(
     assert response.status_code == 200, response.text
     words = response.json()
     assert len(words) == 3
-    assert {(w["progress"], w["learned"], w["book"]) for w in words} == {(5, False, "Moby-Dick")}
+    assert {(w["progress"], w["learned"], w["book"]) for w in words} == {(10, False, "Moby-Dick")}
     assert all(w["meaning"] == f"meaning of {w['word']}" for w in words)
     assert all(w["sentence"] == f"A sentence with {w['word']}." for w in words)
 
@@ -830,3 +832,42 @@ class TestNinjaMode:
 
 def test_words_is_empty_before_any_answer(user_client: TestClient, book: Document) -> None:
     assert user_client.get("/api/quiz/words").json() == []
+
+
+@pytest.mark.usefixtures("book", "clock")
+class TestLearningCap:
+    """At most `learning_cap` words in progress: no new word until one is learned or known."""
+
+    def test_no_new_words_while_the_cap_is_full(
+        self, user_client: TestClient, session: Session, settings: Settings
+    ) -> None:
+        settings.quiz.learning_cap = 2
+        first = [answer(user_client, session)["word"] for _ in range(2)]  # two words in progress
+
+        later = {answer(user_client, session)["word"] for _ in range(6)}
+
+        assert later <= set(first)  # only those two come back
+
+    def test_a_learned_word_frees_a_place(
+        self, user_client: TestClient, session: Session, settings: Settings
+    ) -> None:
+        settings.quiz.learning_cap = 1
+        first = answer(user_client, session)["word"]
+        word = session.scalars(select(Word).where(Word.lemma == first)).one()
+        progress = session.get(UserWord, (reader(session).id, word.id))
+        assert progress is not None
+        progress.status = WordStatus.KNOWN
+        session.commit()
+
+        assert answer(user_client, session)["word"] != first  # a new word comes in
+
+    def test_words_beyond_the_cap_wait_marked_later(
+        self, user_client: TestClient, session: Session, settings: Settings
+    ) -> None:
+        for _ in range(3):
+            answer(user_client, session)
+        settings.quiz.learning_cap = 2
+
+        words = user_client.get("/api/quiz/words").json()
+
+        assert sorted(w["later"] for w in words) == [False, False, True]

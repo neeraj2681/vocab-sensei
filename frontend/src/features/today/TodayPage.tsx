@@ -75,6 +75,12 @@ export function TodayPage() {
                 ? `${String(left)} more answers reach today's goal.`
                 : 'Goal reached today. Nice work!'}
             </p>
+            {(stats.learned_today ?? 0) > 0 && (
+              <p className="today__learned">
+                <Icon name="party_popper" size={22} /> {stats.learned_today}{' '}
+                {stats.learned_today === 1 ? 'word' : 'words'} learned today!
+              </p>
+            )}
           </div>
         </div>
 

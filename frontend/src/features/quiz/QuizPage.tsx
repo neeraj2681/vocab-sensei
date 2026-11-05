@@ -681,13 +681,18 @@ function Feedback({
             {question.meaning && <span className="muted"> · {question.meaning}</span>}
           </>
         )}
-        {learned && (
-          <>
-            {' '}
-            <Icon name="party_popper" size={24} /> Word learned!
-          </>
-        )}
       </p>
+      {learned && (
+        <div className="feedback__learned">
+          <Icon name="trophy" size={56} />
+          <div>
+            <strong>Word learned!</strong>
+            <span>
+              <em>{question.word}</em> is yours: 100%. It comes back now and then so it sticks.
+            </span>
+          </div>
+        </div>
+      )}
       {answered.ninja === 'started' && (
         <p className="ninja-note ninja-note--start">
           <Icon name="ninja" size={32} /> <strong>{NINJA}!</strong> Double coins until a miss.
