@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 from app.core.enums import DocumentStatus, QuestionType, WordStatus
 from app.db.models import CurrentReading, Document, Question, QuizAnswer, UserWord, Word
 from app.db.types import utcnow
+from app.quiz.learning_list import MAX_READING
 from app.repositories.documents import readable_by
 from app.repositories.readings import ReadingRepository
 from app.repositories.words import WordRepository
@@ -224,7 +225,7 @@ class BackupService:
             if book is None:
                 missing.append(item.title)
                 continue
-            if book.id in current:
+            if book.id in current or len(current) >= MAX_READING:
                 continue
             current.add(book.id)
             added += 1

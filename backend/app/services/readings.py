@@ -1,12 +1,14 @@
 """The books a user is reading right now, in priority order, and the chapter they're on.
 
-Quizzes draw words from these books, highest priority first, starting at the current chapter.
+Quizzes draw words from these books (at most `MAX_READING`), in turns, starting at the current
+chapter.
 """
 
 from sqlalchemy.orm import Session
 
 from app.core.enums import DocumentStatus
 from app.db.models import CurrentReading, Document
+from app.quiz.learning_list import MAX_READING
 from app.repositories.readings import ReadingRepository
 
 
@@ -31,10 +33,16 @@ class ReadingService:
             raise ReadingError("This book isn't ready yet")
         if self._readings.get(user_id, document.id):
             raise ReadingError("You're already reading this book")
+        reading_now = len(self._readings.list_for(user_id))
+        if reading_now >= MAX_READING:
+            raise ReadingError(
+                f"You're reading {MAX_READING} books. Stop reading one of them first: "
+                "its progress is kept."
+            )
         reading = CurrentReading(
             user_id=user_id,
             document_id=document.id,
-            priority=len(self._readings.list_for(user_id)),
+            priority=reading_now,
             current_chapter_index=0,
         )
         self._readings.add(reading)

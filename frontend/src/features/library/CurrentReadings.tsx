@@ -30,6 +30,12 @@ export function CurrentReadings({ readings, onChange }: Props) {
   return (
     <section aria-labelledby="reading-heading" className="panel">
       <h3 id="reading-heading">Currently reading</h3>
+      {readings.length > 0 && (
+        <p className="muted">
+          Up to 2 books at once. Their words share your practice equally, so both move along
+          together.
+        </p>
+      )}
       {readings.length === 0 ? (
         <p className="muted">
           Nothing yet. Start a classic below or upload your own book; its words go into your

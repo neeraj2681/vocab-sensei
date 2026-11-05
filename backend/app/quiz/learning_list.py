@@ -1,8 +1,9 @@
 """Which new words to learn next when several books are read at once (docs/PROJECT_PLAN.md §5.2).
 
-Each current read supplies its own queue of new words in reading order. The queues share the slots
-by priority: with n books the weights are n, n-1, ..., 1 (three books → 3:2:1), so the main book
-moves fastest while the others keep progressing. A word that appears in several books is taken once.
+Each current read (at most `MAX_READING`) supplies its own queue of new words in reading order. The
+queues take turns, so every book moves at the same pace. A word that appears in several books is
+taken once. The words in progress are shared the same way (`share_places`): equal halves of the
+places being practised, with a book that has too few words leaving its spare places to the other.
 
 Within a book, words from chapters before the current one (skipped by starting later) are mixed in
 the same way at a lower weight: 1 in `EARLIER_CHAPTERS_EVERY` new words.
@@ -11,6 +12,16 @@ the same way at a lower weight: 1 in `EARLIER_CHAPTERS_EVERY` new words.
 from collections.abc import Callable, Hashable, Sequence
 
 EARLIER_CHAPTERS_EVERY = 4  # 3 words from the current chapter on, then 1 from before it
+MAX_READING = 2  # books read at once
+
+
+def share_places[T](queues: Sequence[Sequence[T]], key: Callable[[T], Hashable]) -> list[T]:
+    """Every item, one from each queue in turn (each queue best first), duplicates once.
+
+    The first `cap` are the ones being practised: an equal share per queue, and a queue too short
+    for its share leaves the rest to the others.
+    """
+    return mix_by_priority(queues, sum(len(q) for q in queues), key, [1] * len(queues))
 
 
 def ahead_then_earlier[T](
@@ -28,12 +39,12 @@ def mix_by_priority[T](
 ) -> list[T]:
     """Up to `count` items from `queues` (highest priority first), interleaved by weight.
 
-    Weights default to n, n-1, ..., 1. Uses smooth weighted round-robin, so picks are spread out
+    Weights default to equal. Uses smooth weighted round-robin, so picks are spread out
     (A B A C B A) rather than bunched (A A A B B C). An empty queue drops out and its share goes
     to the others.
     """
     if weights is None:
-        weights = [len(queues) - i for i in range(len(queues))]
+        weights = [1] * len(queues)
     credit = [0] * len(queues)
     positions = [0] * len(queues)
     taken: set[Hashable] = set()

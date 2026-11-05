@@ -77,9 +77,10 @@ Extract text per chapter ──► tokenize + lemmatize ──► filter (stopwo
   Skippable; untriaged words count as New.
 
 ### 5.2 Current reading chooser
-- **Several current reads at once, with priority.** Multi-select of uploaded books → `current_readings`, ordered by
-  a user-set priority (drag to reorder). New-word slots in a quiz are shared across current reads, weighted by
-  priority (e.g. 1st book gets most of the slots), so the main book moves fastest while others keep progressing.
+- **Up to two current reads at once.** `current_readings`, ordered by a user-set priority (drag to reorder). The
+  books take turns for new words, and the 100 words in progress are shared in equal halves (a book with too few
+  words leaves its spare places to the other), so both books move along together. Starting a third is refused
+  until one is stopped.
 - Each current read tracks **current chapter** (user updates it, or "I finished chapter N" button).
 - `learning_list` is derived (not hand-maintained): words from current reads, ordered by
   `book priority → chapter (starting at current chapter) → first position in chapter`, excluding learned/known words.
@@ -463,7 +464,7 @@ months (belts, garden, badges). None of it changes how words are scored.
 
 | # | Question | Decision |
 |---|----------|----------|
-| 1 | One book or several current reads? | **Several, with priority**; quiz slots weighted by priority (§5.2) |
+| 1 | One book or several current reads? | **Up to two**, sharing quiz words equally (§5.2) |
 | 2 | Quiz length | **Never-ending quiz** with a live lifetime score; 10 answers a day = daily goal/streak (§5.3). Replaced "rounds of 10" on 30 Oct 2026 |
 | 3 | Words already known | **Optional triage after upload** (Known / Unsure / New) **+ "I know this" button** in quizzes (§5.1, §5.3) |
 | 4 | Devices | **Desktop first**; mobile-friendly layout and PWA in Phase 2 |

@@ -2,9 +2,10 @@
 
 Per book, in reading order and skipping words already in progress, learned or known: mostly words
 from the current chapter on (each at the next chapter that uses it), with 1 in 4 from the chapters
-before it. Books share the list by priority (see app.quiz.learning_list).
+before it. Books take turns (see app.quiz.learning_list).
 """
 
+from collections.abc import Collection
 from dataclasses import dataclass
 
 from sqlalchemy.orm import Session
@@ -29,12 +30,17 @@ class LearningService:
         self._learning = LearningRepository(session)
         self._readings = ReadingRepository(session)
 
-    def next_new_words(self, user_id: int, count: int) -> list[LearningWord]:
+    def next_new_words(
+        self, user_id: int, count: int, only: Collection[int] | None = None
+    ) -> list[LearningWord]:
+        """The next `count` new words, from every current read or only the books in `only`."""
         # Words shared with other books may be dropped as duplicates; at most `count` are, so
         # twice as many always leaves enough.
         limit = 2 * count
         queues = []
         for reading in self._readings.list_for(user_id):
+            if only is not None and reading.document_id not in only:
+                continue
 
             def words(earlier: bool, reading: CurrentReading = reading) -> list[LearningWord]:
                 rows = self._learning.new_words(

@@ -103,4 +103,23 @@ describe('classics shelf', () => {
     await within(shelf).findByText('Dracula', { selector: '.cover__title' })
     expect(shelf.querySelector('img.cover')).toHaveAttribute('src', '/api/documents/3/cover')
   })
+
+  it('says when two books are already being read', async () => {
+    const OTHER = classic(7, 'Emma', 'Jane Austen', 900)
+    home([reading(PRIDE), { ...reading(OTHER), priority: 1 }], {
+      'POST /api/readings': () =>
+        json(
+          {
+            detail: "You're reading 2 books. Stop reading one of them first: its progress is kept.",
+          },
+          409,
+        ),
+    })
+    const user = renderApp('/books')
+
+    expect(await screen.findByText(/Up to 2 books at once/)).toBeInTheDocument()
+    await user.click(await screen.findByRole('button', { name: `Start reading ${ALICE.title}` }))
+
+    expect(await screen.findByText(/You're reading 2 books/)).toBeInTheDocument()
+  })
 })

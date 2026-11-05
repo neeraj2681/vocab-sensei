@@ -1,19 +1,29 @@
-from app.quiz.learning_list import mix_by_priority
+from app.quiz.learning_list import mix_by_priority, share_places
 
 
 def mix(queues: list[list[str]], count: int) -> list[str]:
     return mix_by_priority(queues, count, key=lambda word: word)
 
 
-def test_three_books_share_slots_three_two_one() -> None:
-    picked = mix([["a1", "a2", "a3", "a4"], ["b1", "b2", "b3"], ["c1", "c2"]], 6)
+def test_books_take_turns() -> None:
+    picked = mix([["a1", "a2", "a3", "a4"], ["b1", "b2", "b3"]], 6)
 
     books = [word[0] for word in picked]
-    assert (books.count("a"), books.count("b"), books.count("c")) == (3, 2, 1)
+    assert (books.count("a"), books.count("b")) == (3, 3)
 
 
 def test_picks_are_spread_out_and_keep_each_books_order() -> None:
-    assert mix([["a1", "a2", "a3"], ["b1", "b2"]], 4) == ["a1", "b1", "a2", "a3"]
+    assert mix([["a1", "a2", "a3"], ["b1", "b2"]], 4) == ["a1", "b1", "a2", "b2"]
+
+
+def test_places_are_shared_in_equal_halves_and_a_short_book_leaves_its_spare() -> None:
+    a = [f"a{i}" for i in range(80)]
+    b = [f"b{i}" for i in range(30)]
+
+    places = share_places([a, b], key=lambda word: word)[:100]
+    assert (sum(w[0] == "a" for w in places), sum(w[0] == "b" for w in places)) == (70, 30)
+    halves = share_places([a, [f"b{i}" for i in range(60)]], key=lambda word: word)[:100]
+    assert (sum(w[0] == "a" for w in halves), sum(w[0] == "b" for w in halves)) == (50, 50)
 
 
 def test_a_single_book_is_read_in_order() -> None:

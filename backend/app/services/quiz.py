@@ -26,6 +26,7 @@ from app.core.config import Settings
 from app.core.enums import QuestionType, WordStatus
 from app.db.models import GoalChange, Question, QuizAnswer, User, UserWord, Word
 from app.dictionary.types import Dictionary
+from app.quiz.learning_list import share_places
 from app.quiz.questions import (
     Candidate,
     DefinitionQuestionGenerator,
@@ -41,6 +42,7 @@ from app.quiz.selection import DailyGoal, Pool, choose_pool, choose_question_typ
 from app.quiz.shop import DOUBLE_COINS_MULTIPLIER, Freeze, Item, freezes_to_use
 from app.repositories.learning import LearningRepository
 from app.repositories.quiz import QuizRepository
+from app.repositories.readings import ReadingRepository
 from app.scoring.rules import (
     WordProgress,
     answer_points,
@@ -235,6 +237,7 @@ class QuizService:
         self._repo = QuizRepository(session)
         self._learning = LearningService(session)
         self._learning_repo = LearningRepository(session)
+        self._readings = ReadingRepository(session)
 
     # Asking
 
@@ -310,9 +313,25 @@ class QuizService:
         self, user_id: int, now: datetime, exclude: set[int], focus: Focus | None
     ) -> int | None:
         pools: dict[Pool, int] = {}
+        # At most `learning_cap` words in progress, shared equally by the current reads (see
+        # `_ranked_learning`): those are practised; the rest wait with their progress.
+        ranked, per_book = self._ranked_learning(user_id)
+        cap = self._quiz.learning_cap
         if focus is None:
+            # A new word comes in only when a place is free: anywhere under the cap, or in a
+            # book that has fewer words in progress than its share.
+            only = None
+            if len(ranked) >= cap:
+                books = [r.document_id for r in self._readings.list_for(user_id)]
+                share = cap // max(len(books), 1)
+                only = {book for book in books if per_book.get(book, 0) < share}
             new = [
-                item.word.id for item in self._learning.next_new_words(user_id, len(exclude) + 1)
+                item.word.id
+                for item in (
+                    self._learning.next_new_words(user_id, len(exclude) + 1, only)
+                    if only != set()
+                    else []
+                )
             ]
             allowed: set[int] | None = None
         else:
@@ -327,14 +346,9 @@ class QuizService:
         def usable(word_id: int) -> bool:
             return word_id not in exclude and (allowed is None or word_id in allowed)
 
-        # At most `learning_cap` words in progress: those ranked first (top book, then closest to
-        # learned) are practised; the rest wait with their progress. A new word comes in only
-        # when a place is free, except when studying one chapter.
-        ranked = self._repo.learning_by_priority(user_id)
-        cap = self._quiz.learning_cap
         active = {w.word_id for w in ranked[:cap]}
         new = [word_id for word_id in new if usable(word_id)]
-        if new and (allowed is not None or len(ranked) < cap):
+        if new:
             pools[Pool.NEW] = new[0]
         learning = [
             w
@@ -657,11 +671,21 @@ class QuizService:
             raise LookupError(f"no user {user_id}")
         return user
 
+    def _ranked_learning(self, user_id: int) -> tuple[list[UserWord], dict[int, int]]:
+        """Words in progress in the order they get a place among the ones practised (one from
+        each current read in turn, each book's closest to learned first), and how many each
+        book has."""
+        by_book: dict[int, list[UserWord]] = {}
+        for document_id, user_word in self._repo.learning_by_book(user_id):
+            by_book.setdefault(document_id, []).append(user_word)
+        ranked = share_places(list(by_book.values()), key=lambda w: w.word_id)
+        return ranked, {book: len(words) for book, words in by_book.items()}
+
     def practised_words(self, user_id: int, now: datetime) -> list[PractisedWord]:
         """Learned words first, then the rest by progress, then the ones already known."""
         rules = self._settings.scoring
         practised_now = {
-            w.word_id for w in self._repo.learning_by_priority(user_id)[: self._quiz.learning_cap]
+            w.word_id for w in self._ranked_learning(user_id)[0][: self._quiz.learning_cap]
         }
         words = []
         for user_word, word in self._repo.practised_words(user_id):
