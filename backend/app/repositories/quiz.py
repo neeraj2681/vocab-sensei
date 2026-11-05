@@ -166,12 +166,11 @@ class QuizRepository:
         )
         return int(count or 0)
 
-    def learning_by_priority(self, user_id: int) -> list[UserWord]:
-        """Words in progress that a current read uses, in the order they get a place among the
-        ones being practised: the highest-priority book first, then the closest to learned."""
-        priority = func.min(CurrentReading.priority).label("priority")
+    def learning_by_book(self, user_id: int) -> list[tuple[int, UserWord]]:
+        """(book id, word) for every word in progress that a current read uses, book by book in
+        priority order, each book's closest to learned first. A word in two books comes twice."""
         rows = self._session.execute(
-            select(UserWord, priority)
+            select(CurrentReading.document_id, UserWord)
             .join(DocumentWord, DocumentWord.word_id == UserWord.word_id)
             .join(
                 CurrentReading,
@@ -179,10 +178,9 @@ class QuizRepository:
                 & (CurrentReading.user_id == UserWord.user_id),
             )
             .where(UserWord.user_id == user_id, UserWord.status == WordStatus.LEARNING)
-            .group_by(UserWord.user_id, UserWord.word_id)
-            .order_by(priority, UserWord.score.desc(), UserWord.word_id)
+            .order_by(CurrentReading.priority, UserWord.score.desc(), UserWord.word_id)
         )
-        return [row[0] for row in rows]
+        return [(document_id, user_word) for document_id, user_word in rows]
 
     def practised_words(self, user_id: int) -> list[tuple[UserWord, Word]]:
         """Words the user is learning or has learned (answered at least once), and every word they

@@ -117,16 +117,16 @@ def test_skips_words_already_started_learned_or_known(
     assert next_lemmas(user_client) == ["sycophant"]
 
 
-def test_books_share_the_list_by_priority(user_client: TestClient, tmp_path: Path) -> None:
-    add_book(user_client, tmp_path, "a", BOOK_A)  # priority 0: 2 of every 3 words
-    add_book(user_client, tmp_path, "b", BOOK_B)  # priority 1: 1 of every 3
+def test_books_take_turns(user_client: TestClient, tmp_path: Path) -> None:
+    add_book(user_client, tmp_path, "a", BOOK_A)
+    add_book(user_client, tmp_path, "b", BOOK_B)
 
     assert next_lemmas(user_client) == [
         "lugubrious",
         "sycophant",
         "perfunctory",
-        "obsequious",
-        "ebullient",  # book B's "lugubrious" is a duplicate
+        "ebullient",
+        "obsequious",  # book B's "lugubrious" is a duplicate
     ]
 
 

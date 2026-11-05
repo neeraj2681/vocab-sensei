@@ -67,14 +67,14 @@ def test_books_that_failed_to_process_cannot_be_started(user_client: TestClient)
 
 
 def test_reordering(user_client: TestClient, tmp_path: Path) -> None:
-    ids = [book(user_client, tmp_path, f"{n}.epub") for n in "abc"]
+    ids = [book(user_client, tmp_path, f"{n}.epub") for n in "ab"]
     for document_id in ids:
         start(user_client, document_id)
 
     response = user_client.put("/api/readings/order", json={"document_ids": ids[::-1]})
 
     assert response.status_code == 200
-    assert [r["priority"] for r in response.json()] == [0, 1, 2]
+    assert [r["priority"] for r in response.json()] == [0, 1]
     assert order(user_client) == ids[::-1]
 
 
@@ -116,12 +116,25 @@ def test_chapter_must_exist(user_client: TestClient, tmp_path: Path, index: int)
     assert response.json()["detail"] == "This book has chapters 0 to 2"
 
 
+def test_at_most_two_books_at_once(user_client: TestClient, tmp_path: Path) -> None:
+    ids = [book(user_client, tmp_path, f"{n}.epub") for n in "abc"]
+    start(user_client, ids[0])
+    start(user_client, ids[1])
+
+    response = user_client.post("/api/readings", json={"document_id": ids[2]})
+
+    assert response.status_code == 409
+    assert "You're reading 2 books" in response.json()["detail"]
+    assert order(user_client) == ids[:2]
+
+
 def test_stopping_closes_the_gap_in_priorities(user_client: TestClient, tmp_path: Path) -> None:
     ids = [book(user_client, tmp_path, f"{n}.epub") for n in "abc"]
-    for document_id in ids:
-        start(user_client, document_id)
+    start(user_client, ids[0])
+    start(user_client, ids[1])
 
     assert user_client.delete(f"/api/readings/{ids[0]}").status_code == 204
+    start(user_client, ids[2])  # a place is free again
 
     readings = user_client.get("/api/readings").json()
     assert [(r["document"]["id"], r["priority"]) for r in readings] == [(ids[1], 0), (ids[2], 1)]

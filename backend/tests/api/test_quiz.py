@@ -909,3 +909,27 @@ class TestLearningCap:
         words = user_client.get("/api/quiz/words").json()
 
         assert sorted(w["later"] for w in words) == [False, False, True]
+
+
+def test_both_books_share_the_words_in_progress(
+    user_client: TestClient, session: Session, settings: Settings, clock: Clock
+) -> None:
+    """With the places full of one book's words, the other book still gets its half."""
+    user = reader(session)
+    add_book(session, user, [f"alpha{i}" for i in range(8)])
+    beta = add_book(session, user, [f"beta{i}" for i in range(8)])
+    reading = session.get(CurrentReading, (user.id, beta.id))
+    assert reading is not None
+    reading.priority = 1
+    for lemma in [f"alpha{i}" for i in range(4)]:  # alpha fills all 4 places
+        word = session.scalars(select(Word).where(Word.lemma == lemma)).one()
+        session.add(UserWord(user_id=user.id, word_id=word.id, score=20, last_reviewed_at=NOW))
+    session.commit()
+    settings.quiz.learning_cap = 4
+
+    for _ in range(16):
+        answer(user_client, session)
+
+    words = user_client.get("/api/quiz/words").json()
+    practised = sorted(w["word"][:4] for w in words if not w["later"])
+    assert practised == ["alph", "alph", "beta", "beta"]  # equal halves
