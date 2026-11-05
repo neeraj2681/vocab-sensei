@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react'
-import { recapsApi, type Recaps } from '../../api/recaps'
+import { recapsApi, type Recap, type Recaps } from '../../api/recaps'
 import { RecapCard } from './RecapCard'
 import { recapSpan } from './span'
 
-/** On Me: the last 4 weeks and 3 months, one at a time. */
+const picker = (recap: Recap) =>
+  recap.current ? (recap.period === 'week' ? 'This week' : 'This month') : recapSpan(recap)
+
+/** On Me: this week and the last 4, this month and the last 3, one at a time. */
 export function RecapsPanel() {
   const [recaps, setRecaps] = useState<Recaps | null>(null)
   const [kind, setKind] = useState<'weeks' | 'months'>('weeks')
@@ -55,7 +58,7 @@ export function RecapsPanel() {
               setIndex(i)
             }}
           >
-            {recapSpan(recap)}
+            {picker(recap)}
           </button>
         ))}
       </div>

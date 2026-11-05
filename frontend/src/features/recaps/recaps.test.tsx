@@ -20,10 +20,12 @@ const recap = (period: Recap['period'], first: string, last: string, extra = {})
   toughest_word: 'lugubrious',
   favourite_book: 'Moby-Dick',
   streak: 6,
+  current: false,
   ...extra,
 })
 const RECAPS: Recaps = {
   weeks: [
+    recap('week', '2026-11-02', '2026-11-08', { current: true, goal_days: 3, days: 3, streak: 9 }),
     recap('week', '2026-10-26', '2026-11-01'),
     recap('week', '2026-10-19', '2026-10-25', { answers: 0 }),
   ],
@@ -35,7 +37,16 @@ describe('recaps', () => {
     fakeApi({ 'GET /api/auth/me': () => json(USER), 'GET /api/recaps?tz=UTC': () => json(RECAPS) })
     const user = renderApp('/me')
 
+    const now = await screen.findByRole('region', { name: /Recap (2 Nov|Nov 2)/ })
+    expect(now).toHaveTextContent('This week')
+    expect(now).toHaveTextContent('so far')
+    expect(now).toHaveTextContent('3/3 days')
+    expect(now).toHaveTextContent('Day streak now: 9')
+
+    await user.click(screen.getByRole('button', { name: /26 Oct|Oct 26/ }))
     const card = await screen.findByRole('region', { name: /Recap (26 Oct|Oct 26)/ }) // either way round, by locale
+    expect(card).toHaveTextContent('Your week')
+    expect(card).toHaveTextContent('Day streak at the end of the week: 6')
     expect(card).toHaveTextContent('Words learned12')
     expect(card).toHaveTextContent('80 · 80%')
     expect(card).toHaveTextContent('Toughest word: lugubrious')

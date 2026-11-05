@@ -22,7 +22,7 @@ RecapServiceDep = Annotated[RecapService, Depends(get_recap_service)]
 
 class RecapResponse(BaseModel):
     period: Period
-    first: date
+    first: date  # or the day the user joined, if later
     last: date  # inclusive
     words_learned: int
     coins: int
@@ -34,7 +34,8 @@ class RecapResponse(BaseModel):
     best_day_coins: int
     toughest_word: str | None
     favourite_book: str | None
-    streak: int
+    streak: int  # at the period's end (now, for the current period)
+    current: bool  # still running
 
     @classmethod
     def of(cls, r: Recap) -> Self:
@@ -53,12 +54,13 @@ class RecapResponse(BaseModel):
             toughest_word=r.toughest_word[0] if r.toughest_word else None,
             favourite_book=r.favourite_book[0] if r.favourite_book else None,
             streak=r.streak,
+            current=r.current,
         )
 
 
 class RecapsResponse(BaseModel):
-    weeks: list[RecapResponse]  # the last 4 finished weeks, newest first
-    months: list[RecapResponse]  # the last 3 finished months
+    weeks: list[RecapResponse]  # this week and the last 4, newest first (none before joining)
+    months: list[RecapResponse]  # this month and the last 3
 
 
 @router.get("")

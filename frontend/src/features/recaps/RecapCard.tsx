@@ -1,6 +1,6 @@
 import type { Recap } from '../../api/recaps'
 import { Icon } from '../../components/Icon'
-import { day, recapSpan } from './span'
+import { day, recapSpan, recapTitle } from './span'
 
 /** A finished week or month at a glance: the numbers, then its highlights. */
 export function RecapCard({ recap, title }: { recap: Recap; title?: string }) {
@@ -12,8 +12,11 @@ export function RecapCard({ recap, title }: { recap: Recap; title?: string }) {
       <div className="recap__head">
         <Icon name="party_popper" size={36} />
         <div>
-          <h3>{title ?? (recap.period === 'week' ? 'Your week' : 'Your month')}</h3>
-          <p className="muted">{recapSpan(recap)}</p>
+          <h3>{title ?? recapTitle(recap)}</h3>
+          <p className="muted">
+            {recapSpan(recap)}
+            {recap.current && ' · so far'}
+          </p>
         </div>
       </div>
       {recap.answers === 0 ? (
@@ -40,7 +43,9 @@ export function RecapCard({ recap, title }: { recap: Recap; title?: string }) {
             <div>
               <dt>Goal met</dt>
               <dd>
-                {recap.goal_days}/{recap.days} days
+                {recap.days > 0
+                  ? `${String(recap.goal_days)}/${String(recap.days)} days`
+                  : 'Not yet'}
               </dd>
             </div>
           </dl>
@@ -67,7 +72,9 @@ export function RecapCard({ recap, title }: { recap: Recap; title?: string }) {
               </li>
             )}
             <li>
-              <Icon name="fire" size={22} /> Day streak now: <strong>{recap.streak}</strong>
+              <Icon name="fire" size={22} />{' '}
+              {recap.current ? 'Day streak now' : `Day streak at the end of the ${recap.period}`}:{' '}
+              <strong>{recap.streak}</strong>
             </li>
           </ul>
         </>
