@@ -16,6 +16,7 @@ from app.api import (
     quiz,
     readings,
     reminders,
+    shop,
     triage,
 )
 from app.core.config import get_settings
@@ -65,6 +66,7 @@ def create_app() -> FastAPI:
     app.include_router(quiz.router, prefix="/api")
     app.include_router(quests.router, prefix="/api")
     app.include_router(leaderboard.router, prefix="/api")
+    app.include_router(shop.router, prefix="/api")
     app.include_router(triage.router, prefix="/api")
     app.include_router(backup.router, prefix="/api")
     app.include_router(reminders.router, prefix="/api")

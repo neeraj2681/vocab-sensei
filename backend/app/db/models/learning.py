@@ -105,3 +105,18 @@ class QuestClaim(Base):
     quest: Mapped[str] = mapped_column(String(40))  # e.g. "answer-20", or "chest"
     coins: Mapped[int]
     claimed_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+
+
+class ShopPurchase(Base):
+    """Something bought in the Shop. It sits in the inventory until used: a streak freeze covers
+    `used_for_day`, double coins start running at `used_at`."""
+
+    __tablename__ = "shop_purchases"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    item: Mapped[str] = mapped_column(String(40))  # app.quiz.shop.Item
+    coins: Mapped[int]  # what it cost
+    bought_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+    used_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
+    used_for_day: Mapped[date | None] = mapped_column(Date)  # the missed day a freeze covered

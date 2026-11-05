@@ -338,7 +338,7 @@ because git and the workflow files carry over.
     attribution shown), or Fluent-style illustrations generated once with a local open model.
   - Pick distractor pictures from words of the same part of speech; cache images on our server.
   - Becomes a fifth question type, mixed in like the others.
-- [ ] **The Shop opens** (requested 2 Nov 2026, next phase): coins (the score) buy things in the Shop
+- [x] **The Shop opens** (built 5 Nov 2026: open all of Sunday; streak freezes (10,000, up to 3) and double coins (50,000, 30 min); extra name changes still to come): coins (the score) buy things in the Shop
   tab, which today shows the cartoon market with "The merchant isn't here yet".
   - **Extra username change**: everyone gets one free change (Settings); more cost coins.
   - **Streak freeze**: keeps the streak alive through one missed day; bought ahead, used automatically.
@@ -377,7 +377,7 @@ because git and the workflow files carry over.
   - **Invite link**: share a link (WhatsApp etc.) that opens sign-up and sends the request automatically.
   - Requests: pending → accepted / declined. Remove or block a friend at any time.
   - Data: a `friendships` table (requester, addressee, status, timestamps).
-- [ ] **Leaderboards** (requested 2 Nov 2026, next phase): **Friends** and **Global** tabs.
+- [ ] **Leaderboards** (global board of today's coins with profiles built 4 Nov 2026, #110; the Friends tab waits for Friends): **Friends** and **Global** tabs.
   - **Ranked by points earned this week**, resetting every Monday, so newcomers can compete. An all-time
     tab can come later.
   - Each row: rank, picture or figure, username, weekly points and streak. You're always shown, even outside
@@ -397,7 +397,7 @@ months (belts, garden, badges). None of it changes how words are scored.
   Win → the chapter is stamped "Ready to read ✓" with a celebration and bonus coins; lose → try again tomorrow.
 - [ ] **Word garden**: each learned word is a plant; as its score decays it wilts (the weekly decay already
   exists); "water" = a quick review of the wilting ones. Garden grows with belts.
-- [ ] **Daily quests**: three a day, e.g. "Learn 5 words from Dracula", "10 right in a row", "Finish your goal
+- [x] **Daily quests** (built 3 Nov 2026, #99): three a day, e.g. "Learn 5 words from Dracula", "10 right in a row", "Finish your goal
   before noon"; each pays coins; a small chest when all three are done.
 - [x] **Combo meter** (built 3 Nov 2026 as **Ninja Mode**, #95–#97): right answers in a row fill a meter; at 5 the coins double until a mistake. A short sound
   and phone vibration (`navigator.vibrate`), both switchable off in Settings.

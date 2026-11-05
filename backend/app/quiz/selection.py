@@ -1,6 +1,6 @@
 """Choosing what to ask next, and the daily streak, for the never-ending quiz."""
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Collection, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date, timedelta
 from enum import StrEnum
@@ -50,15 +50,21 @@ class DailyGoal:
         return current
 
 
-def streak(answers_per_day: Mapping[date, int], today: date, goal: DailyGoal) -> int:
-    """Days in a row that reached the daily goal, ending today.
+def streak(
+    answers_per_day: Mapping[date, int],
+    today: date,
+    goal: DailyGoal,
+    frozen: Collection[date] = (),
+) -> int:
+    """Days in a row that reached the daily goal (or were covered by a streak freeze), ending
+    today.
 
     Today only counts once its goal is met; until then the streak still includes yesterday,
     so it doesn't look broken first thing in the morning.
     """
 
     def met(day: date) -> bool:
-        return answers_per_day.get(day, 0) >= goal.on(day)
+        return answers_per_day.get(day, 0) >= goal.on(day) or day in frozen
 
     day = today if met(today) else today - timedelta(days=1)
     days = 0

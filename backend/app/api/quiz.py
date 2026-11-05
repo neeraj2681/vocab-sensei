@@ -118,8 +118,9 @@ class QuestionResponse(BaseModel):
 class DayResponse(BaseModel):
     date: date
     answers: int
-    met: bool  # judged by that day's goal, like the streak
+    met: bool  # judged by that day's goal, like the streak (or covered by a streak freeze)
     points: int  # net score earned that day
+    frozen: bool  # a streak freeze covered it
 
 
 class StatsResponse(BaseModel):
@@ -131,6 +132,7 @@ class StatsResponse(BaseModel):
     combo: int  # right answers in a row; Ninja Mode (double coins) from `combo_after`
     combo_after: int
     combo_multiplier: int
+    double_coins_until: datetime | None  # the Shop's double coins are running until then
 
     @classmethod
     def of(cls, stats: Stats) -> Self:
@@ -142,8 +144,11 @@ class StatsResponse(BaseModel):
             combo=stats.combo,
             combo_after=stats.combo_after,
             combo_multiplier=stats.combo_multiplier,
+            double_coins_until=stats.double_coins_until,
             week=[
-                DayResponse(date=d.date, answers=d.answers, met=d.met, points=d.points)
+                DayResponse(
+                    date=d.date, answers=d.answers, met=d.met, points=d.points, frozen=d.frozen
+                )
                 for d in stats.week
             ],
         )

@@ -147,9 +147,11 @@ function Week({ days }: { days: Day[] }) {
           <li
             key={day.date}
             className={`week__day${day.met ? ' week__day--met' : ''}${i === days.length - 1 ? ' week__day--today' : ''}`}
-            aria-label={`${local.toLocaleDateString(undefined, { weekday: 'long' })}: ${day.met ? 'goal met' : 'goal not met'}`}
+            aria-label={`${local.toLocaleDateString(undefined, { weekday: 'long' })}: ${day.frozen ? 'kept by a streak freeze' : day.met ? 'goal met' : 'goal not met'}`}
           >
-            <span className="week__dot">{day.met && <Icon name="fire" size={18} />}</span>
+            <span className="week__dot">
+              {day.met && <Icon name={day.frozen ? 'torch' : 'fire'} size={18} />}
+            </span>
             {DAY_NAMES[local.getDay()]}
           </li>
         )
