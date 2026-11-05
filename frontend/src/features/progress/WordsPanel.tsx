@@ -50,6 +50,7 @@ export function WordsPanel() {
     learning: words.filter((w) => !w.learned && !w.known && !w.later),
     known: words.filter((w) => w.known),
   }
+  const waiting = words.filter((w) => w.later).length // beyond the 100 practised now
   const shownTab =
     tab ?? (['learned', 'learning', 'known'] as const).find((t) => byTab[t].length) ?? 'learning'
   const query = filter.trim().toLowerCase()
@@ -68,7 +69,14 @@ export function WordsPanel() {
       <div className="word-tools">
         <div className="word-tabs" role="group" aria-label="Show">
           {(['learned', 'learning', 'known'] as const).map((t) => (
-            <TabButton key={t} tab={t} shown={shownTab} count={byTab[t].length} onPick={setTab} />
+            <TabButton
+              key={t}
+              tab={t}
+              shown={shownTab}
+              // Learning counts every word in progress, also those waiting in Later.
+              count={t === 'learning' ? byTab.learning.length + waiting : byTab[t].length}
+              onPick={setTab}
+            />
           ))}
         </div>
         <input
@@ -115,7 +123,7 @@ export function WordsPanel() {
           <summary>
             Later · {later.length}{' '}
             <span className="muted">
-              (waiting for a place: up to {LEARNING_CAP} words are practised at once)
+              (waiting for a place: the top {LEARNING_CAP} are practised first)
             </span>
           </summary>
           <WordRows words={later} onOpen={openWord} />
