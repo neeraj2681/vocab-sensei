@@ -75,7 +75,7 @@ describe('a name change from the Shop', () => {
       opens_at: '2026-11-08T00:00:00Z',
       closes_at: '2026-11-09T00:00:00Z',
       coins: 0,
-      stock: [{ item: 'name_change', price: 100_000, owned: 1, max_owned: 1 }],
+      stock: [{ item: 'name_change', price: 5_000, owned: 1, max_owned: 1 }],
       double_coins_until: null,
     }
     const api = account(

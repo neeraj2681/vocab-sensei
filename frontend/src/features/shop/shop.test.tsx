@@ -6,13 +6,13 @@ import { renderApp } from '../../test/renderApp'
 
 const USER = { id: 1, email: 'reader@example.com', display_name: 'Reader', email_verified_at: 'x' }
 const inHours = (hours: number) => new Date(Date.now() + hours * 3_600_000).toISOString()
-const FREEZE = { item: 'streak_freeze', price: 10_000, owned: 1, max_owned: 3 } as const
-const DOUBLE = { item: 'double_coins', price: 50_000, owned: 0, max_owned: 1 } as const
+const FREEZE = { item: 'streak_freeze', price: 1_500, owned: 1, max_owned: 3 } as const
+const DOUBLE = { item: 'double_coins', price: 1_000, owned: 0, max_owned: 1 } as const
 const CLOSED: Shop = {
   open: false,
   opens_at: inHours(50),
   closes_at: inHours(74),
-  coins: 12_000,
+  coins: 1_200,
   stock: [FREEZE, DOUBLE],
   double_coins_until: null,
 }
@@ -37,7 +37,7 @@ describe('shop', () => {
     expect(screen.getByRole('timer', { name: 'Opens in' })).toHaveTextContent(
       /Opens in 2d 01:59:5\d/,
     )
-    expect(screen.getByText('12,000 coins')).toBeInTheDocument()
+    expect(screen.getByText('1,200 coins')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Buy/ })).not.toBeInTheDocument()
     expect(screen.getByText('Streak freezes: 1')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Shop' })).toHaveAttribute('href', '/shop')
@@ -45,11 +45,11 @@ describe('shop', () => {
 
   it('on Sundays sells streak freezes and double coins', async () => {
     const api = shop(OPEN, {
-      'POST /api/shop/buy/streak_freeze?tz=UTC': () =>
+      'POST /api/shop/buy/double_coins?tz=UTC': () =>
         json({
           ...OPEN,
-          coins: 2_000,
-          stock: [{ ...FREEZE, owned: 2 }, DOUBLE],
+          coins: 200,
+          stock: [FREEZE, { ...DOUBLE, owned: 1 }],
         }),
     })
     const user = renderApp('/shop')
@@ -60,14 +60,14 @@ describe('shop', () => {
     const items = within(screen.getAllByRole('list')[0] as HTMLElement).getAllByRole('listitem')
     const [freeze, double] = items as [HTMLElement, HTMLElement]
     expect(freeze).toHaveTextContent('You have 1 of 3')
-    expect(within(double).getByRole('button', { name: /Buy/ })).toBeDisabled() // 50,000 > 12,000
-    expect(double).toHaveTextContent('38,000 more coins needed.')
+    expect(within(freeze).getByRole('button', { name: /Buy/ })).toBeDisabled() // 1,500 > 1,200
+    expect(freeze).toHaveTextContent('300 more coins needed.')
 
-    await user.click(within(freeze).getByRole('button', { name: /Buy/ }))
+    await user.click(within(double).getByRole('button', { name: /Buy/ }))
 
-    expect(api.calls('POST /api/shop/buy/streak_freeze?tz=UTC')).toHaveLength(1)
-    expect(await screen.findByText('2,000 coins')).toBeInTheDocument()
-    expect(screen.getByText('Streak freezes: 2')).toBeInTheDocument()
+    expect(api.calls('POST /api/shop/buy/double_coins?tz=UTC')).toHaveLength(1)
+    expect(await screen.findByText('200 coins')).toBeInTheDocument()
+    expect(screen.getByText('Double coins: 1')).toBeInTheDocument()
   })
 
   it('uses double coins from the inventory, any day', async () => {

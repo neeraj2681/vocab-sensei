@@ -244,7 +244,7 @@ export function ProfilePanel() {
             ) : (
               <>
                 ⚠ You can change your username <strong>only once</strong> for free. Choose
-                carefully: after this, another change costs 100,000 coins in the Shop.
+                carefully: after this, another change costs 5,000 coins in the Shop.
               </>
             )}
           </p>

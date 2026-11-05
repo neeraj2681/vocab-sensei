@@ -338,7 +338,7 @@ because git and the workflow files carry over.
     attribution shown), or Fluent-style illustrations generated once with a local open model.
   - Pick distractor pictures from words of the same part of speech; cache images on our server.
   - Becomes a fifth question type, mixed in like the others.
-- [x] **The Shop opens** (built 5 Nov 2026: open all of Sunday; streak freezes (10,000, up to 3) and double coins (50,000, 30 min); extra name changes still to come): coins (the score) buy things in the Shop
+- [x] **The Shop opens** (built 5 Nov 2026: open all of Sunday; streak freezes (1,500, up to 3), double coins (1,000, 30 min) and an extra name change (5,000); prices lowered 5 Nov to fit ~400 coins a day): coins (the score) buy things in the Shop
   tab, which today shows the cartoon market with "The merchant isn't here yet".
   - **Extra username change**: everyone gets one free change (Settings); more cost coins.
   - **Streak freeze**: keeps the streak alive through one missed day; bought ahead, used automatically.
