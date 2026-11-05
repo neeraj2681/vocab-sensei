@@ -52,7 +52,7 @@ def test_buying_freezes_spends_coins_up_to_three(
     user_client: TestClient, session: Session, time: Clock
 ) -> None:
     time.now = SUNDAY
-    give_coins(session, 45_000)
+    give_coins(session, 5_000)
 
     for _ in range(3):
         assert user_client.post("/api/shop/buy/streak_freeze?tz=UTC").status_code == 200
@@ -60,9 +60,9 @@ def test_buying_freezes_spends_coins_up_to_three(
 
     state = shop(user_client)
     assert fourth.status_code == 409
-    assert (stock(state, "streak_freeze")["owned"], state["coins"]) == (3, 15_000)
-    assert user_client.get("/api/quiz/stats?tz=UTC").json()["total"] == 15_000
-    too_dear = user_client.post("/api/shop/buy/double_coins?tz=UTC")
+    assert (stock(state, "streak_freeze")["owned"], state["coins"]) == (3, 500)
+    assert user_client.get("/api/quiz/stats?tz=UTC").json()["total"] == 500
+    too_dear = user_client.post("/api/shop/buy/double_coins?tz=UTC")  # 1,000 > 500
     assert (too_dear.status_code, too_dear.json()["detail"]) == (409, "Not enough coins yet")
 
 
@@ -70,7 +70,7 @@ def test_double_coins_double_right_answers_for_half_an_hour(
     user_client: TestClient, session: Session, time: Clock
 ) -> None:
     time.now = SUNDAY
-    give_coins(session, 50_000)
+    give_coins(session, 1_000)
     user_client.post("/api/shop/buy/double_coins?tz=UTC")
     assert user_client.post("/api/shop/buy/double_coins?tz=UTC").status_code == 409  # one at most
 
@@ -90,7 +90,7 @@ def test_a_streak_freeze_saves_a_missed_day(
     user_client: TestClient, session: Session, time: Clock
 ) -> None:
     time.now = SUNDAY
-    give_coins(session, 10_000)
+    give_coins(session, 1_500)
     user_client.post("/api/shop/buy/streak_freeze?tz=UTC")
     for _ in range(10):  # Sunday's goal (10) met
         answer(user_client, session)
@@ -109,7 +109,7 @@ def test_a_freeze_is_kept_while_the_goal_is_met(
     user_client: TestClient, session: Session, time: Clock
 ) -> None:
     time.now = SUNDAY
-    give_coins(session, 10_000)
+    give_coins(session, 1_500)
     user_client.post("/api/shop/buy/streak_freeze?tz=UTC")
     for days in (0, 1):
         time.now = SUNDAY + timedelta(days=days)
@@ -126,7 +126,7 @@ def test_a_bought_name_change_allows_another_username_change(
     user_client: TestClient, session: Session, time: Clock
 ) -> None:
     time.now = SUNDAY
-    give_coins(session, 100_000)
+    give_coins(session, 5_000)
     assert user_client.patch("/api/auth/me/name", json={"display_name": "First"}).status_code == 200
     assert user_client.patch("/api/auth/me/name", json={"display_name": "Again"}).status_code == 409
 

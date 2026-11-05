@@ -20,7 +20,9 @@ class Item(StrEnum):
     NAME_CHANGE = "name_change"  # one more username change, after the free one
 
 
-PRICES = {Item.STREAK_FREEZE: 10_000, Item.DOUBLE_COINS: 50_000, Item.NAME_CHANGE: 100_000}
+# A freeze is about 3-4 days of keen play (~400 coins a day); double coins are a leaderboard boost
+# (30 good minutes earn a few hundred back); a name change is rare and deliberate.
+PRICES = {Item.STREAK_FREEZE: 1_500, Item.DOUBLE_COINS: 1_000, Item.NAME_CHANGE: 5_000}
 MAX_OWNED = {Item.STREAK_FREEZE: 3, Item.DOUBLE_COINS: 1, Item.NAME_CHANGE: 1}  # held at once
 DOUBLE_COINS_FOR = timedelta(minutes=30)
 DOUBLE_COINS_MULTIPLIER = 2
