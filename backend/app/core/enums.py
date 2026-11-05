@@ -56,6 +56,7 @@ class QuestionType(StrEnum):
     CORRECT_USAGE = "correct_usage"
     NUANCE = "nuance"
     REVERSE = "reverse"
+    SAY_WORD = "say_word"  # say it aloud; checked by speech recognition (well-known words)
 
 
 class ReminderChannel(StrEnum):

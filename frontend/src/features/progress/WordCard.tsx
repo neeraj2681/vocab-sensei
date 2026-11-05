@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { quizApi, type PractisedWord } from '../../api/quiz'
 import { FormError } from '../../components/Form'
+import { SayItButton } from '../../components/SayItButton'
 import { SpeakButton } from '../../components/SpeakButton'
 import { useSubmit } from '../../components/useSubmit'
 
@@ -44,6 +45,7 @@ export function WordCard({
           <SpeakButton word={word.word} />
         </div>
         <p>{word.meaning ?? 'No meaning found.'}</p>
+        <SayItButton word={word.word} />
         {word.sentence && <blockquote className="feedback__sentence">{word.sentence}</blockquote>}
         <span className="bar" aria-hidden="true">
           <span style={{ width: `${String(word.progress)}%` }} />

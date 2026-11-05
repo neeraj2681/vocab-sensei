@@ -13,6 +13,7 @@ from app.api import (
     health,
     leaderboard,
     learning,
+    pronunciation,
     quests,
     quiz,
     readings,
@@ -67,6 +68,7 @@ def create_app() -> FastAPI:
     app.include_router(learning.router, prefix="/api")
     app.include_router(quiz.router, prefix="/api")
     app.include_router(quests.router, prefix="/api")
+    app.include_router(pronunciation.router, prefix="/api")
     app.include_router(leaderboard.router, prefix="/api")
     app.include_router(friends.router, prefix="/api")
     app.include_router(shop.router, prefix="/api")

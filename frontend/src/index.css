@@ -2094,6 +2094,80 @@ button.raised:disabled {
   animation: ninja-in 0.25s ease-out;
 }
 
+/* 🎤 Say it, on word cards */
+.say-it {
+  display: grid;
+  justify-items: start;
+  gap: 0.35rem;
+  margin: 0.5rem 0;
+}
+
+.say-it__button--on {
+  border-color: var(--bad);
+  color: var(--bad);
+}
+
+.say-it p {
+  margin: 0;
+}
+
+.say-it__ok {
+  color: var(--accent-deep);
+  font-weight: 700;
+}
+
+.say-it__again {
+  color: var(--bad);
+  font-weight: 700;
+}
+
+/* "Say this word": a big microphone button */
+.say-word {
+  display: grid;
+  justify-items: center;
+  gap: 0.6rem;
+  margin: 1rem 0;
+}
+
+.say-word__mic {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 1rem 1.75rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent);
+  box-shadow: 0 5px 0 var(--accent-deep);
+  color: var(--on-accent);
+  font: inherit;
+  font-family: var(--display);
+  font-size: 1.2rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.say-word__mic span {
+  font-size: 1.6rem;
+}
+
+.say-word__mic--on {
+  background: var(--bad);
+  box-shadow: 0 5px 0 #a3302a;
+  animation: mic-pulse 0.8s ease-in-out infinite alternate;
+}
+
+@keyframes mic-pulse {
+  to {
+    transform: scale(1.05);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .say-word__mic--on {
+    animation: none;
+  }
+}
+
 /* Ninja Mode: five right in a row double the coins until a miss */
 .stat-pill--ninja {
   border-color: #3b3f58;

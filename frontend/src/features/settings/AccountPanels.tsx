@@ -6,6 +6,7 @@ import { Icon } from '../../components/Icon'
 import { Field, FormError } from '../../components/Form'
 import { MIN_PASSWORD_LENGTH } from '../auth/RegisterPage'
 import { hapticsOn, setHapticsOn } from '../../components/haptics'
+import { setSpeakingQuestionsOn, speakingQuestionsOn } from '../../components/recorder'
 import { setSoundOn, setVolume, soundOn, sounds, volume } from '../../components/sounds'
 import { chooseTheme, currentTheme, THEMES, type Theme } from '../../components/theme'
 import { useSubmit } from '../../components/useSubmit'
@@ -47,6 +48,7 @@ export function ThemePanel() {
 export function SoundPanel() {
   const [on, setOn] = useState(soundOn)
   const [level, setLevel] = useState(() => Math.round(volume() * 100))
+  const [speaking, setSpeaking] = useState(speakingQuestionsOn)
 
   return (
     <section aria-labelledby="sound-heading" className="panel">
@@ -86,6 +88,18 @@ export function SoundPanel() {
         />
       </div>
       <p className="muted">On iPhone, the silent switch may mute these sounds.</p>
+      <label className="check">
+        <input
+          type="checkbox"
+          checked={speaking}
+          onChange={(event) => {
+            setSpeakingQuestionsOn(event.target.checked)
+            setSpeaking(event.target.checked)
+          }}
+        />{' '}
+        Speaking questions in the quiz (“say this word”, for words you know well; needs a
+        microphone, and your voice is checked on our server, never sent elsewhere)
+      </label>
     </section>
   )
 }

@@ -3,17 +3,19 @@ from datetime import date, datetime
 from typing import Annotated, Self
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, UploadFile, status
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from app.api.deps import CurrentUser, DictionaryLoader, SettingsDep, get_dictionary
+from app.api.deps import CurrentUser, DictionaryLoader, SettingsDep, SpeechDep, get_dictionary
 from app.api.documents import DocumentServiceDep
 from app.core.enums import QuestionType, WordStatus
+from app.core.speech import AudioError, Recognizer
 from app.db.models import Question
 from app.db.session import get_session
 from app.db.types import utcnow
 from app.dictionary.types import DictionaryUnavailableError
+from app.quiz.speech import said
 from app.services.library import LibraryService
 from app.services.quiz import (
     AlreadyAnsweredError,
@@ -61,8 +63,11 @@ def get_quiz_service(
     session: Annotated[Session, Depends(get_session)],
     settings: SettingsDep,
     dictionary: Annotated[DictionaryLoader, Depends(get_dictionary)],
+    speaking: Annotated[
+        bool, Query(description='the screen can record: "say this word" questions may come')
+    ] = False,
 ) -> QuizService:
-    return QuizService(session, settings, dictionary)
+    return QuizService(session, settings, dictionary, speaking=speaking)
 
 
 QuizServiceDep = Annotated[QuizService, Depends(get_quiz_service)]
@@ -176,6 +181,7 @@ class AnswerResponse(BaseModel):
     stats: StatsResponse
     next: QuestionResponse | None  # with include_next: the question now on screen
     after_next: QuestionResponse | None = None  # and the one kept ready after it
+    heard: str | None = None  # "say this word": what the speech recogniser heard
 
 
 class PractisedWordResponse(BaseModel):
@@ -301,6 +307,68 @@ def answer(
         stats=StatsResponse.of(outcome.stats),
         **(next_questions(quiz, user.id, now, focus) if include_next else {"next": None}),
     )
+
+
+@router.post("/questions/{question_id}/speak")
+def speak(
+    question_id: int,
+    audio: UploadFile,
+    user: CurrentUser,
+    quiz: QuizServiceDep,
+    documents: DocumentServiceDep,
+    speech: SpeechDep,
+    settings: SettingsDep,
+    now: Now,
+    tz: TimeZone,
+    include_next: Annotated[bool, Query()] = False,
+    document_id: Annotated[int | None, Query()] = None,
+    chapter: Annotated[int | None, Query(ge=0)] = None,
+) -> AnswerResponse:
+    """Answers a "say this word" question with a recording: right when the speech recogniser
+    hears the word (on our server; the audio isn't kept)."""
+    try:
+        question = quiz.unanswered_question(user.id, question_id)
+    except QuestionNotFoundError as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from None
+    except AlreadyAnsweredError as exc:
+        raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from None
+    if question.type is not QuestionType.SAY_WORD:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Not a speaking question")
+    heard = hear(speech, audio, question.prompt, settings.speech.max_audio_bytes)
+    response = answer(
+        question_id,
+        AnswerRequest(chosen_index=0 if said(heard, question.prompt) else 1),
+        user,
+        quiz,
+        documents,
+        now,
+        tz,
+        include_next,
+        document_id,
+        chapter,
+    )
+    response.heard = heard
+    return response
+
+
+@router.post("/questions/{question_id}/skip", status_code=status.HTTP_204_NO_CONTENT)
+def skip(question_id: int, user: CurrentUser, quiz: QuizServiceDep) -> None:
+    """Drops a "say this word" question (can't speak right now)."""
+    try:
+        quiz.skip(user.id, question_id)
+    except (QuestionNotFoundError, AlreadyAnsweredError) as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from None
+
+
+def hear(speech: Recognizer, audio: UploadFile, word: str, max_bytes: int) -> str:
+    """What the recording says (422 if it isn't readable audio or is too big)."""
+    data = audio.file.read(max_bytes + 1)
+    if len(data) > max_bytes:
+        raise HTTPException(status.HTTP_413_CONTENT_TOO_LARGE, "That recording is too long")
+    try:
+        return speech.transcribe(data, word)
+    except AudioError as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from None
 
 
 def next_questions(
