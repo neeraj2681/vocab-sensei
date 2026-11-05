@@ -120,3 +120,21 @@ def test_a_freeze_is_kept_while_the_goal_is_met(
 
     assert user_client.get("/api/quiz/stats?tz=UTC").json()["streak"] == 2
     assert stock(shop(user_client), "streak_freeze")["owned"] == 1  # carried over
+
+
+def test_a_bought_name_change_allows_another_username_change(
+    user_client: TestClient, session: Session, time: Clock
+) -> None:
+    time.now = SUNDAY
+    give_coins(session, 100_000)
+    assert user_client.patch("/api/auth/me/name", json={"display_name": "First"}).status_code == 200
+    assert user_client.patch("/api/auth/me/name", json={"display_name": "Again"}).status_code == 409
+
+    assert user_client.post("/api/shop/buy/name_change?tz=UTC").status_code == 200
+    assert user_client.post("/api/shop/buy/name_change?tz=UTC").status_code == 409  # one at most
+    changed = user_client.patch("/api/auth/me/name", json={"display_name": "Second"})
+
+    assert changed.status_code == 200
+    assert changed.json()["display_name"] == "Second"
+    assert stock(shop(user_client), "name_change")["owned"] == 0  # used
+    assert user_client.patch("/api/auth/me/name", json={"display_name": "Third"}).status_code == 409

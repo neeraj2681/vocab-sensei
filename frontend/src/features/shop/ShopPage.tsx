@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router'
 import { shopApi, type Shop, type ShopItem, type Stock } from '../../api/shop'
 import { Burst } from '../../components/Burst'
 import { FormError } from '../../components/Form'
@@ -13,6 +14,12 @@ const ITEMS: Record<ShopItem, { name: string; icon: IconName; about: string }> =
     icon: 'torch',
     about:
       'Keeps your streak alive on a day you miss your goal. Used by itself; if you meet your goal, it stays for another day.',
+  },
+  name_change: {
+    name: 'Username change',
+    icon: 'name_badge',
+    about:
+      'One more change of your username, after the free one. Keep it and use it in Settings when you like.',
   },
   double_coins: {
     name: 'Double coins',
@@ -197,6 +204,7 @@ function Inventory({
   const left = useCountdown(shop.double_coins_until)
   const freezes = shop.stock.find((s) => s.item === 'streak_freeze')?.owned ?? 0
   const doubles = shop.stock.find((s) => s.item === 'double_coins')?.owned ?? 0
+  const names = shop.stock.find((s) => s.item === 'name_change')?.owned ?? 0
   const running = left !== null && left > 0
   return (
     <section className="card inventory" aria-labelledby="inventory-heading">
@@ -224,6 +232,18 @@ function Inventory({
             <button type="button" className="primary" disabled={busy} onClick={onUseDoubleCoins}>
               {running ? 'Add 30 min' : 'Use now'}
             </button>
+          )}
+        </li>
+        <li>
+          <Icon name="name_badge" size={40} />
+          <span>
+            <strong>Username changes: {names}</strong>
+            <span className="muted"> · use it in Settings</span>
+          </span>
+          {names > 0 && (
+            <Link className="button-link secondary" to="/settings">
+              Settings
+            </Link>
           )}
         </li>
       </ul>

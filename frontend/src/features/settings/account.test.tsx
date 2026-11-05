@@ -52,7 +52,7 @@ describe('username', () => {
     await user.type(screen.getByLabelText('New username'), 'Neeraj')
     await user.click(screen.getByRole('button', { name: 'Change it for good' }))
 
-    expect(await screen.findByText('You’ve used your one username change.')).toBeInTheDocument()
+    expect(await screen.findByText(/You’ve used your free username change/)).toBeInTheDocument()
     expect(api.calls('PATCH /api/auth/me/name')).toEqual([{ display_name: 'Neeraj' }])
     expect(screen.getByText('Neeraj')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Change' })).not.toBeInTheDocument()
@@ -63,7 +63,40 @@ describe('username', () => {
 
     renderApp('/settings')
 
-    expect(await screen.findByText('You’ve used your one username change.')).toBeInTheDocument()
+    expect(await screen.findByText(/You’ve used your free username change/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Change' })).not.toBeInTheDocument()
+  })
+})
+
+describe('a name change from the Shop', () => {
+  it('allows one more change, with its own warning', async () => {
+    const shop = {
+      open: false,
+      opens_at: '2026-11-08T00:00:00Z',
+      closes_at: '2026-11-09T00:00:00Z',
+      coins: 0,
+      stock: [{ item: 'name_change', price: 100_000, owned: 1, max_owned: 1 }],
+      double_coins_until: null,
+    }
+    const api = account(
+      { ...USER, name_changed_at: '2026-11-01T10:00:00Z' },
+      {
+        'GET /api/shop?tz=UTC': () => json(shop),
+        'PATCH /api/auth/me/name': () =>
+          json({ ...USER, display_name: 'Neeraj', name_changed_at: '2026-11-05T10:00:00Z' }),
+      },
+    )
+    const user = renderApp('/settings')
+
+    expect(await screen.findByText(/You have a name change from the Shop/)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Change' }))
+    expect(screen.getByRole('note')).toHaveTextContent('This uses your name change from the Shop')
+    await user.clear(screen.getByLabelText('New username'))
+    await user.type(screen.getByLabelText('New username'), 'Neeraj')
+    await user.click(screen.getByRole('button', { name: 'Change it for good' }))
+
+    expect(api.calls('PATCH /api/auth/me/name')).toEqual([{ display_name: 'Neeraj' }])
+    expect(await screen.findByText(/You’ve used your free username change/)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Change' })).not.toBeInTheDocument()
   })
 })

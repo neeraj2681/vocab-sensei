@@ -1,7 +1,7 @@
 import { apiGet, apiPost } from './client'
 import { timeZone } from './quiz'
 
-export type ShopItem = 'streak_freeze' | 'double_coins'
+export type ShopItem = 'streak_freeze' | 'double_coins' | 'name_change'
 
 export interface Stock {
   item: ShopItem

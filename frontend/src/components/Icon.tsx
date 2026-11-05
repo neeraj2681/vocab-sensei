@@ -11,6 +11,7 @@ export type IconName =
   | 'gear'
   | 'hourglass'
   | 'man'
+  | 'name_badge'
   | 'ninja'
   | 'palm_tree'
   | 'person'

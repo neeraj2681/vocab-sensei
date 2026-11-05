@@ -1,4 +1,4 @@
-"""The Shop: open on Sundays, selling streak freezes and double coins. Pure rules, no database.
+"""The Shop: open on Sundays, selling streak freezes, double coins and name changes. Pure rules.
 
 - A streak freeze covers one missed day, used automatically, but only when there is a streak to
   protect and only by a freeze bought before that day ended. Days whose goal was met use nothing.
@@ -17,10 +17,11 @@ from app.quiz.selection import DailyGoal, streak
 class Item(StrEnum):
     STREAK_FREEZE = "streak_freeze"
     DOUBLE_COINS = "double_coins"
+    NAME_CHANGE = "name_change"  # one more username change, after the free one
 
 
-PRICES = {Item.STREAK_FREEZE: 10_000, Item.DOUBLE_COINS: 50_000}
-MAX_OWNED = {Item.STREAK_FREEZE: 3, Item.DOUBLE_COINS: 1}  # in the inventory at once
+PRICES = {Item.STREAK_FREEZE: 10_000, Item.DOUBLE_COINS: 50_000, Item.NAME_CHANGE: 100_000}
+MAX_OWNED = {Item.STREAK_FREEZE: 3, Item.DOUBLE_COINS: 1, Item.NAME_CHANGE: 1}  # held at once
 DOUBLE_COINS_FOR = timedelta(minutes=30)
 DOUBLE_COINS_MULTIPLIER = 2
 OPEN_WEEKDAY = 6  # Sunday (Monday is 0)
