@@ -309,6 +309,44 @@ def test_i_know_this_retires_the_word(user_client: TestClient, session: Session)
     assert asked["prompt"] not in words
 
 
+@pytest.mark.usefixtures("book", "clock")
+def test_i_know_this_after_answering_moves_the_word_to_known(
+    user_client: TestClient, session: Session
+) -> None:
+    # Answer word00 twice (wrong, then right), with other words in between.
+    first = answer(user_client, session, right=False)
+    assert first["word"] == "word00"
+    answered = 1
+    asked = question(user_client)
+    for _ in range(60):
+        if asked["prompt"] == "word00":
+            if answered == 2:
+                break
+            answered += 1
+        answer(user_client, session, right=True)
+        asked = question(user_client)
+    assert (asked["prompt"], answered) == ("word00", 2), "word00 never came back"
+    word = session.scalars(select(Word).where(Word.lemma == "word00")).one()
+    progress = session.get(UserWord, (reader(session).id, word.id))
+    assert progress is not None
+    session.refresh(progress)
+    assert (progress.status, progress.score) == (WordStatus.LEARNING, 10)
+    coins = user_client.get("/api/quiz/stats").json()["total"]
+
+    # The third time it comes up: "I know this".
+    response = user_client.post(f"/api/quiz/questions/{asked['id']}/know")
+
+    assert response.status_code == 204
+    session.refresh(progress)
+    assert progress.status == WordStatus.KNOWN
+    assert user_client.get("/api/quiz/stats").json()["total"] == coins  # coins earned are kept
+    listed = {w["word"]: w for w in user_client.get("/api/quiz/words?include_known=true").json()}
+    assert (listed["word00"]["known"], listed["word00"]["progress"]) == (True, 100)
+    assert "word00" not in {w["word"] for w in user_client.get("/api/quiz/words").json()}
+    asked_later = [answer(user_client, session)["word"] for _ in range(40)]
+    assert "word00" not in asked_later
+
+
 def test_synonyms_are_never_wrong_options(
     user_client: TestClient, session: Session, dictionary: FakeDictionary, clock: Clock
 ) -> None:
