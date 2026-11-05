@@ -9,6 +9,8 @@ from app.core.config import Settings
 from app.core.enums import Gender
 from app.core.images import square_avatar
 from app.db.models import User
+from app.quiz.shop import Item
+from app.repositories.quiz import QuizRepository
 
 MAX_AVATAR_BYTES = 5 * 1024 * 1024
 
@@ -27,14 +29,17 @@ class ProfileService:
         self._settings = settings
 
     def change_name(self, user: User, name: str, now: datetime) -> None:
-        """One change per account for now; buying more with coins comes with the shop."""
+        """The first change is free; after it, each change uses a name change bought in the Shop."""
         name = name.strip()
         if not name:
             raise ProfileError("Enter a name")
-        if user.name_changed_at is not None:
-            raise NameAlreadyChangedError("You've already used your one name change")
         if name == user.display_name:
             return
+        if user.name_changed_at is not None:
+            bought = QuizRepository(self._session).unused(user.id, Item.NAME_CHANGE)
+            if not bought:
+                raise NameAlreadyChangedError("You've already used your one name change")
+            bought[0].used_at = now
         user.display_name, user.name_changed_at = name, now
         self._session.commit()
 

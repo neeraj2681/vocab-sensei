@@ -1,6 +1,8 @@
-import { useRef, useState, type SyntheticEvent } from 'react'
+import { useEffect, useRef, useState, type SyntheticEvent } from 'react'
 import { authApi, type Gender } from '../../api/auth'
+import { shopApi } from '../../api/shop'
 import { Avatar } from '../../components/Avatar'
+import { Icon } from '../../components/Icon'
 import { Field, FormError } from '../../components/Form'
 import { MIN_PASSWORD_LENGTH } from '../auth/RegisterPage'
 import { hapticsOn, setHapticsOn } from '../../components/haptics'
@@ -111,15 +113,32 @@ export function VibrationPanel() {
   )
 }
 
-/** Picture, name (changeable once) and gender, which picks the figure when there's no picture. */
+/** Picture, name (one free change, then one per name change bought in the Shop) and gender,
+which picks the figure when there's no picture. */
 export function ProfilePanel() {
   const { user, updateUser } = useAuth()
   const { busy, error, run } = useSubmit()
   const [renaming, setRenaming] = useState(false)
   const [name, setName] = useState('')
+  const [bought, setBought] = useState(0) // name changes from the Shop, not used yet
   const fileInput = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    let current = true
+    shopApi
+      .get()
+      .then((shop) => {
+        if (current) setBought(shop.stock.find((s) => s.item === 'name_change')?.owned ?? 0)
+      })
+      .catch(() => undefined) // without it, only the free change is offered
+    return () => {
+      current = false
+    }
+  }, [])
+
   if (!user) return null
   const nameUsed = Boolean(user.name_changed_at)
+  const canChange = !nameUsed || bought > 0
 
   function upload(file: File | undefined) {
     if (!file) return
@@ -133,6 +152,7 @@ export function ProfilePanel() {
     event.preventDefault()
     void run(async () => {
       updateUser(await authApi.changeName(name))
+      if (nameUsed) setBought((n) => n - 1) // that used the bought one
       setRenaming(false)
     })
   }
@@ -177,7 +197,7 @@ export function ProfilePanel() {
 
       <div className="profile__row">
         <span className="muted">Username</span> <strong>{user.display_name}</strong>{' '}
-        {!nameUsed && !renaming && (
+        {canChange && !renaming && (
           <button
             type="button"
             className="link-button"
@@ -190,12 +210,29 @@ export function ProfilePanel() {
           </button>
         )}
       </div>
-      {nameUsed && <p className="muted">You’ve used your one username change.</p>}
+      {nameUsed && bought === 0 && (
+        <p className="muted">
+          You’ve used your free username change. Another one is for sale in the Shop on Sundays.
+        </p>
+      )}
+      {nameUsed && bought > 0 && !renaming && (
+        <p className="muted">
+          <Icon name="name_badge" size={20} /> You have a name change from the Shop.
+        </p>
+      )}
       {renaming && (
         <form onSubmit={rename} className="profile__rename">
           <p className="notice" role="note">
-            ⚠ You can change your username <strong>only once</strong>. Choose carefully: after this
-            it can’t be changed again.
+            {nameUsed ? (
+              <>
+                ⚠ This uses your <strong>name change from the Shop</strong>. Choose carefully.
+              </>
+            ) : (
+              <>
+                ⚠ You can change your username <strong>only once</strong> for free. Choose
+                carefully: after this, another change costs 100,000 coins in the Shop.
+              </>
+            )}
           </p>
           <Field
             label="New username"
