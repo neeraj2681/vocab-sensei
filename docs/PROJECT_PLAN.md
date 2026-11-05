@@ -78,9 +78,13 @@ Extract text per chapter ──► tokenize + lemmatize ──► filter (stopwo
 
 ### 5.2 Current reading chooser
 - **Up to two current reads at once.** `current_readings`, ordered by a user-set priority (drag to reorder). The
-  books take turns for new words, and the 100 words in progress are shared in equal halves (a book with too few
+  books take turns for new words, and the words in progress are shared in equal halves (a book with too few
   words leaves its spare places to the other), so both books move along together. Starting a third is refused
   until one is stopped.
+- **How many words in progress:** the daily goal, between 15 and 50 (20 answers a day → 20 words), so each word
+  comes up about once a day and a new user learns their first word in about a week (with 100 at once, a 20-a-day
+  user learned none in a month). Half the practice goes to the word closest to learned, half to the one waiting
+  longest; a word answered wrong comes back after 3 other questions.
 - Each current read tracks **current chapter** (user updates it, or "I finished chapter N" button).
 - `learning_list` is derived (not hand-maintained): words from current reads, ordered by
   `book priority → chapter (starting at current chapter) → first position in chapter`, excluding learned/known words.

@@ -160,10 +160,22 @@ class TestAsking:
     def test_a_word_is_not_asked_again_within_ten_questions(
         self, user_client: TestClient, session: Session
     ) -> None:
-        words = [answer(user_client, session, right=False)["word"] for _ in range(25)]
+        words = [answer(user_client, session, right=True)["word"] for _ in range(25)]
 
         for i in range(len(words)):
             assert words[i] not in words[i + 1 : i + 11]
+
+    def test_a_word_answered_wrong_comes_back_after_three_others(
+        self, user_client: TestClient, session: Session
+    ) -> None:
+        missed = answer(user_client, session, right=False)
+        others = [answer(user_client, session)["word"] for _ in range(3)]
+
+        back = answer(user_client, session)  # scored: a retry isn't "too soon"
+
+        assert missed["word"] not in others
+        assert back["word"] == missed["word"]
+        assert back["counted"] is True
 
 
 def test_without_current_reads_there_is_nothing_to_ask(
@@ -874,12 +886,24 @@ def test_words_is_empty_before_any_answer(user_client: TestClient, book: Documen
 
 @pytest.mark.usefixtures("book", "clock")
 class TestLearningCap:
-    """At most `learning_cap` words in progress: no new word until one is learned or known."""
+    """At most `_cap` words in progress: no new word until one is learned or known."""
+
+    def test_the_cap_follows_the_daily_goal(
+        self, user_client: TestClient, session: Session, settings: Settings
+    ) -> None:
+        user = reader(session)
+        user.daily_goal = 3  # under the smallest cap: still at least 4 words here
+        session.commit()
+        settings.quiz.learning_cap_min, settings.quiz.learning_cap_max = 4, 50
+
+        words = {answer(user_client, session)["word"] for _ in range(12)}
+
+        assert len(words) == 4
 
     def test_no_new_words_while_the_cap_is_full(
         self, user_client: TestClient, session: Session, settings: Settings
     ) -> None:
-        settings.quiz.learning_cap = 2
+        settings.quiz.learning_cap_min = settings.quiz.learning_cap_max = 2
         first = [answer(user_client, session)["word"] for _ in range(2)]  # two words in progress
 
         later = {answer(user_client, session)["word"] for _ in range(6)}
@@ -889,7 +913,7 @@ class TestLearningCap:
     def test_a_learned_word_frees_a_place(
         self, user_client: TestClient, session: Session, settings: Settings
     ) -> None:
-        settings.quiz.learning_cap = 1
+        settings.quiz.learning_cap_min = settings.quiz.learning_cap_max = 1
         first = answer(user_client, session)["word"]
         word = session.scalars(select(Word).where(Word.lemma == first)).one()
         progress = session.get(UserWord, (reader(session).id, word.id))
@@ -904,7 +928,7 @@ class TestLearningCap:
     ) -> None:
         for _ in range(3):
             answer(user_client, session)
-        settings.quiz.learning_cap = 2
+        settings.quiz.learning_cap_min = settings.quiz.learning_cap_max = 2
 
         words = user_client.get("/api/quiz/words").json()
 
@@ -925,7 +949,7 @@ def test_both_books_share_the_words_in_progress(
         word = session.scalars(select(Word).where(Word.lemma == lemma)).one()
         session.add(UserWord(user_id=user.id, word_id=word.id, score=20, last_reviewed_at=NOW))
     session.commit()
-    settings.quiz.learning_cap = 4
+    settings.quiz.learning_cap_min = settings.quiz.learning_cap_max = 4
 
     for _ in range(16):
         answer(user_client, session)

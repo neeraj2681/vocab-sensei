@@ -44,7 +44,8 @@ export function GoalPanel() {
     <section aria-labelledby="goal-heading" className="panel">
       <h3 id="goal-heading">Daily goal</h3>
       <p className="muted">
-        Answers a day that keep your streak going. Days before a change keep their old goal.
+        Answers a day that keep your streak going. Days before a change keep their old goal. It also
+        sets how many words you practise at once (15 to 50), so each comes up about once a day.
       </p>
       {goal !== null && (
         <div className="goal-choices" role="group" aria-label="Answers a day">

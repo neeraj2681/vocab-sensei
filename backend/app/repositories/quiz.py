@@ -50,18 +50,18 @@ class QuizRepository:
             select(QuizAnswer).where(QuizAnswer.question_id == question_id)
         ).first()
 
-    def recently_answered_word_ids(self, user_id: int, count: int) -> set[int]:
-        """Words of the user's last `count` answers."""
+    def recent_answers(self, user_id: int, count: int) -> list[tuple[int, bool]]:
+        """(word, answered right) for the user's last `count` answers, newest first. "I know this"
+        counts as right."""
         if count == 0:
-            return set()
-        return set(
-            self._session.scalars(
-                select(QuizAnswer.word_id)
-                .where(QuizAnswer.user_id == user_id)
-                .order_by(QuizAnswer.id.desc())
-                .limit(count)
-            )
+            return []
+        rows = self._session.execute(
+            select(QuizAnswer.word_id, QuizAnswer.correct, QuizAnswer.chosen_index)
+            .where(QuizAnswer.user_id == user_id)
+            .order_by(QuizAnswer.id.desc())
+            .limit(count)
         )
+        return [(word_id, correct or chosen is None) for word_id, correct, chosen in rows]
 
     def add(self, item: Question | QuizAnswer | UserWord) -> None:
         self._session.add(item)
