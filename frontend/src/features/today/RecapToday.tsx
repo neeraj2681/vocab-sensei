@@ -15,8 +15,10 @@ export function RecapToday() {
       .get()
       .then((loaded) => {
         const shown = []
-        if (today.getDay() === 1 && loaded.weeks[0]) shown.push(loaded.weeks[0])
-        if (today.getDate() === 1 && loaded.months[0]) shown.push(loaded.months[0])
+        const lastWeek = loaded.weeks.find((r) => !r.current)
+        const lastMonth = loaded.months.find((r) => !r.current)
+        if (today.getDay() === 1 && lastWeek) shown.push(lastWeek)
+        if (today.getDate() === 1 && lastMonth) shown.push(lastMonth)
         if (current) setRecaps(shown)
       })
       .catch(() => undefined)

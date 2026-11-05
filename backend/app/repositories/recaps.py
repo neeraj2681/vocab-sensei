@@ -45,6 +45,11 @@ class RecapRepository:
         )
         return int(count or 0)
 
+    def first_answer_at(self, user_id: int) -> datetime | None:
+        return self._session.scalar(
+            select(func.min(QuizAnswer.answered_at)).where(QuizAnswer.user_id == user_id)
+        )
+
     def quest_coins(self, user_id: int, first: date, last: date) -> dict[date, int]:
         rows = self._session.execute(
             select(QuestClaim.day, func.sum(QuestClaim.coins))

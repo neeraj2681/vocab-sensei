@@ -175,13 +175,18 @@ class ReminderService:
             if reminder.last_recap_on == today or local.time() < time(hour, minute):
                 continue
             recaps = RecapService(self._session)
+            joined = recaps.joined(user.id, tz)
             parts = []
             if today.weekday() == 0:
                 first, last = weeks_before(today, 1)[0]
-                parts.append(recap_text(recaps.recap(user.id, Period.WEEK, first, last, now, tz)))
+                if last >= joined:
+                    recap = recaps.recap(user.id, Period.WEEK, first, last, now, tz)
+                    parts.append(recap_text(recap))
             if today.day == 1:
                 first, last = months_before(today, 1)[0]
-                parts.append(recap_text(recaps.recap(user.id, Period.MONTH, first, last, now, tz)))
+                if last >= joined:
+                    recap = recaps.recap(user.id, Period.MONTH, first, last, now, tz)
+                    parts.append(recap_text(recap))
             reminder.last_recap_on = today
             if parts and self._send_recap_email(user, "\n\n".join(parts)):
                 sent += 1

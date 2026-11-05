@@ -38,6 +38,9 @@ def test_finished_weeks_and_months() -> None:
 
 
 def test_last_weeks_recap(user_client: TestClient, session: Session, time: Clock) -> None:
+    user = reader(session)
+    user.created_at, user.daily_goal = WEDNESDAY_BEFORE, 2
+    session.commit()
     time.now = WEDNESDAY_BEFORE
     for right in (True, True, True, False):
         answer(user_client, session, right=right)
@@ -49,14 +52,41 @@ def test_last_weeks_recap(user_client: TestClient, session: Session, time: Clock
 
     recaps: dict[str, Any] = user_client.get("/api/recaps?tz=UTC").json()
 
-    week = recaps["weeks"][0]
-    assert (week["first"], week["last"]) == ("2026-10-19", "2026-10-25")
+    # This week, then last week from the day they joined; nothing from before.
+    assert [(w["first"], w["current"]) for w in recaps["weeks"]] == [
+        ("2026-10-26", True),
+        ("2026-10-21", False),
+    ]
+    week = recaps["weeks"][1]
+    assert week["last"] == "2026-10-25"
     assert (week["answers"], week["right"], week["coins"]) == (4, 3, 15)  # 3x5 - 10 + 10
+    assert (week["goal_days"], week["days"]) == (1, 5)  # Wednesday to Sunday
+    assert week["streak"] == 0  # Sunday was missed
     assert week["best_day"] == "2026-10-21"
     assert week["favourite_book"] == "Moby-Dick"
     assert week["toughest_word"] is not None
-    assert len(recaps["weeks"]) == 4
-    assert [m["first"] for m in recaps["months"]] == ["2026-09-01", "2026-08-01", "2026-07-01"]
+    assert [m["first"] for m in recaps["months"]] == ["2026-10-21"]
+
+
+def test_this_week_counts_today_once_its_goal_is_met(
+    user_client: TestClient, session: Session, time: Clock
+) -> None:
+    user = reader(session)
+    user.created_at, user.daily_goal = NOW - timedelta(days=1), 2  # joined Thursday
+    session.commit()
+    time.now = NOW - timedelta(days=1)
+    answer(user_client, session, right=True)
+    answer(user_client, session, right=True)
+    time.now = NOW
+
+    week = user_client.get("/api/recaps?tz=UTC").json()["weeks"][0]
+    assert (week["first"], week["current"]) == ("2026-10-29", True)
+    assert (week["goal_days"], week["days"], week["streak"]) == (1, 1, 1)  # today not yet
+
+    answer(user_client, session, right=True)
+    answer(user_client, session, right=True)
+    week = user_client.get("/api/recaps?tz=UTC").json()["weeks"][0]
+    assert (week["goal_days"], week["days"], week["streak"]) == (2, 2, 2)
 
 
 def test_the_recap_is_emailed_on_monday_at_the_reminder_time(
@@ -69,6 +99,8 @@ def test_the_recap_is_emailed_on_monday_at_the_reminder_time(
     configure(user_client, time="09:00", timezone="UTC", push=False, email=True)
     reminders = ReminderService(session, settings, mailer, pusher)
     monday = datetime(2026, 11, 2, 8, 59, tzinfo=UTC)
+    reader(session).created_at = datetime(2026, 10, 1, tzinfo=UTC)
+    session.commit()
     before = len(mailer.outbox)
 
     assert reminders.send_recaps(monday) == 0  # before 9:00
@@ -79,6 +111,21 @@ def test_the_recap_is_emailed_on_monday_at_the_reminder_time(
     assert [m.subject for m in sent] == ["Your Vocab Sensei recap"]
     assert "Your week (26 Oct to 01 Nov)" in sent[0].body
     assert "Your month" not in sent[0].body  # 2 Nov isn't the 1st
+
+
+def test_no_recap_email_for_a_week_before_joining(
+    user_client: TestClient,
+    session: Session,
+    settings: Settings,
+    mailer: FakeEmailSender,
+    pusher: FakePushSender,  # noqa: F811
+) -> None:
+    configure(user_client, time="09:00", timezone="UTC", push=False, email=True)
+    monday = datetime(2026, 11, 2, 10, 0, tzinfo=UTC)
+    reader(session).created_at = monday - timedelta(hours=2)
+    session.commit()
+
+    assert ReminderService(session, settings, mailer, pusher).send_recaps(monday) == 0
 
 
 def test_no_recap_email_midweek_or_without_email_reminders(
