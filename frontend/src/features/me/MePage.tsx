@@ -4,6 +4,7 @@ import { friendsApi } from '../../api/friends'
 import { Icon } from '../../components/Icon'
 import { useAuth } from '../auth/AuthContext'
 import { ProfileView } from '../profile/ProfileView'
+import { RecapsPanel } from '../recaps/RecapsPanel'
 import { useProfile } from '../profile/useProfile'
 import { BackupPanel } from '../progress/BackupPanel'
 import { DeleteAccountPanel } from '../progress/DeleteAccountPanel'
@@ -37,6 +38,8 @@ export function MePage() {
       )}
       {!error && !profile && <p className="muted">Loading…</p>}
       {profile && <ProfileView profile={profile} />}
+
+      <RecapsPanel />
 
       <nav className="card me__links" aria-label="Your account">
         <Link to="/friends">

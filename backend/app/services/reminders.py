@@ -23,6 +23,7 @@ from app.db.models import PushSubscription, Reminder, User
 from app.repositories.quiz import QuizRepository
 from app.repositories.reminders import ReminderRepository
 from app.services.quiz import Stats, quiz_stats
+from app.services.recaps import Period, RecapService, months_before, recap_text, weeks_before
 
 logger = logging.getLogger(__name__)
 
@@ -157,6 +158,52 @@ class ReminderService:
             self._session.commit()
         return sent
 
+    def send_recaps(self, now: datetime) -> int:
+        """Emails last week's recap on Mondays and last month's on the 1st, at the reminder time,
+        to people with email reminders on. Returns how many went out."""
+        sent = 0
+        for reminder, user in self._repo.enabled():
+            if not reminder.email:
+                continue
+            try:
+                tz = zone(reminder.timezone)
+            except ReminderError:
+                continue
+            local = now.astimezone(tz)
+            today = local.date()
+            hour, minute = (int(part) for part in reminder.time.split(":"))
+            if reminder.last_recap_on == today or local.time() < time(hour, minute):
+                continue
+            recaps = RecapService(self._session)
+            parts = []
+            if today.weekday() == 0:
+                first, last = weeks_before(today, 1)[0]
+                parts.append(recap_text(recaps.recap(user.id, Period.WEEK, first, last, now, tz)))
+            if today.day == 1:
+                first, last = months_before(today, 1)[0]
+                parts.append(recap_text(recaps.recap(user.id, Period.MONTH, first, last, now, tz)))
+            reminder.last_recap_on = today
+            if parts and self._send_recap_email(user, "\n\n".join(parts)):
+                sent += 1
+            self._session.commit()
+        return sent
+
+    def _send_recap_email(self, user: User, text: str) -> bool:
+        link = f"{self._settings.email.app_base_url}/me"
+        try:
+            self._email.send(
+                Email(
+                    to=user.email,
+                    subject="Your Vocab Sensei recap",
+                    body=f"Hi {user.display_name},\n\n{text}\n\nSee more: {link}\n\n"
+                    "(These come with email reminders; change them in Me → Settings.)",
+                )
+            )
+        except Exception:
+            logger.exception("recap email failed")
+            return False
+        return True
+
     def _send(self, user: User, stats: Stats, *, push: bool, email: bool) -> bool:
         """Sends on every chosen channel; True if any reached the person."""
         text = message(stats)
@@ -207,9 +254,10 @@ def run_scheduler(
     while not stop.wait(settings.reminders.check_seconds):
         try:
             with session_factory() as session:
-                sent = ReminderService(session, settings, email_sender, push_sender).send_due(
-                    datetime.now(ZoneInfo("UTC"))
-                )
+                service = ReminderService(session, settings, email_sender, push_sender)
+                now = datetime.now(ZoneInfo("UTC"))
+                sent = service.send_due(now)
+                service.send_recaps(now)
             if sent:
                 logger.info("sent %d reminders", sent)
         except Exception:

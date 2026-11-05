@@ -9,6 +9,7 @@ import { UpNext } from '../learning/UpNext'
 import { BookCover } from '../library/BookCover'
 import { chapterLabel } from '../library/labels'
 import { QuestsPanel } from './QuestsPanel'
+import { RecapToday } from './RecapToday'
 import { WeekChart } from './WeekChart'
 
 const SECONDS_PER_ANSWER = 15 // measured from real sessions
@@ -80,6 +81,7 @@ export function TodayPage() {
         <Link className="button-link primary today__go" to="/quiz">
           {left > 0 ? `Continue · about ${String(minutes)} min` : 'Keep practising'}
         </Link>
+        <RecapToday />
         <QuestsPanel
           onClaimed={(total) => {
             setToday((t) => t && { ...t, stats: { ...t.stats, total } })

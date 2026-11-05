@@ -1768,6 +1768,86 @@ a.primary:active {
   margin-bottom: 0.75rem;
 }
 
+/* Recaps */
+.recap__head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.recap__head h3,
+.recap__head p {
+  margin: 0;
+}
+
+.recap__numbers {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+}
+
+.recap__numbers div {
+  padding: 0.5rem 0.75rem;
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+
+.recap__numbers dt {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.recap__numbers dd {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin: 0;
+  font-family: var(--display);
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.recap__highlights {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.recap__highlights li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.recaps {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.recaps h3 {
+  margin: 0;
+}
+
+.recaps .word-tabs {
+  max-width: 16rem;
+}
+
+.recaps__picker {
+  display: flex;
+  gap: 0.35rem;
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+}
+
+.recaps__picker .word-tab {
+  flex: none;
+  font-size: 0.85rem;
+}
+
 /* Leaderboard */
 .leaderboard h2 {
   display: flex;
