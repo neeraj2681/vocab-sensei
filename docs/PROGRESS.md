@@ -16,6 +16,8 @@ database backups and 8 built-in classics, at the fixed **Tailscale Funnel** addr
 https://neerajs-macbook-air.tail8cd657.ts.net (see [../deploy/README.md](../deploy/README.md)).
 
 Open items (waiting on the user):
+- **Moving to a server this weekend (7–8 Nov 2026)**: Oracle Cloud Always Free (ARM) + domain is the plan; the
+  API image is ~2.8 GB now (speech model). Restore normal rate limits there; set up the watchdog/backups.
 - **Moving to a real server** (asked 2 Nov 2026): recommended **Oracle Cloud Always Free** (ARM, Mumbai /
   Hyderabad, ₹0) + a domain (~₹500–1,000/yr) + Caddy HTTPS + Cloudflare DNS; fallback AWS Lightsail Mumbai 2 GB
   (~$10/month). The user must create the Oracle account, buy the domain and add an SSH key; then migrate
@@ -149,6 +151,31 @@ Migrations this stretch: covers, reminders push/email, profile (8c7b9f9e4cc0), g
 deploy was preceded by a `pg_dump` to `deploy/backups/before-*.sql.gz`.
 
 **Tests:** backend 380 (also run on PostgreSQL), frontend 133.
+
+### 3–5 Nov 2026
+| PR | What |
+|----|------|
+| #89, #90, #92 | Words: **Known** tab, "Learn it again", known words only sent on request (old cached apps) |
+| #91, #85 | Books: one scrollable row per shelf, aligned covers |
+| #95–#97, #107 | **Ninja Mode**: double coins after 5 right in a row, a 5-segment meter, a warning before stopping; ends on a new visit (only a quiz reload keeps it) |
+| #99 | **Daily quests** on Today: 3 a day sized by the goal, Claim buttons, bonus chest |
+| #100, #101 | Vibration on iPhone (switch haptic), **sound effects** (Web Audio) with volume in Settings |
+| #102, #104 | New versions apply on first open (reload on SW takeover, no-cache headers); green icon renamed to beat icon caches |
+| #103 | Green book app icon |
+| #105, #106 | Keyboard: ↓/↑ + Enter for options, summary and warnings |
+| #108, #109 | Book page: tap a chapter circle for a Practice bubble (chapter-only quiz) |
+| #110, #111 | **Leaderboard** (today's coins), public **profiles**, new **Me** page (Progress merged), privacy switches, book covers on profiles |
+| #112, #113 | **Shop opens on Sundays**: streak freeze (10k, ≤3, auto-used), double coins (50k, 30 min, 4× in Ninja Mode), extra username change (100k) |
+| #114 | **Friends**: exact search, requests, Friends leaderboard tab |
+| #115 | **Weekly/monthly recaps** on Today, Me and by email |
+| #116 | **Pronunciation**: 🎤 Say it on word cards, "say this word" quiz questions; faster-whisper `base.en` on our server (image +1 GB) |
+| #117 | **Learning cap**: ≤100 words in progress (top book, then closest to learned; rest "Later"), 10 right answers to learn, Almost-there group, learned banner |
+
+Migrations this stretch (each preceded by a `pg_dump` in `deploy/backups/before-*.sql.gz`): combo, quest
+claims, leaderboard opt-out + books visibility, shop purchases, friendships, recap emails.
+
+**Tests:** backend 440, frontend 181. The routine watchdog cron was stopped on 5 Nov (the user is moving to a
+server that weekend).
 
 ### What works end to end today
 Sign up → verify → upload an EPUB / PDF / TXT → book ready in ~20 s with chapters and ~6,700 defined words →
