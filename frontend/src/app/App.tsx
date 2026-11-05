@@ -13,6 +13,7 @@ import { VerifyEmailPage } from '../features/auth/VerifyEmailPage'
 import { BookPage } from '../features/library/BookPage'
 import { LibraryPage } from '../features/library/LibraryPage'
 import { MePage } from '../features/me/MePage'
+import { FriendsPage } from '../features/friends/FriendsPage'
 import { LeaderboardPage } from '../features/leaderboard/LeaderboardPage'
 import { UserProfilePage } from '../features/profile/UserProfilePage'
 import { QuizPage } from '../features/quiz/QuizPage'
@@ -105,6 +106,14 @@ function AppRoutes() {
         element={
           <RequireAuth>
             <LeaderboardPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/friends"
+        element={
+          <RequireAuth>
+            <FriendsPage />
           </RequireAuth>
         }
       />

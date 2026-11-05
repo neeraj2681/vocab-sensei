@@ -10,13 +10,14 @@ const MEDALS = ['🥇', '🥈', '🥉']
 /** Everyone's coins today, most first; tap a name to open their profile. */
 export function LeaderboardPage() {
   const { user } = useAuth()
+  const [scope, setScope] = useState<'everyone' | 'friends'>('everyone')
   const [rows, setRows] = useState<LeaderboardRow[] | null>(null)
   const [error, setError] = useState(false)
 
   useEffect(() => {
     let current = true
     leaderboardApi
-      .today()
+      .today(scope)
       .then((loaded) => {
         if (current) setRows(loaded)
       })
@@ -26,7 +27,7 @@ export function LeaderboardPage() {
     return () => {
       current = false
     }
-  }, [])
+  }, [scope])
 
   return (
     <section className="leaderboard">
@@ -34,6 +35,26 @@ export function LeaderboardPage() {
         <Icon name="trophy" size={36} /> Leaderboard
       </h2>
       <p className="muted">Coins earned today. It starts again at midnight.</p>
+      <div className="word-tabs" role="group" aria-label="Show">
+        {(['everyone', 'friends'] as const).map((tab) => (
+          <button
+            key={tab}
+            type="button"
+            className="word-tab"
+            aria-pressed={scope === tab}
+            onClick={() => {
+              setScope(tab)
+            }}
+          >
+            {tab === 'everyone' ? 'Everyone' : 'Friends'}
+          </button>
+        ))}
+      </div>
+      {scope === 'friends' && rows && rows.length <= 1 && (
+        <p className="muted">
+          No friends here yet. <Link to="/friends">Find a friend</Link> to compete with.
+        </p>
+      )}
       {error && (
         <p role="alert" className="form-error">
           Couldn’t load the leaderboard.

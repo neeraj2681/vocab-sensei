@@ -14,6 +14,7 @@ export type IconName =
   | 'name_badge'
   | 'ninja'
   | 'palm_tree'
+  | 'people_hugging'
   | 'person'
   | 'pot'
   | 'shopping_bags'

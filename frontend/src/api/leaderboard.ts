@@ -32,7 +32,8 @@ export interface Profile {
 const tz = () => `tz=${encodeURIComponent(timeZone())}`
 
 export const leaderboardApi = {
-  today: () => apiGet<LeaderboardRow[]>(`/leaderboard?${tz()}`),
+  today: (scope: 'everyone' | 'friends' = 'everyone') =>
+    apiGet<LeaderboardRow[]>(`/leaderboard?${tz()}${scope === 'friends' ? '&scope=friends' : ''}`),
   profile: (userId: number) => apiGet<Profile>(`/profiles/${String(userId)}?${tz()}`),
   avatarUrl: (userId: number) => `/api/profiles/${String(userId)}/avatar`,
   coverUrl: (userId: number, bookId: number) =>
