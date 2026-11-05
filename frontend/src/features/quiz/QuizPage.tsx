@@ -45,6 +45,11 @@ function focusOf(book: number | null, chapter: number | null) {
   return book !== null && chapter !== null ? { documentId: book, chapter } : undefined
 }
 
+/** Whether a time the server sent (like double coins' end) is still to come. */
+function running(until: string | null | undefined): boolean {
+  return !!until && new Date(until).getTime() > Date.now()
+}
+
 /** Selects the next (or previous) of `selector`'s buttons, wrapping round at the ends. */
 function moveFocus(selector: string, step: 1 | -1) {
   const buttons = [...document.querySelectorAll<HTMLButtonElement>(selector)]
@@ -182,7 +187,10 @@ export function QuizPage() {
     const outcome = correct ? question.if_right : question.if_wrong
     // The same rule as the server: right answers in Ninja Mode earn more; a wrong one ends it.
     const doubled = correct && ninja(combo) && outcome.points > 0
-    const points = doubled ? outcome.points * combo.multiplier : outcome.points
+    // The Shop's double coins (until a time the server set) double right answers again.
+    const boosted = correct && outcome.points > 0 && running(stats?.double_coins_until)
+    const points =
+      (doubled ? outcome.points * combo.multiplier : outcome.points) * (boosted ? 2 : 1)
     const next = { ...combo, run: correct ? combo.run + 1 : 0 }
     const change =
       !ninja(combo) && ninja(next) ? 'started' : ninja(combo) && !correct ? 'ended' : undefined

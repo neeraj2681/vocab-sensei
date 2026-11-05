@@ -1,5 +1,6 @@
 import type { QuizStats } from '../../api/quiz'
 import { Icon } from '../../components/Icon'
+import { formatCountdown, useCountdown } from '../../components/useCountdown'
 import { Sparkline } from './Sparkline'
 
 export interface Pop {
@@ -20,6 +21,7 @@ const formatDelta = (delta: number) =>
 /** Live lifetime score with a +5 / −10 pop, recent trend and today's progress. */
 export function ScoreBar({ stats, pop, recent }: Props) {
   const goalMet = stats.today >= stats.daily_goal
+  const doubleLeft = useCountdown(stats.double_coins_until)
 
   return (
     <div className="scorebar">
@@ -49,6 +51,11 @@ export function ScoreBar({ stats, pop, recent }: Props) {
         <span title="Days in a row with your daily goal met">
           <Icon name="fire" size={18} /> {stats.streak}-day streak
         </span>
+        {doubleLeft !== null && doubleLeft > 0 && (
+          <span className="scorebar__double" title="Double coins from the Shop">
+            <Icon name="double_coins" size={20} /> 2× · {formatCountdown(doubleLeft)}
+          </span>
+        )}
         <span className={goalMet ? 'scorebar__goal scorebar__goal--met' : 'scorebar__goal'}>
           Today {stats.today}/{stats.daily_goal}
           {goalMet && ' ✓'}

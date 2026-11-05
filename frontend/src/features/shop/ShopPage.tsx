@@ -1,82 +1,284 @@
 import { useEffect, useState } from 'react'
-import { quizApi } from '../../api/quiz'
-import { Icon } from '../../components/Icon'
+import { shopApi, type Shop, type ShopItem, type Stock } from '../../api/shop'
+import { Burst } from '../../components/Burst'
+import { FormError } from '../../components/Form'
+import { Icon, type IconName } from '../../components/Icon'
+import { sounds } from '../../components/sounds'
+import { formatCountdown, useCountdown } from '../../components/useCountdown'
+import { useSubmit } from '../../components/useSubmit'
 
-/** The market where coins will buy things. The merchant hasn't arrived yet. */
+const ITEMS: Record<ShopItem, { name: string; icon: IconName; about: string }> = {
+  streak_freeze: {
+    name: 'Streak freeze',
+    icon: 'torch',
+    about:
+      'Keeps your streak alive on a day you miss your goal. Used by itself; if you meet your goal, it stays for another day.',
+  },
+  double_coins: {
+    name: 'Double coins',
+    icon: 'double_coins',
+    about:
+      'Doubles the coins of every right answer for 30 minutes (four times in Ninja Mode). Keep it and use it when you like.',
+  },
+}
+
+/** The desert market: open all of Sunday with streak freezes and double coins; the rest of the
+week a countdown. The inventory (and using double coins) is there every day. */
 export function ShopPage() {
-  const [coins, setCoins] = useState<number | null>(null)
+  const [shop, setShop] = useState<Shop | null>(null)
+  const [error, setError] = useState(false)
+  const [bought, setBought] = useState<ShopItem | null>(null)
+  const { busy, error: actionError, run } = useSubmit()
+  const opensIn = useCountdown(shop?.open ? shop.closes_at : shop?.opens_at)
 
   useEffect(() => {
     let current = true
-    quizApi
-      .stats()
-      .then((stats) => {
-        if (current) setCoins(stats.total)
+    shopApi
+      .get()
+      .then((loaded) => {
+        if (current) setShop(loaded)
       })
-      .catch(() => undefined) // the market still shows; only the balance is missing
+      .catch(() => {
+        if (current) setError(true)
+      })
     return () => {
       current = false
     }
   }, [])
 
+  // The countdown reached zero: the Shop just opened or closed, so ask again.
+  useEffect(() => {
+    if (opensIn !== 0) return
+    let current = true
+    void shopApi.get().then((loaded) => {
+      if (current) setShop(loaded)
+    })
+    return () => {
+      current = false
+    }
+  }, [opensIn])
+
+  function buy(item: ShopItem) {
+    void run(async () => {
+      setShop(await shopApi.buy(item))
+      setBought(item)
+      sounds.coin()
+    })
+  }
+
+  function useDoubleCoins() {
+    void run(async () => {
+      setShop(await shopApi.useDoubleCoins())
+      sounds.ninjaStart()
+    })
+  }
+
   return (
     <section className="shop">
       <div className="shop__head">
         <h2>Shop</h2>
-        {coins !== null && (
+        {shop && (
           <span className="stat-pill" title="Your coins">
-            <Icon name="coin" size={22} /> {coins.toLocaleString()} coins
+            <Icon name="coin" size={22} /> {shop.coins.toLocaleString()} coins
           </span>
         )}
       </div>
 
-      <div
-        className="market"
-        role="img"
-        aria-label="A quiet desert market at dusk; one stall is shut"
-      >
-        <span className="market__moon">
-          <Icon name="crescent_moon" size={56} />
-        </span>
-        <span className="market__dune market__dune--back" />
-        <span className="market__dune market__dune--front" />
-        <span className="market__palm market__palm--left">
-          <Icon name="palm_tree" size={110} />
-        </span>
-        <span className="market__palm market__palm--right">
-          <Icon name="palm_tree" size={90} />
-        </span>
+      <Market open={shop?.open ?? false} />
 
-        <div className="market__stalls">
-          <Stall stripe="red">
-            <Icon name="amphora" size={44} />
-            <Icon name="pot" size={40} />
+      {error && (
+        <p role="alert" className="form-error">
+          Couldn’t reach the Shop. Is the backend running?
+        </p>
+      )}
+      {shop && !shop.open && (
+        <div className="card shop__notice">
+          <Icon name="hourglass" size={48} />
+          <div>
+            <h3>The merchant comes on Sunday</h3>
+            <p className="muted">The Shop is open all day every Sunday. Keep earning coins!</p>
+            {opensIn !== null && (
+              <p className="shop__timer" role="timer" aria-label="Opens in">
+                Opens in <strong>{formatCountdown(opensIn)}</strong>
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+      {shop?.open && (
+        <>
+          <div className="card shop__notice shop__notice--open">
+            <Icon name="shopping_bags" size={48} />
+            <div>
+              <h3>The merchant is here!</h3>
+              {opensIn !== null && (
+                <p className="shop__timer" role="timer" aria-label="Closes in">
+                  Closes in <strong>{formatCountdown(opensIn)}</strong>
+                </p>
+              )}
+            </div>
+          </div>
+          <ul className="shop__items">
+            {shop.stock.map((stock) => (
+              <ItemCard
+                key={stock.item}
+                stock={stock}
+                coins={shop.coins}
+                busy={busy}
+                justBought={bought === stock.item}
+                onBuy={() => {
+                  buy(stock.item)
+                }}
+              />
+            ))}
+          </ul>
+        </>
+      )}
+      <FormError message={actionError} />
+      {shop && <Inventory shop={shop} busy={busy} onUseDoubleCoins={useDoubleCoins} />}
+    </section>
+  )
+}
+
+function ItemCard({
+  stock,
+  coins,
+  busy,
+  justBought,
+  onBuy,
+}: {
+  stock: Stock
+  coins: number
+  busy: boolean
+  justBought: boolean
+  onBuy: () => void
+}) {
+  const item = ITEMS[stock.item]
+  const full = stock.owned >= stock.max_owned
+  const short = coins < stock.price
+  return (
+    <li className="card shop-item">
+      {justBought && <Burst />}
+      <Icon name={item.icon} size={72} />
+      <h3>{item.name}</h3>
+      <p className="muted">{item.about}</p>
+      <p className="shop-item__owned">
+        You have {stock.owned} of {stock.max_owned}
+      </p>
+      <button
+        type="button"
+        className="quest__claim shop-item__buy"
+        disabled={busy || full || short}
+        onClick={onBuy}
+      >
+        Buy <Icon name="coin" size={20} /> {stock.price.toLocaleString()}
+      </button>
+      {full ? (
+        <p className="muted">You have as many as you can keep.</p>
+      ) : (
+        short && (
+          <p className="muted">{(stock.price - coins).toLocaleString()} more coins needed.</p>
+        )
+      )}
+    </li>
+  )
+}
+
+/** What you own, every day: freezes work by themselves; double coins start when you say. */
+function Inventory({
+  shop,
+  busy,
+  onUseDoubleCoins,
+}: {
+  shop: Shop
+  busy: boolean
+  onUseDoubleCoins: () => void
+}) {
+  const left = useCountdown(shop.double_coins_until)
+  const freezes = shop.stock.find((s) => s.item === 'streak_freeze')?.owned ?? 0
+  const doubles = shop.stock.find((s) => s.item === 'double_coins')?.owned ?? 0
+  const running = left !== null && left > 0
+  return (
+    <section className="card inventory" aria-labelledby="inventory-heading">
+      <h3 id="inventory-heading">Your inventory</h3>
+      <ul className="inventory__list">
+        <li>
+          <Icon name="torch" size={40} />
+          <span>
+            <strong>Streak freezes: {freezes}</strong>
+            <span className="muted"> · used by themselves on a missed day</span>
+          </span>
+        </li>
+        <li>
+          <Icon name="double_coins" size={40} />
+          <span>
+            <strong>Double coins: {doubles}</strong>
+            {running && (
+              <span className="inventory__running">
+                {' '}
+                · 2× coins for <strong>{formatCountdown(left)}</strong>
+              </span>
+            )}
+          </span>
+          {doubles > 0 && (
+            <button type="button" className="primary" disabled={busy} onClick={onUseDoubleCoins}>
+              {running ? 'Add 30 min' : 'Use now'}
+            </button>
+          )}
+        </li>
+      </ul>
+    </section>
+  )
+}
+
+function Market({ open }: { open: boolean }) {
+  return (
+    <div
+      className="market"
+      role="img"
+      aria-label={
+        open
+          ? 'A busy desert market; the merchant’s stall is open'
+          : 'A quiet desert market at dusk; one stall is shut'
+      }
+    >
+      <span className="market__moon">
+        <Icon name="crescent_moon" size={56} />
+      </span>
+      <span className="market__dune market__dune--back" />
+      <span className="market__dune market__dune--front" />
+      <span className="market__palm market__palm--left">
+        <Icon name="palm_tree" size={110} />
+      </span>
+      <span className="market__palm market__palm--right">
+        <Icon name="palm_tree" size={90} />
+      </span>
+
+      <div className="market__stalls">
+        <Stall stripe="red">
+          <Icon name="amphora" size={44} />
+          <Icon name="pot" size={40} />
+        </Stall>
+        {open ? (
+          <Stall stripe="blue">
+            <Icon name="torch" size={44} />
+            <Icon name="double_coins" size={44} />
           </Stall>
+        ) : (
           <Stall stripe="blue" closed>
             <Icon name="door" size={48} />
           </Stall>
-          <Stall stripe="green">
-            <Icon name="diya_lamp" size={40} />
-            <Icon name="coin" size={34} />
-          </Stall>
-        </div>
-
-        <span className="market__camel">
-          <Icon name="camel" size={84} />
-        </span>
+        )}
+        <Stall stripe="green">
+          <Icon name="diya_lamp" size={40} />
+          <Icon name="coin" size={34} />
+        </Stall>
       </div>
 
-      <div className="card shop__notice">
-        <Icon name="hourglass" size={48} />
-        <div>
-          <h3>The merchant isn’t here yet</h3>
-          <p className="muted">
-            Keep earning coins in the quiz. When the merchant arrives you’ll be able to buy things
-            like a streak freeze or another name change.
-          </p>
-        </div>
-      </div>
-    </section>
+      <span className="market__camel">
+        <Icon name="camel" size={84} />
+      </span>
+    </div>
   )
 }
 

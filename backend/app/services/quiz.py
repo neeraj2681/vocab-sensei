@@ -16,7 +16,7 @@ from collections import Counter
 from collections.abc import Callable
 from contextlib import suppress
 from dataclasses import dataclass, replace
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, time, timedelta
 from random import Random
 from zoneinfo import ZoneInfo
 
@@ -38,6 +38,7 @@ from app.quiz.questions import (
     blank_out,
 )
 from app.quiz.selection import DailyGoal, Pool, choose_pool, choose_question_type, streak
+from app.quiz.shop import DOUBLE_COINS_MULTIPLIER, Freeze, Item, freezes_to_use
 from app.repositories.learning import LearningRepository
 from app.repositories.quiz import QuizRepository
 from app.scoring.rules import (
@@ -91,8 +92,9 @@ class Focus:
 class Day:
     date: date
     answers: int
-    met: bool  # judged by the goal the user had that day, like the streak
+    met: bool  # judged by the goal the user had that day, like the streak (or frozen)
     points: int  # net change in the lifetime score that day (wrong answers subtract)
+    frozen: bool = False  # missed, but a streak freeze kept the streak
 
 
 @dataclass(frozen=True)
@@ -105,6 +107,7 @@ class Stats:
     combo: int = 0  # right answers in a row
     combo_after: int = 5  # Ninja Mode starts after this many in a row...
     combo_multiplier: int = 2  # ...and multiplies the coins of right answers by this
+    double_coins_until: datetime | None = None  # a Shop item doubling right answers' coins
 
 
 @dataclass(frozen=True)
@@ -179,13 +182,24 @@ def quiz_stats(repo: QuizRepository, user: User, now: datetime, tz: ZoneInfo) ->
     goal = daily_goal(user, tz)
     days = [today - timedelta(days=back) for back in range(6, -1, -1)]
     points.update(repo.quest_coins_by_day(user.id, days[0]))  # quest rewards count on their day
+    frozen = repo.frozen_days(user.id)
     return Stats(
         total=repo.total_points(user.id),
         today=per_day[today],
         daily_goal=goal.on(today),
-        streak=streak(per_day, today, goal),
-        week=[Day(day, per_day[day], per_day[day] >= goal.on(day), points[day]) for day in days],
+        streak=streak(per_day, today, goal, frozen),
+        week=[
+            Day(
+                day,
+                per_day[day],
+                per_day[day] >= goal.on(day) or day in frozen,
+                points[day],
+                frozen=day in frozen,
+            )
+            for day in days
+        ],
         combo=user.combo,
+        double_coins_until=user.double_coins_until,
     )
 
 
@@ -409,6 +423,8 @@ class QuizService:
         user = self._user(user_id)
         if correct:  # Ninja Mode: doubled coins once the run is long enough, then the run grows
             points *= combo_multiplier(user.combo, self._settings.scoring)
+            if user.double_coins_until and now < user.double_coins_until:
+                points *= DOUBLE_COINS_MULTIPLIER  # the Shop's double coins (x4 with Ninja Mode)
             user.combo += 1
         else:
             user.combo = 0
@@ -530,7 +546,39 @@ class QuizService:
 
     # Progress
 
+    def apply_streak_freezes(self, user_id: int, now: datetime, tz: ZoneInfo) -> None:
+        """Uses streak freezes for missed days since the last check (see app/quiz/shop.py)."""
+        user = self._user(user_id)
+        yesterday = now.astimezone(tz).date() - timedelta(days=1)
+        checked = user.freezes_checked_through
+        if checked is not None and checked >= yesterday:
+            return
+        if checked is None:  # the first look: freezes only cover days from now on
+            user.freezes_checked_through = yesterday
+            self._session.commit()
+            return
+        unused = self._repo.unused(user.id, Item.STREAK_FREEZE)
+        if unused:
+            since = datetime.combine(checked - timedelta(days=_STREAK_DAYS), time.min, tz)
+            per_day: Counter[date] = Counter(
+                a.answered_at.astimezone(tz).date() for a in self._repo.answers(user.id, since)
+            )
+            freezes = {p.id: p for p in unused}
+            for day, freeze_id in freezes_to_use(
+                per_day,
+                daily_goal(user, tz),
+                self._repo.frozen_days(user.id),
+                [Freeze(p.id, p.bought_at.astimezone(tz).date()) for p in unused],
+                checked + timedelta(days=1),
+                yesterday,
+            ):
+                freezes[freeze_id].used_at = now
+                freezes[freeze_id].used_for_day = day
+        user.freezes_checked_through = yesterday
+        self._session.commit()
+
     def stats(self, user_id: int, now: datetime, tz: ZoneInfo) -> Stats:
+        self.apply_streak_freezes(user_id, now, tz)
         rules = self._settings.scoring
         return replace(
             quiz_stats(self._repo, self._user(user_id), now, tz),

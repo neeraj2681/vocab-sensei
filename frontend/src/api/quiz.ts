@@ -34,6 +34,7 @@ export interface QuizStats {
   combo?: number // right answers in a row, kept between sessions
   combo_after?: number // Ninja Mode (more coins for right answers) after this many in a row
   combo_multiplier?: number
+  double_coins_until?: string | null // the Shop's double coins are running until then
 }
 
 export interface Day {
@@ -41,6 +42,7 @@ export interface Day {
   answers: number
   met: boolean
   points?: number // net score earned that day
+  frozen?: boolean // missed, but a streak freeze kept the streak
 }
 
 export interface AnswerResult {

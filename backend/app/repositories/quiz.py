@@ -15,6 +15,7 @@ from app.db.models import (
     QuestClaim,
     Question,
     QuizAnswer,
+    ShopPurchase,
     UserWord,
     Word,
 )
@@ -68,14 +69,41 @@ class QuizRepository:
     # Scores
 
     def total_points(self, user_id: int) -> int:
-        """Lifetime coins: every answer's points plus claimed quest rewards."""
+        """Coins to spend: every answer's points plus claimed quest rewards, minus Shop buys."""
         answers = self._session.scalar(
             select(func.sum(QuizAnswer.points)).where(QuizAnswer.user_id == user_id)
         )
         quests = self._session.scalar(
             select(func.sum(QuestClaim.coins)).where(QuestClaim.user_id == user_id)
         )
-        return int(answers or 0) + int(quests or 0)
+        spent = self._session.scalar(
+            select(func.sum(ShopPurchase.coins)).where(ShopPurchase.user_id == user_id)
+        )
+        return int(answers or 0) + int(quests or 0) - int(spent or 0)
+
+    def frozen_days(self, user_id: int) -> set[date]:
+        """Missed days a streak freeze covered."""
+        return set(
+            self._session.scalars(
+                select(ShopPurchase.used_for_day).where(
+                    ShopPurchase.user_id == user_id, ShopPurchase.used_for_day.is_not(None)
+                )
+            )
+        )
+
+    def unused(self, user_id: int, item: str) -> list[ShopPurchase]:
+        """Bought and still in the inventory, oldest first."""
+        return list(
+            self._session.scalars(
+                select(ShopPurchase)
+                .where(
+                    ShopPurchase.user_id == user_id,
+                    ShopPurchase.item == item,
+                    ShopPurchase.used_at.is_(None),
+                )
+                .order_by(ShopPurchase.bought_at, ShopPurchase.id)
+            )
+        )
 
     def quest_coins_by_day(self, user_id: int, since: date) -> dict[date, int]:
         rows = self._session.execute(

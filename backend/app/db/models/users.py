@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 
-from sqlalchemy import ForeignKey, String
+from sqlalchemy import Date, ForeignKey, String
 from sqlalchemy import true as sa_true
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -28,6 +28,8 @@ class User(Base):
     # Listed on the leaderboard, with a profile others can open; can be turned off in Settings.
     show_on_leaderboard: Mapped[bool] = mapped_column(default=True, server_default=sa_true())
     show_books: Mapped[bool] = mapped_column(default=True, server_default=sa_true())  # on profile
+    double_coins_until: Mapped[datetime | None] = mapped_column(UTCDateTime)  # from the Shop
+    freezes_checked_through: Mapped[date | None] = mapped_column(Date)  # missed days looked at
     onboarded_at: Mapped[datetime | None] = mapped_column(UTCDateTime)  # finished the tour
     name_changed_at: Mapped[datetime | None] = mapped_column(UTCDateTime)  # one change allowed
     gender: Mapped[Gender] = mapped_column(

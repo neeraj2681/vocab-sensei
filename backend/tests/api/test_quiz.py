@@ -197,6 +197,7 @@ class TestAnswering:
             "combo": 1,
             "combo_after": 5,
             "combo_multiplier": 2,
+            "double_coins_until": None,
         }
 
     def test_a_wrong_answer_always_takes_ten_from_the_total(
