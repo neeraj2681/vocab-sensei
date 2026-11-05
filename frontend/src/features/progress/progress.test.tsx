@@ -303,7 +303,7 @@ describe('Me tab', () => {
     progress(HISTORY, { 'GET /api/quiz/words?include_known=true': () => json([...WORDS, waiting]) })
     const user = renderApp('/words')
 
-    await user.click(await screen.findByRole('button', { name: 'Learning · 2' })) // not counted
+    await user.click(await screen.findByRole('button', { name: 'Learning · 3' })) // all in progress
 
     const later = screen.getByText(/Later · 1/).closest('details')
     expect(later).toHaveTextContent('quaint')
