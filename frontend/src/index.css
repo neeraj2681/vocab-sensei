@@ -2094,17 +2094,11 @@ button.raised:disabled {
   animation: ninja-in 0.25s ease-out;
 }
 
-/* 🎤 Say it, on word cards */
+/* 🎤 Saying a word: tap to record (the button waves with your voice), then confirm what was heard */
 .say-it {
   display: grid;
-  justify-items: start;
   gap: 0.35rem;
   margin: 0.5rem 0;
-}
-
-.say-it__button--on {
-  border-color: var(--bad);
-  color: var(--bad);
 }
 
 .say-it p {
@@ -2121,62 +2115,24 @@ button.raised:disabled {
   font-weight: 700;
 }
 
-/* Words tab groups */
-.word-group {
-  margin: 1rem 0 0.25rem;
-  font-size: 0.95rem;
-}
-
-.word-later {
-  margin-top: 1rem;
-}
-
-.word-later summary {
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.today__learned {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  margin: 0.35rem 0 0;
-  color: var(--accent-deep);
-  font-weight: 700;
-}
-
-/* A word reaches 100%: a big moment */
-.feedback__learned {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin: 0.75rem 0;
-  padding: 0.75rem 1rem;
-  border-radius: 16px;
-  background: linear-gradient(#fff4cc, #ffe08a);
-  color: #4a2e00;
-  animation: ninja-in 0.35s ease-out;
-}
-
-.feedback__learned strong {
-  display: block;
-  font-family: var(--display);
-  font-size: 1.3rem;
-}
-
-/* "Say this word": a big microphone button */
-.say-word {
+.voice {
   display: grid;
   justify-items: center;
   gap: 0.6rem;
-  margin: 1rem 0;
+  margin: 0.75rem 0;
 }
 
-.say-word__mic {
+.say-it .voice {
+  justify-items: start;
+  margin: 0;
+}
+
+.voice__mic {
   display: inline-flex;
   align-items: center;
   gap: 0.6rem;
-  padding: 1rem 1.75rem;
+  min-height: 3.2rem;
+  padding: 0.8rem 1.6rem;
   border: 0;
   border-radius: 999px;
   background: var(--accent);
@@ -2184,31 +2140,63 @@ button.raised:disabled {
   color: var(--on-accent);
   font: inherit;
   font-family: var(--display);
-  font-size: 1.2rem;
+  font-size: 1.15rem;
   font-weight: 600;
   cursor: pointer;
 }
 
-.say-word__mic span {
-  font-size: 1.6rem;
+.voice__mic > span:first-child:not(.voice__wave) {
+  font-size: 1.5rem;
 }
 
-.say-word__mic--on {
+.voice__mic--on {
   background: var(--bad);
   box-shadow: 0 5px 0 #a3302a;
-  animation: mic-pulse 0.8s ease-in-out infinite alternate;
 }
 
-@keyframes mic-pulse {
-  to {
-    transform: scale(1.05);
-  }
+/* The wave: five bars that follow the voice's loudness */
+.voice__wave {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 1.6rem;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .say-word__mic--on {
-    animation: none;
-  }
+.voice__wave span {
+  width: 4px;
+  height: 100%;
+  border-radius: 2px;
+  background: currentcolor;
+  transform-origin: center;
+  transition: transform 0.08s linear;
+}
+
+.voice__heard {
+  display: grid;
+  gap: 0.35rem;
+  width: min(100%, 24rem);
+}
+
+.voice__heard label {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.voice__row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.voice__row input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.55rem 0.75rem;
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-2);
+  color: var(--fg);
+  font: inherit;
+  font-weight: 700;
 }
 
 /* Ninja Mode: five right in a row double the coins until a miss */

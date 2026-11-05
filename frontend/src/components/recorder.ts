@@ -1,7 +1,6 @@
 /** Recording a short clip from the microphone (MediaRecorder), for pronunciation practice. */
 
 export const SPEAKING_STORAGE_KEY = 'vs-speaking'
-const CLIP_MS = 2500 // long enough for one word
 
 let skippedThisVisit = false // "Can't speak now" in the quiz: no more speaking questions this visit
 
@@ -38,26 +37,56 @@ export function skipSpeakingThisVisit() {
   skippedThisVisit = true
 }
 
-/** Records about 2.5 seconds; asks for the microphone the first time. */
-export async function recordClip(ms = CLIP_MS): Promise<Blob> {
+export interface Recording {
+  stop: () => void // tap again: finish now
+  done: Promise<Blob> // the clip, once stopped (by stop() or after MAX_MS)
+  level: () => number // 0-1: how loud it is right now, for the wave
+}
+
+const MAX_MS = 6000 // stops by itself after this
+
+/** Starts recording (asking for the microphone the first time); stop() or 6 seconds end it. */
+export async function startRecording(maxMs = MAX_MS): Promise<Recording> {
   const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+  const recorder = new MediaRecorder(stream)
+  const chunks: Blob[] = []
+  recorder.ondataavailable = (event) => {
+    if (event.data.size > 0) chunks.push(event.data)
+  }
+  // A level meter for the wave animation (the browser's own audio analyser; nothing is sent).
+  let context: AudioContext | null = null
+  let analyser: AnalyserNode | null = null
   try {
-    const recorder = new MediaRecorder(stream)
-    const chunks: Blob[] = []
-    recorder.ondataavailable = (event) => {
-      if (event.data.size > 0) chunks.push(event.data)
+    context = new AudioContext()
+    analyser = context.createAnalyser()
+    analyser.fftSize = 256
+    context.createMediaStreamSource(stream).connect(analyser)
+  } catch {
+    analyser = null // no meter: the wave just pulses
+  }
+  const samples = new Uint8Array(analyser?.fftSize ?? 0)
+  const done = new Promise<Blob>((resolve) => {
+    recorder.onstop = () => {
+      for (const track of stream.getTracks()) track.stop() // the microphone light goes off
+      void context?.close().catch(() => undefined)
+      resolve(new Blob(chunks, { type: recorder.mimeType || 'audio/webm' }))
     }
-    const stopped = new Promise<void>((resolve) => {
-      recorder.onstop = () => {
-        resolve()
-      }
-    })
-    recorder.start()
-    await new Promise((resolve) => setTimeout(resolve, ms))
-    recorder.stop()
-    await stopped
-    return new Blob(chunks, { type: recorder.mimeType || 'audio/webm' })
-  } finally {
-    for (const track of stream.getTracks()) track.stop() // the microphone light goes off
+  })
+  const timer = window.setTimeout(stop, maxMs)
+  function stop() {
+    window.clearTimeout(timer)
+    if (recorder.state !== 'inactive') recorder.stop()
+  }
+  recorder.start()
+  return {
+    stop,
+    done,
+    level: () => {
+      if (!analyser) return 0.5
+      analyser.getByteTimeDomainData(samples)
+      let peak = 0
+      for (const value of samples) peak = Math.max(peak, Math.abs(value - 128))
+      return Math.min(1, peak / 64)
+    },
   }
 }

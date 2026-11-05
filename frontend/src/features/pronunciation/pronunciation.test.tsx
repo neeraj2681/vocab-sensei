@@ -1,17 +1,27 @@
-import { screen } from '@testing-library/react'
+import { screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AnswerResult, QuizQuestion } from '../../api/quiz'
 import { fakeApi, json, noContent, type Routes } from '../../test/fakeApi'
 import { renderApp } from '../../test/renderApp'
 
 // A pretend microphone: jsdom has none.
+// Recording starts at a tap and stops at the next one, like the real thing.
 vi.mock('../../components/recorder', () => ({
   canRecord: () => true,
   quizSpeaking: vi.fn(() => true),
   speakingQuestionsOn: () => true,
   setSpeakingQuestionsOn: vi.fn(),
   skipSpeakingThisVisit: vi.fn(),
-  recordClip: vi.fn(() => Promise.resolve(new Blob(['clip'], { type: 'audio/webm' }))),
+  startRecording: vi.fn(() => {
+    let finish: (clip: Blob) => void = () => undefined
+    const done = new Promise<Blob>((resolve) => {
+      finish = resolve
+    })
+    const stop = () => {
+      finish(new Blob(['clip'], { type: 'audio/webm' }))
+    }
+    return Promise.resolve({ stop, done, level: () => 0.6 })
+  }),
 }))
 
 const USER = { id: 1, email: 'reader@example.com', display_name: 'Reader', email_verified_at: 'x' }
@@ -56,7 +66,7 @@ describe('pronunciation', () => {
       correct: true,
       correct_index: 0,
       points: 5,
-      score_delta: 5,
+      score_delta: 10,
       counted: true,
       word: 'lugubrious',
       meaning: 'looking sad and dismal',
@@ -66,20 +76,29 @@ describe('pronunciation', () => {
       stats: { ...STATS, total: 105, today: 4 },
       heard: 'Lugubrious.',
     }
+    const speakUrl = 'POST /api/quiz/questions/7/speak?tz=UTC&include_next=true&speaking=true'
     const api = quiz({
-      'POST /api/quiz/questions/7/speak?tz=UTC&include_next=true&speaking=true': () => json(result),
+      'POST /api/pronunciation/transcribe': () => json({ heard: 'Lugubrious.' }),
+      [speakUrl]: () => json(result),
     })
     const user = renderApp('/quiz')
 
     expect(await screen.findByText('Say this word aloud')).toBeInTheDocument()
     expect(screen.queryByText('I know this word, don’t ask again')).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: /Tap and say it/ }))
+    await user.click(await screen.findByRole('button', { name: /Tap to stop/ })) // the wave shows
 
-    expect(await screen.findByText('Well said!')).toBeInTheDocument()
-    expect(screen.getByText('We heard: “Lugubrious.”')).toBeInTheDocument()
-    expect(
-      api.calls('POST /api/quiz/questions/7/speak?tz=UTC&include_next=true&speaking=true'),
-    ).toHaveLength(1)
+    const box = await screen.findByLabelText('We heard')
+    expect(box).toHaveValue('Lugubrious.')
+    expect(box).toHaveAttribute('readonly')
+    await user.type(box, '{Enter}') // Enter in the box confirms it
+
+    await waitFor(() => {
+      expect(api.calls(speakUrl)).toEqual([{ heard: 'Lugubrious.' }])
+    })
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'Well said! We heard: “Lugubrious.”',
+    )
   })
 
   it('can be skipped when you can’t speak', async () => {
@@ -106,14 +125,22 @@ describe('pronunciation', () => {
     const api = fakeApi({
       'GET /api/auth/me': () => json(USER),
       'GET /api/quiz/words?include_known=true': () => json(words),
+      'POST /api/pronunciation/transcribe': () => json({ heard: 'a bullion' }),
       'POST /api/pronunciation': () => json({ heard: 'a bullion', correct: false }),
     })
     const user = renderApp('/words')
 
     await user.click(await screen.findByRole('button', { name: /ebullient/ }))
     await user.click(screen.getByRole('button', { name: /Say it/ }))
+    await user.click(await screen.findByRole('button', { name: /Tap to stop/ }))
+    expect(await screen.findByLabelText('We heard')).toHaveValue('a bullion')
+    await user.click(screen.getByRole('button', { name: /Enter/ }))
 
-    expect(await screen.findByText(/Try again/)).toHaveTextContent('heard “a bullion”')
-    expect(api.calls('POST /api/pronunciation')).toHaveLength(1)
+    expect(await screen.findByText('Not quite: try again')).toBeInTheDocument()
+    expect(api.calls('POST /api/pronunciation')).toEqual([
+      { word: 'ebullient', heard: 'a bullion' },
+    ])
+    await user.click(screen.getByRole('button', { name: 'Try again' }))
+    expect(screen.getByRole('button', { name: /Say it/ })).toBeInTheDocument()
   })
 })

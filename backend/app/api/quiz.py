@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, UploadFi
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from app.api.deps import CurrentUser, DictionaryLoader, SettingsDep, SpeechDep, get_dictionary
+from app.api.deps import CurrentUser, DictionaryLoader, SettingsDep, get_dictionary
 from app.api.documents import DocumentServiceDep
 from app.core.enums import QuestionType, WordStatus
 from app.core.speech import AudioError, Recognizer
@@ -313,23 +313,25 @@ def answer(
     )
 
 
+class SpeakRequest(BaseModel):
+    heard: Annotated[str, Field(max_length=300)]  # from /pronunciation/transcribe, confirmed
+
+
 @router.post("/questions/{question_id}/speak")
 def speak(
     question_id: int,
-    audio: UploadFile,
+    body: SpeakRequest,
     user: CurrentUser,
     quiz: QuizServiceDep,
     documents: DocumentServiceDep,
-    speech: SpeechDep,
-    settings: SettingsDep,
     now: Now,
     tz: TimeZone,
     include_next: Annotated[bool, Query()] = False,
     document_id: Annotated[int | None, Query()] = None,
     chapter: Annotated[int | None, Query(ge=0)] = None,
 ) -> AnswerResponse:
-    """Answers a "say this word" question with a recording: right when the speech recogniser
-    hears the word (on our server; the audio isn't kept)."""
+    """Answers a "say this word" question with what the speech recogniser heard (the player saw
+    it and confirmed it): right when it is the word."""
     try:
         question = quiz.unanswered_question(user.id, question_id)
     except QuestionNotFoundError as exc:
@@ -338,10 +340,9 @@ def speak(
         raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from None
     if question.type is not QuestionType.SAY_WORD:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Not a speaking question")
-    heard = hear(speech, audio, question.prompt, settings.speech.max_audio_bytes)
     response = answer(
         question_id,
-        AnswerRequest(chosen_index=0 if said(heard, question.prompt) else 1),
+        AnswerRequest(chosen_index=0 if said(body.heard, question.prompt) else 1),
         user,
         quiz,
         documents,
@@ -351,7 +352,7 @@ def speak(
         document_id,
         chapter,
     )
-    response.heard = heard
+    response.heard = body.heard
     return response
 
 

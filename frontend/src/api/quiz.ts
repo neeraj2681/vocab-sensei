@@ -112,17 +112,14 @@ export const quizApi = {
       }`,
       { chosen_index: chosenIndex },
     ),
-  /** Answers a "say this word" question with a recording (checked on our server). */
-  speak: (id: number, clip: Blob, focus?: Focus) => {
-    const form = new FormData()
-    form.append('audio', clip, 'say.webm')
-    return apiPost<AnswerResult>(
+  /** Answers a "say this word" question with what was heard (confirmed by the player). */
+  speak: (id: number, heard: string, focus?: Focus) =>
+    apiPost<AnswerResult>(
       `/quiz/questions/${String(id)}/speak?${tz()}&include_next=true${speaking()}${
         focus ? `&document_id=${String(focus.documentId)}&chapter=${String(focus.chapter)}` : ''
       }`,
-      form,
-    )
-  },
+      { heard },
+    ),
   /** Drops a "say this word" question: can't speak right now. */
   skip: (id: number) => apiPost(`/quiz/questions/${String(id)}/skip`),
   /** Marks a word known; the next questions come back with it (in `focus`, if given). */
