@@ -35,13 +35,13 @@ describe('recaps', () => {
     fakeApi({ 'GET /api/auth/me': () => json(USER), 'GET /api/recaps?tz=UTC': () => json(RECAPS) })
     const user = renderApp('/me')
 
-    const card = await screen.findByRole('region', { name: /Recap 26 Oct/ })
+    const card = await screen.findByRole('region', { name: /Recap (26 Oct|Oct 26)/ }) // either way round, by locale
     expect(card).toHaveTextContent('Words learned12')
     expect(card).toHaveTextContent('80 · 80%')
     expect(card).toHaveTextContent('Toughest word: lugubrious')
     expect(card).toHaveTextContent('Favourite book: Moby-Dick')
 
-    await user.click(screen.getByRole('button', { name: /19 Oct/ }))
+    await user.click(screen.getByRole('button', { name: /19 Oct|Oct 19/ }))
     expect(await screen.findByText(/No answers this week/)).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Months' }))
