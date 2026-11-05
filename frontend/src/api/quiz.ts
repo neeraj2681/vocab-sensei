@@ -1,6 +1,7 @@
+import { quizSpeaking } from '../components/recorder'
 import { apiGet, apiPost, apiPut } from './client'
 
-export type QuestionType = 'definition_mcq' | 'reverse' | 'fill_in_blank'
+export type QuestionType = 'definition_mcq' | 'reverse' | 'fill_in_blank' | 'say_word'
 
 export interface QuizQuestion {
   id: number
@@ -59,6 +60,7 @@ export interface AnswerResult {
   stats: QuizStats
   next?: QuizQuestion | null // the question now on screen, sent with the saved answer
   after_next?: QuizQuestion | null // and the one kept ready after it
+  heard?: string | null // "say this word": what the speech recogniser heard
 }
 
 export interface HistoryPoint {
@@ -89,26 +91,42 @@ export interface Focus {
   chapter: number
 }
 
+/** "&speaking=true" when the quiz may ask the player to say a word (a microphone is there). */
+const speaking = () => (quizSpeaking() ? '&speaking=true' : '')
+
 export const quizApi = {
   /** The question on screen and the one kept ready after it. */
   question: (focus?: Focus) =>
     apiGet<QuizQuestion>(
-      `/quiz/question?include_next=true${
+      `/quiz/question?include_next=true${speaking()}${
         focus ? `&document_id=${String(focus.documentId)}&chapter=${String(focus.chapter)}` : ''
       }`,
     ),
   /** Saves an answer; the next question comes back with it (in `focus`, if given). */
   answer: (id: number, chosenIndex: number, focus?: Focus) =>
     apiPost<AnswerResult>(
-      `/quiz/questions/${String(id)}/answer?${tz()}&include_next=true${
+      `/quiz/questions/${String(id)}/answer?${tz()}&include_next=true${speaking()}${
         focus ? `&document_id=${String(focus.documentId)}&chapter=${String(focus.chapter)}` : ''
       }`,
       { chosen_index: chosenIndex },
     ),
+  /** Answers a "say this word" question with a recording (checked on our server). */
+  speak: (id: number, clip: Blob, focus?: Focus) => {
+    const form = new FormData()
+    form.append('audio', clip, 'say.webm')
+    return apiPost<AnswerResult>(
+      `/quiz/questions/${String(id)}/speak?${tz()}&include_next=true${speaking()}${
+        focus ? `&document_id=${String(focus.documentId)}&chapter=${String(focus.chapter)}` : ''
+      }`,
+      form,
+    )
+  },
+  /** Drops a "say this word" question: can't speak right now. */
+  skip: (id: number) => apiPost(`/quiz/questions/${String(id)}/skip`),
   /** Marks a word known; the next questions come back with it (in `focus`, if given). */
   know: (id: number, focus?: Focus) =>
     apiPost<{ next: QuizQuestion | null; after_next?: QuizQuestion | null }>(
-      `/quiz/questions/${String(id)}/know?include_next=true${
+      `/quiz/questions/${String(id)}/know?include_next=true${speaking()}${
         focus ? `&document_id=${String(focus.documentId)}&chapter=${String(focus.chapter)}` : ''
       }`,
     ),

@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import Settings, get_settings
 from app.core.email import Email, EmailSender, SmtpEmailSender
+from app.core.speech import Recognizer, get_recognizer
 from app.db.models import User
 from app.db.session import get_session
 from app.dictionary.types import Dictionary
@@ -20,6 +21,14 @@ from app.services.auth import AuthService
 logger = logging.getLogger(__name__)
 
 SettingsDep = Annotated[Settings, Depends(get_settings)]
+
+
+def get_speech(settings: SettingsDep) -> Recognizer:
+    """The speech recogniser for pronunciation practice (tests swap in a fake)."""
+    return get_recognizer(settings)
+
+
+SpeechDep = Annotated[Recognizer, Depends(get_speech)]
 
 
 def get_email_sender(settings: SettingsDep) -> EmailSender:

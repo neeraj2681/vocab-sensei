@@ -111,6 +111,15 @@ class LibrarySettings(BaseModel):
     default_classic: int = 1342  # Project Gutenberg id new users start on (Pride and Prejudice)
 
 
+class SpeechSettings(BaseModel):
+    """Pronunciation practice: speech recognition on our own server (faster-whisper)."""
+
+    model: str = "base.en"  # English Whisper, ~140 MB, about half a second a word on a laptop CPU
+    model_dir: Path | None = None  # a model already downloaded (the Docker image has one)
+    say_word_share: float = Field(default=0.2, ge=0, le=1)  # of well-known words in the quiz
+    max_audio_bytes: int = 1_000_000
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="VOCAB_", env_nested_delimiter="__", env_file=".env", extra="ignore"
@@ -129,6 +138,7 @@ class Settings(BaseSettings):
     push: PushSettings = PushSettings()
     reminders: ReminderSettings = ReminderSettings()
     library: LibrarySettings = LibrarySettings()
+    speech: SpeechSettings = SpeechSettings()
 
     @property
     def dictionary_dir(self) -> Path:

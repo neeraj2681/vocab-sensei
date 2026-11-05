@@ -215,8 +215,10 @@ class QuizService:
         dictionary: Callable[[], Dictionary],
         rng: Random | None = None,
         generators: dict[QuestionType, QuestionGenerator] | None = None,
+        speaking: bool = False,
     ) -> None:
         self._session = session
+        self._speaking = speaking  # the screen can record: "say this word" questions may come
         self._settings = settings
         self._quiz = settings.quiz
         self._dictionary = dictionary
@@ -233,9 +235,28 @@ class QuizService:
 
     # Asking
 
+    def _pending(self, user_id: int, limit: int) -> list[Question]:
+        """Unanswered questions, dropping "say this word" ones when the screen can't record."""
+        if not self._speaking:
+            for question in self._repo.unanswered(user_id, limit=10):
+                if question.type is QuestionType.SAY_WORD:
+                    self._session.delete(question)
+            self._session.flush()
+        return self._repo.unanswered(user_id, limit=limit)
+
+    def skip(self, user_id: int, question_id: int) -> None:
+        """Drops an unanswered "say this word" question (can't speak right now)."""
+        question = self._unanswered(user_id, question_id)
+        if question.type is QuestionType.SAY_WORD:
+            self._session.delete(question)
+            self._session.commit()
+
+    def unanswered_question(self, user_id: int, question_id: int) -> Question:
+        return self._unanswered(user_id, question_id)
+
     def current_question(self, user_id: int, now: datetime, focus: Focus | None = None) -> Question:
         """The question on screen: the oldest unanswered one, or a new one (from `focus`)."""
-        pending = self._repo.unanswered(user_id, limit=1)
+        pending = self._pending(user_id, limit=1)
         if pending:
             return pending[0]
         question = self._ask(user_id, now, focus)
@@ -248,7 +269,7 @@ class QuizService:
         """The question on screen and the one kept ready after it, so the screen can move on
         without a request. Choosing the second a step early picks the same word: the first is
         excluded either way (a word isn't asked twice within `spacing` questions)."""
-        pending = self._repo.unanswered(user_id, limit=2)
+        pending = self._pending(user_id, limit=2)
         if not pending:
             pending = [self._ask(user_id, now, focus)]
         if len(pending) == 1:
@@ -359,6 +380,24 @@ class QuizService:
             reverse_from=self._quiz.reverse_from_score,
             fill_from=self._quiz.fill_from_score,
         )
+        score = progress.score if progress else 0
+        speech = self._settings.speech
+        if (
+            self._speaking
+            and score >= self._quiz.fill_from_score
+            and self._rng.random() < speech.say_word_share
+        ):
+            return Question(  # say it aloud: right or not decided by speech recognition
+                user_id=user_id,
+                document_id=document.id if document else None,
+                word_id=word.id,
+                type=QuestionType.SAY_WORD,
+                prompt=word.lemma,
+                options=["said it", "not yet"],
+                correct_index=0,
+                generator="speech",
+                source_sentence=target.context_sentence,
+            )
         needed = self._quiz.options_per_question - 1
         # Closest first: same part of speech and similar difficulty, then wider, then anything.
         window = self._quiz.distractor_zipf_window

@@ -9,6 +9,7 @@ import { type Pop, ScoreBar } from './ScoreBar'
 import { Burst } from '../../components/Burst'
 import { resumingQuiz } from './visit'
 import { buzz } from '../../components/haptics'
+import { recordClip, skipSpeakingThisVisit } from '../../components/recorder'
 import { sounds } from '../../components/sounds'
 import { Icon } from '../../components/Icon'
 import { SpeakButton } from '../../components/SpeakButton'
@@ -85,6 +86,7 @@ type Phase =
       points: number // coins it earned, Ninja Mode included
       doubled: boolean // Ninja Mode multiplied them
       ninja?: 'started' | 'ended' // this answer started or ended Ninja Mode
+      heard?: string | null // "say this word": what the speech recogniser heard
     }
   | { kind: 'error'; message: string; noWords: boolean }
   | { kind: 'summary' }
@@ -183,6 +185,46 @@ export function QuizPage() {
   /** Shows the whole result at once (the question carries both outcomes), then saves the answer
   in the background; the saved answer confirms the score and brings a question to keep ready. */
   function choose(question: QuizQuestion, index: number) {
+    reveal(question, index)
+    void save(question, index)
+  }
+
+  /** "Say this word": record, let the server judge it, then show the result like any answer. */
+  async function speak(question: QuizQuestion, clip: Blob) {
+    setBusy(true)
+    setAnswerError(null)
+    try {
+      const result = await quizApi.speak(question.id, clip, focusOf(focusBook, focusChapter))
+      reveal(
+        question,
+        result.correct ? question.correct_index : 1 - question.correct_index,
+        result.heard,
+      )
+      setStats(result.stats)
+      keep(result.next, result.after_next)
+    } catch (err) {
+      const error = errorPhase(err)
+      setAnswerError(error.kind === 'error' ? error.message : 'Something went wrong')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  /** "Can't speak now": no speaking questions for the rest of this visit. */
+  function skipSpeaking(question: QuizQuestion) {
+    skipSpeakingThisVisit()
+    void quizApi.skip(question.id).catch(() => undefined)
+    ready.current = ready.current.filter((q) => q.type !== 'say_word')
+    const kept = ready.current.shift()
+    if (kept) show(kept)
+    else {
+      setPhase({ kind: 'loading' })
+      setQuestionVersion((v) => v + 1)
+    }
+  }
+
+  /** Shows an answer's result at once: colours, coins, sound, combo. */
+  function reveal(question: QuizQuestion, index: number, heard?: string | null) {
     const correct = index === question.correct_index
     const outcome = correct ? question.if_right : question.if_wrong
     // The same rule as the server: right answers in Ninja Mode earn more; a wrong one ends it.
@@ -195,7 +237,16 @@ export function QuizPage() {
     const change =
       !ninja(combo) && ninja(next) ? 'started' : ninja(combo) && !correct ? 'ended' : undefined
     setCombo(next)
-    setPhase({ kind: 'answered', question, chosen: index, correct, points, doubled, ninja: change })
+    setPhase({
+      kind: 'answered',
+      question,
+      chosen: index,
+      correct,
+      points,
+      doubled,
+      ninja: change,
+      heard,
+    })
     buzz(correct)
     playAnswer(correct, next.run, doubled, change, correct && question.if_right.learned)
     setSession((s) => ({
@@ -207,7 +258,6 @@ export function QuizPage() {
     setStats((s) => s && { ...s, total: s.total + points, today: s.today + 1 })
     setRecent((values) => [...values, (values.at(-1) ?? 0) + points].slice(-(RECENT_ANSWERS + 1)))
     setPop((previous) => ({ id: (previous?.id ?? 0) + 1, delta: points, correct }))
-    void save(question, index)
   }
 
   /** Done for today / ✕: if stopping costs something (the run of right answers, Ninja Mode, or
@@ -426,6 +476,12 @@ export function QuizPage() {
           onKnow={() => {
             know(phase.question)
           }}
+          onSpeak={(clip) => {
+            void speak(phase.question, clip)
+          }}
+          onSkipSpeaking={() => {
+            skipSpeaking(phase.question)
+          }}
           onNext={next}
         />
       )}
@@ -439,10 +495,21 @@ interface CardProps {
   continueQueued: boolean
   onChoose: (index: number) => void
   onKnow: () => void
+  onSpeak: (clip: Blob) => void
+  onSkipSpeaking: () => void
   onNext: () => void
 }
 
-function QuestionCard({ phase, busy, continueQueued, onChoose, onKnow, onNext }: CardProps) {
+function QuestionCard({
+  phase,
+  busy,
+  continueQueued,
+  onChoose,
+  onKnow,
+  onSpeak,
+  onSkipSpeaking,
+  onNext,
+}: CardProps) {
   const { question } = phase
   const answered = phase.kind === 'answered' ? phase : null
 
@@ -456,25 +523,29 @@ function QuestionCard({ phase, busy, continueQueued, onChoose, onKnow, onNext }:
   return (
     <div className="quiz__card">
       <Prompt question={question} />
-      <ol className="options">
-        {question.options.map((option, index) => (
-          <li key={option}>
-            <button
-              type="button"
-              className={optionClass(index)}
-              disabled={answered !== null}
-              onClick={() => {
-                onChoose(index)
-              }}
-            >
-              <span className="option__key" aria-hidden="true">
-                {index + 1}
-              </span>
-              {option}
-            </button>
-          </li>
-        ))}
-      </ol>
+      {question.type === 'say_word' ? (
+        !answered && <SayWord busy={busy} onClip={onSpeak} onSkip={onSkipSpeaking} />
+      ) : (
+        <ol className="options">
+          {question.options.map((option, index) => (
+            <li key={option}>
+              <button
+                type="button"
+                className={optionClass(index)}
+                disabled={answered !== null}
+                onClick={() => {
+                  onChoose(index)
+                }}
+              >
+                <span className="option__key" aria-hidden="true">
+                  {index + 1}
+                </span>
+                {option}
+              </button>
+            </li>
+          ))}
+        </ol>
+      )}
       {answered ? (
         <Feedback
           question={question}
@@ -483,10 +554,62 @@ function QuestionCard({ phase, busy, continueQueued, onChoose, onKnow, onNext }:
           onNext={onNext}
         />
       ) : (
-        <button type="button" className="link-button" disabled={busy} onClick={onKnow}>
-          I know this word, don’t ask again
-        </button>
+        question.type !== 'say_word' && (
+          <button type="button" className="link-button" disabled={busy} onClick={onKnow}>
+            I know this word, don’t ask again
+          </button>
+        )
       )}
+    </div>
+  )
+}
+
+/** The microphone for "say this word": tap, say it, and the server listens. */
+function SayWord({
+  busy,
+  onClip,
+  onSkip,
+}: {
+  busy: boolean
+  onClip: (clip: Blob) => void
+  onSkip: () => void
+}) {
+  const [recording, setRecording] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function record() {
+    setError(null)
+    setRecording(true)
+    try {
+      onClip(await recordClip())
+    } catch {
+      setError('The microphone isn’t available. Allow it in your browser, or skip this one.')
+    } finally {
+      setRecording(false)
+    }
+  }
+
+  return (
+    <div className="say-word">
+      <button
+        type="button"
+        className={`say-word__mic${recording ? ' say-word__mic--on' : ''}`}
+        disabled={busy || recording}
+        onClick={() => {
+          void record()
+        }}
+      >
+        <span aria-hidden="true">🎤</span>
+        {recording ? 'Listening…' : busy ? 'Checking…' : 'Tap and say it'}
+      </button>
+      {error && (
+        <p role="alert" className="form-error">
+          {error}
+        </p>
+      )}
+      <button type="button" className="link-button" onClick={onSkip}>
+        Can’t speak now
+      </button>
     </div>
   )
 }
@@ -495,13 +618,14 @@ const INSTRUCTIONS: Record<QuizQuestion['type'], string> = {
   definition_mcq: 'What does this word mean?',
   reverse: 'Which word has this meaning?',
   fill_in_blank: 'Which word fills the gap in the book’s sentence?',
+  say_word: 'Say this word aloud',
 }
 
 function Prompt({ question }: { question: QuizQuestion }) {
   return (
     <>
       <p className="muted quiz__prompt">{INSTRUCTIONS[question.type]}</p>
-      {question.type === 'definition_mcq' && (
+      {(question.type === 'definition_mcq' || question.type === 'say_word') && (
         <div className="said-word">
           <h2 className="quiz__word">{question.prompt}</h2>
           <SpeakButton word={question.prompt} />
@@ -537,7 +661,14 @@ function Feedback({
         <Icon name={correct ? 'check_mark_button' : 'cross_mark'} size={28} />{' '}
         {/* The colour says right or wrong; screen readers get the word. */}
         <span className="sr-only">{correct ? 'Right.' : 'Wrong.'}</span>{' '}
-        {question.type === 'definition_mcq' ? (
+        {question.type === 'say_word' ? (
+          <>
+            {correct ? 'Well said!' : 'Not quite.'}{' '}
+            <span className="muted">
+              We heard: “{answered.heard?.trim() ? answered.heard : 'nothing'}”
+            </span>
+          </>
+        ) : question.type === 'definition_mcq' ? (
           !correct && (
             <>
               It means: <strong>{question.options[question.correct_index]}</strong>
