@@ -25,6 +25,7 @@ class Reminder(Base):
     push: Mapped[bool] = mapped_column(default=True, server_default=true())  # notifications
     email: Mapped[bool] = mapped_column(default=False, server_default=false())
     last_sent_on: Mapped[date | None] = mapped_column(Date)  # local date, so once a day at most
+    last_recap_on: Mapped[date | None] = mapped_column(Date)  # the weekly/monthly recap email
 
 
 class PushSubscription(Base):

@@ -16,6 +16,7 @@ from app.api import (
     quests,
     quiz,
     readings,
+    recaps,
     reminders,
     shop,
     triage,
@@ -69,6 +70,7 @@ def create_app() -> FastAPI:
     app.include_router(leaderboard.router, prefix="/api")
     app.include_router(friends.router, prefix="/api")
     app.include_router(shop.router, prefix="/api")
+    app.include_router(recaps.router, prefix="/api")
     app.include_router(triage.router, prefix="/api")
     app.include_router(backup.router, prefix="/api")
     app.include_router(reminders.router, prefix="/api")
