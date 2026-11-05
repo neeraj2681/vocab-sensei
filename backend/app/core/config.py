@@ -31,7 +31,11 @@ class QuizSettings(BaseModel):
 
     options_per_question: int = Field(default=4, ge=2)
     spacing: int = Field(default=10, ge=0)  # a word isn't asked again within this many questions
-    learning_cap: int = Field(default=100, ge=1)  # words in progress at once; new ones wait
+    retry_after: int = Field(default=3, ge=0)  # ...unless answered wrong: then after this many
+    # Words in progress at once (new ones wait): the user's daily goal, kept within these bounds.
+    # The smallest stays above `spacing`, or the quiz would run out of words it may ask.
+    learning_cap_min: int = Field(default=15, ge=1)
+    learning_cap_max: int = Field(default=50, ge=1)
     daily_goal: int = Field(default=20, gt=0)  # new accounts' answers a day (about 5 minutes)
     # How often the next word is new / in progress / a learned word due for review (6:3:1).
     new_weight: int = Field(default=6, ge=0)

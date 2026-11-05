@@ -4,8 +4,9 @@ There are no rounds: the screen always shows the user's newest unanswered questi
 makes the next one. Each answer changes the word's score (+5 / -10, never below 0) and the lifetime
 score at the top (+5 / -10 every time; only the total never goes below 0). Both changes are
 logged; the lifetime score is the sum of the points. A word isn't asked again within
-`spacing` questions; if the user has fewer words than that, it may come back sooner, but then the
-answer is practice and doesn't score.
+`spacing` questions (one answered wrong comes back after `retry_after`, while it's fresh); if the
+user has fewer words than that, it may come back sooner, but then the answer is practice and
+doesn't score.
 
 Words in progress are only asked while one of the user's current reads uses them: stopping a book
 pauses its words (progress kept) until it's read again. Learned words still come back for review
@@ -13,7 +14,7 @@ from any book, so stopping a book doesn't mean forgetting its words.
 """
 
 from collections import Counter
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from contextlib import suppress
 from dataclasses import dataclass, replace
 from datetime import date, datetime, time, timedelta
@@ -38,7 +39,16 @@ from app.quiz.questions import (
     Target,
     blank_out,
 )
-from app.quiz.selection import DailyGoal, Pool, choose_pool, choose_question_type, streak
+from app.quiz.selection import (
+    DailyGoal,
+    Pool,
+    choose_pool,
+    choose_question_type,
+    closest_or_oldest,
+    learning_cap,
+    spacing_rules,
+    streak,
+)
 from app.quiz.shop import DOUBLE_COINS_MULTIPLIER, Freeze, Item, freezes_to_use
 from app.repositories.learning import LearningRepository
 from app.repositories.quiz import QuizRepository
@@ -285,14 +295,16 @@ class QuizService:
         return pending[0], pending[1] if len(pending) > 1 else None
 
     def _ask(self, user_id: int, now: datetime, focus: Focus | None) -> Question:
-        recent = self._repo.recently_answered_word_ids(user_id, self._quiz.spacing)
-        recent |= {q.word_id for q in self._repo.unanswered(user_id)}  # not twice in a row
+        recent, retry = self._spacing(user_id)
+        waiting = {q.word_id for q in self._repo.unanswered(user_id)}
+        recent |= waiting  # not twice in a row
+        retry = [word_id for word_id in retry if word_id not in waiting]
         unusable: set[int] = set()  # words we couldn't build a question for
         # First try words not asked recently; if there are none, allow repeats (they don't score).
         for allow_recent in (False, True):
             while True:
                 excluded = unusable if allow_recent else unusable | recent
-                word_id = self._pick_word(user_id, now, excluded, focus)
+                word_id = self._pick_word(user_id, now, excluded, focus, retry)
                 if word_id is None:
                     break
                 question = self._build(user_id, word_id)
@@ -309,14 +321,31 @@ class QuizService:
             )
         raise NoWordsError("Start reading a book to get questions")
 
+    def _spacing(self, user_id: int) -> tuple[set[int], list[int]]:
+        """Words too soon to ask again, and words answered wrong that are due back now."""
+        recent = self._repo.recent_answers(user_id, self._quiz.spacing)
+        return spacing_rules(recent, self._quiz.retry_after)
+
+    def _cap(self, user_id: int) -> int:
+        """Words in progress at once: about one per answer of the daily goal."""
+        quiz = self._quiz
+        return learning_cap(
+            self._user(user_id).daily_goal, quiz.learning_cap_min, quiz.learning_cap_max
+        )
+
     def _pick_word(
-        self, user_id: int, now: datetime, exclude: set[int], focus: Focus | None
+        self,
+        user_id: int,
+        now: datetime,
+        exclude: set[int],
+        focus: Focus | None,
+        retry: Sequence[int] = (),
     ) -> int | None:
         pools: dict[Pool, int] = {}
-        # At most `learning_cap` words in progress, shared equally by the current reads (see
+        # At most `_cap` words in progress, shared equally by the current reads (see
         # `_ranked_learning`): those are practised; the rest wait with their progress.
         ranked, per_book = self._ranked_learning(user_id)
-        cap = self._quiz.learning_cap
+        cap = self._cap(user_id)
         if focus is None:
             # A new word comes in only when a place is free: anywhere under the cap, or in a
             # book that has fewer words in progress than its share.
@@ -346,6 +375,12 @@ class QuizService:
         def usable(word_id: int) -> bool:
             return word_id not in exclude and (allowed is None or word_id in allowed)
 
+        # A word just answered wrong comes back first, while it's fresh.
+        for word_id in retry:
+            progress = self._repo.user_word(user_id, word_id)
+            if usable(word_id) and progress is not None and progress.status is not WordStatus.KNOWN:
+                return word_id
+
         active = {w.word_id for w in ranked[:cap]}
         new = [word_id for word_id in new if usable(word_id)]
         if new:
@@ -359,7 +394,7 @@ class QuizService:
             if usable(w.word_id) and (allowed is not None or w.word_id in active)
         ]
         if learning:
-            pools[Pool.LEARNING] = learning[0].word_id
+            pools[Pool.LEARNING] = closest_or_oldest(learning, lambda w: w.score, self._rng).word_id
         due = [
             w
             for w in self._repo.words_with_status(user_id, WordStatus.LEARNED, exclude)
@@ -464,9 +499,7 @@ class QuizService:
             raise InvalidChoiceError(f"Pick an option from 0 to {len(question.options) - 1}")
 
         correct = chosen_index == question.correct_index
-        counted = question.word_id not in self._repo.recently_answered_word_ids(
-            user_id, self._quiz.spacing
-        )
+        counted = question.word_id not in self._spacing(user_id)[0]
         word = self._user_word(user_id, question.word_id)
         delta = 0
         if counted and word.status is not WordStatus.KNOWN:
@@ -521,9 +554,7 @@ class QuizService:
     def preview(self, user_id: int, question: Question, now: datetime) -> Preview:
         """What answering `question` right or wrong would do, by the same rules as `answer`."""
         rules = self._settings.scoring
-        counted = question.word_id not in self._repo.recently_answered_word_ids(
-            user_id, self._quiz.spacing
-        )
+        counted = question.word_id not in self._spacing(user_id)[0]
         existing = self._repo.user_word(user_id, question.word_id)
         progress = _progress(existing) if existing else WordProgress()
         status_if_right = progress.status
@@ -684,9 +715,7 @@ class QuizService:
     def practised_words(self, user_id: int, now: datetime) -> list[PractisedWord]:
         """Learned words first, then the rest by progress, then the ones already known."""
         rules = self._settings.scoring
-        practised_now = {
-            w.word_id for w in self._ranked_learning(user_id)[0][: self._quiz.learning_cap]
-        }
+        practised_now = {w.word_id for w in self._ranked_learning(user_id)[0][: self._cap(user_id)]}
         words = []
         for user_word, word in self._repo.practised_words(user_id):
             progress = _progress(user_word)

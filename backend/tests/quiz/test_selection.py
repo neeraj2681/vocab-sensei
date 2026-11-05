@@ -3,7 +3,16 @@ from datetime import date
 from random import Random
 
 from app.core.enums import QuestionType
-from app.quiz.selection import DailyGoal, Pool, choose_pool, choose_question_type, streak
+from app.quiz.selection import (
+    DailyGoal,
+    Pool,
+    choose_pool,
+    choose_question_type,
+    closest_or_oldest,
+    learning_cap,
+    spacing_rules,
+    streak,
+)
 
 WEIGHTS = {Pool.NEW: 6, Pool.LEARNING: 3, Pool.REVIEW: 1}
 TODAY = date(2026, 10, 30)
@@ -104,3 +113,45 @@ def test_harder_formats_unlock_as_a_word_is_learned() -> None:
 
 def test_fill_in_needs_a_sentence() -> None:
     assert QuestionType.FILL_IN_BLANK not in kinds_for(90, can_fill=False)
+
+
+def test_the_learning_cap_is_the_daily_goal_within_bounds() -> None:
+    assert [learning_cap(goal, 15, 50) for goal in (5, 20, 50, 200)] == [15, 20, 50, 50]
+
+
+def test_right_answers_wait_and_wrong_ones_come_back_after_a_few() -> None:
+    recent = [(1, True), (2, False), (3, True), (4, False), (5, False), (1, True)]  # newest first
+
+    too_soon, retry = spacing_rules(recent, retry_after=3)
+
+    assert too_soon == {1, 2, 3}  # 2 was missed only 1 answer ago: not yet
+    assert retry == [5, 4]  # oldest miss first
+
+
+def test_a_missed_word_gets_one_retry() -> None:
+    recent = [
+        (1, True),
+        (2, True),
+        (3, True),
+        (7, False),
+        (4, True),
+        (5, True),
+        (6, True),
+        (7, False),
+    ]
+
+    assert spacing_rules(recent, 3) == ({1, 2, 3, 4, 5, 6, 7}, [])  # missed on the retry too
+
+
+def test_a_missed_word_answered_right_since_waits_again() -> None:
+    assert spacing_rules([(7, True), (8, True), (9, True), (7, False)], 3) == ({7, 8, 9}, [])
+
+
+def test_half_the_time_the_closest_to_learned_otherwise_the_oldest() -> None:
+    words = [("oldest", 10), ("middle", 80), ("newest", 40)]
+    picks = Counter(
+        closest_or_oldest(words, lambda w: w[1], Random(seed))[0] for seed in range(400)
+    )
+
+    assert set(picks) == {"oldest", "middle"}
+    assert 150 < picks["middle"] < 250

@@ -79,7 +79,7 @@ export interface PractisedWord {
   progress: number // 0-100: how far the word is towards "learned"
   learned: boolean
   known?: boolean // marked "I know this": never asked again
-  later?: boolean // in progress but waiting its turn (beyond the 100 practised now)
+  later?: boolean // in progress but waiting its turn (beyond the ones practised now)
 }
 
 /** The browser's time zone decides when "today" starts for the daily goal. */

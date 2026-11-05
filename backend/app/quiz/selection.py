@@ -1,6 +1,7 @@
 """Choosing what to ask next, and the daily streak, for the never-ending quiz."""
 
-from collections.abc import Collection, Mapping, Sequence
+from collections import Counter
+from collections.abc import Callable, Collection, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date, timedelta
 from enum import StrEnum
@@ -85,3 +86,42 @@ def choose_question_type(
     if score >= fill_from and can_fill:
         kinds.append(QuestionType.FILL_IN_BLANK)
     return rng.choice(kinds)
+
+
+def learning_cap(daily_goal: int, smallest: int, largest: int) -> int:
+    """Words in progress at once: about one per daily answer, so each comes up about once a day."""
+    return max(smallest, min(largest, daily_goal))
+
+
+def spacing_rules(
+    recent: Sequence[tuple[int, bool]], retry_after: int
+) -> tuple[set[int], list[int]]:
+    """From the last answers (newest first, as (word, right)): the words too soon to ask again,
+    and the ones answered wrong that should come back now, oldest first.
+
+    A word answered right waits for the whole window; one answered wrong comes back once after
+    `retry_after` other answers, while it's still fresh. Missed again on that retry, it waits
+    like the others (so a run of wrong answers can't keep cycling the same few words).
+    """
+    times = Counter(word_id for word_id, _ in recent)
+    seen: set[int] = set()
+    too_soon: set[int] = set()
+    retry: list[int] = []
+    for position, (word_id, right) in enumerate(recent):
+        if word_id in seen:
+            continue
+        seen.add(word_id)
+        if right or position < retry_after or times[word_id] > 1:
+            too_soon.add(word_id)
+        else:
+            retry.append(word_id)
+    return too_soon, retry[::-1]
+
+
+def closest_or_oldest[T](words: Sequence[T], score: Callable[[T], int], rng: Random) -> T:
+    """Which word in progress to ask: half the time the one closest to learned, so nearly done
+    words finish; otherwise the one waiting longest (`words` is in that order), so none is
+    forgotten."""
+    if rng.random() < 0.5:
+        return max(words, key=score)  # ties: the one waiting longest
+    return words[0]

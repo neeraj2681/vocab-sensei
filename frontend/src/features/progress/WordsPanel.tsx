@@ -50,7 +50,7 @@ export function WordsPanel() {
     learning: words.filter((w) => !w.learned && !w.known && !w.later),
     known: words.filter((w) => w.known),
   }
-  const waiting = words.filter((w) => w.later).length // beyond the 100 practised now
+  const waiting = words.filter((w) => w.later).length // beyond the ones practised now
   const shownTab =
     tab ?? (['learned', 'learning', 'known'] as const).find((t) => byTab[t].length) ?? 'learning'
   const query = filter.trim().toLowerCase()
@@ -123,7 +123,7 @@ export function WordsPanel() {
           <summary>
             Later · {later.length}{' '}
             <span className="muted">
-              (waiting for a place: the top {LEARNING_CAP} are practised first)
+              (waiting for a place: your daily goal sets how many are practised at once)
             </span>
           </summary>
           <WordRows words={later} onOpen={openWord} />
@@ -147,7 +147,6 @@ export function WordsPanel() {
 }
 
 const ALMOST = 70 // progress from which a word is "almost there"
-const LEARNING_CAP = 100 // the server's learning_cap
 
 function WordRows({ words, onOpen }: { words: PractisedWord[]; onOpen: (word: string) => void }) {
   if (words.length === 0) return null
