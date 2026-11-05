@@ -42,25 +42,34 @@ def recording(data: bytes = b"webm bytes") -> dict[str, Any]:
     return {"audio": ("say.webm", data, "audio/webm")}
 
 
-def test_practice_says_whether_the_word_was_said(
+def test_a_recording_is_transcribed_then_judged(
     user_client: TestClient, ears: FakeRecognizer
 ) -> None:
     ears.heard = "Laguubrious."
-    right = user_client.post("/api/pronunciation", data={"word": "lugubrious"}, files=recording())
-    ears.heard = "Banana."
-    wrong = user_client.post("/api/pronunciation", data={"word": "lugubrious"}, files=recording())
+    heard = user_client.post(
+        "/api/pronunciation/transcribe", data={"word": "lugubrious"}, files=recording()
+    )
+    right = user_client.post(
+        "/api/pronunciation", json={"word": "lugubrious", "heard": "Laguubrious."}
+    )
+    wrong = user_client.post("/api/pronunciation", json={"word": "lugubrious", "heard": "Banana."})
 
+    assert heard.json() == {"heard": "Laguubrious."}
+    assert ears.hints == ["lugubrious"]  # the recogniser is told the word
     assert right.json() == {"heard": "Laguubrious.", "correct": True}
-    assert wrong.json() == {"heard": "Banana.", "correct": False}
-    assert ears.hints == ["lugubrious", "lugubrious"]  # the recogniser is told the word
+    assert wrong.json()["correct"] is False
 
 
 def test_unreadable_or_huge_recordings_are_refused(
     user_client: TestClient, ears: FakeRecognizer, settings: Settings
 ) -> None:
-    noise = user_client.post("/api/pronunciation", data={"word": "x"}, files=recording(b"noise"))
+    noise = user_client.post(
+        "/api/pronunciation/transcribe", data={"word": "x"}, files=recording(b"noise")
+    )
     settings.speech.max_audio_bytes = 10
-    huge = user_client.post("/api/pronunciation", data={"word": "x"}, files=recording(b"x" * 11))
+    huge = user_client.post(
+        "/api/pronunciation/transcribe", data={"word": "x"}, files=recording(b"x" * 11)
+    )
 
     assert noise.status_code == 422
     assert huge.status_code == 413
@@ -76,14 +85,15 @@ def well_known(session: Session, lemma: str) -> None:
 
 
 def test_a_speaking_question_is_scored_by_what_was_heard(
-    user_client: TestClient, session: Session, ears: FakeRecognizer, settings: Settings
+    user_client: TestClient, session: Session, settings: Settings
 ) -> None:
     settings.speech.say_word_share = 1.0
     well_known(session, "word00")
 
     asked = user_client.get("/api/quiz/question?speaking=true").json()
-    ears.heard = "word zero zero"  # not it
-    wrong = user_client.post(f"/api/quiz/questions/{asked['id']}/speak?tz=UTC", files=recording())
+    wrong = user_client.post(
+        f"/api/quiz/questions/{asked['id']}/speak?tz=UTC", json={"heard": "word zero zero"}
+    )
 
     assert (asked["type"], asked["prompt"]) == ("say_word", "word00")
     assert (wrong.json()["correct"], wrong.json()["heard"]) == (False, "word zero zero")

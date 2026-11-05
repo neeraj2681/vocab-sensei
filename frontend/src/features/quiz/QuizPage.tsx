@@ -9,7 +9,8 @@ import { type Pop, ScoreBar } from './ScoreBar'
 import { Burst } from '../../components/Burst'
 import { resumingQuiz } from './visit'
 import { buzz } from '../../components/haptics'
-import { recordClip, skipSpeakingThisVisit } from '../../components/recorder'
+import { skipSpeakingThisVisit } from '../../components/recorder'
+import { VoiceInput } from '../../components/VoiceInput'
 import { sounds } from '../../components/sounds'
 import { Icon } from '../../components/Icon'
 import { SpeakButton } from '../../components/SpeakButton'
@@ -190,11 +191,11 @@ export function QuizPage() {
   }
 
   /** "Say this word": record, let the server judge it, then show the result like any answer. */
-  async function speak(question: QuizQuestion, clip: Blob) {
+  async function speak(question: QuizQuestion, heard: string) {
     setBusy(true)
     setAnswerError(null)
     try {
-      const result = await quizApi.speak(question.id, clip, focusOf(focusBook, focusChapter))
+      const result = await quizApi.speak(question.id, heard, focusOf(focusBook, focusChapter))
       reveal(
         question,
         result.correct ? question.correct_index : 1 - question.correct_index,
@@ -476,8 +477,8 @@ export function QuizPage() {
           onKnow={() => {
             know(phase.question)
           }}
-          onSpeak={(clip) => {
-            void speak(phase.question, clip)
+          onSpeak={(heard) => {
+            void speak(phase.question, heard)
           }}
           onSkipSpeaking={() => {
             skipSpeaking(phase.question)
@@ -495,7 +496,7 @@ interface CardProps {
   continueQueued: boolean
   onChoose: (index: number) => void
   onKnow: () => void
-  onSpeak: (clip: Blob) => void
+  onSpeak: (heard: string) => void
   onSkipSpeaking: () => void
   onNext: () => void
 }
@@ -524,7 +525,13 @@ function QuestionCard({
     <div className="quiz__card">
       <Prompt question={question} />
       {question.type === 'say_word' ? (
-        !answered && <SayWord busy={busy} onClip={onSpeak} onSkip={onSkipSpeaking} />
+        !answered && (
+          <VoiceInput word={question.prompt} busy={busy} onConfirm={onSpeak}>
+            <button type="button" className="link-button" onClick={onSkipSpeaking}>
+              Can’t speak now
+            </button>
+          </VoiceInput>
+        )
       ) : (
         <ol className="options">
           {question.options.map((option, index) => (
@@ -560,56 +567,6 @@ function QuestionCard({
           </button>
         )
       )}
-    </div>
-  )
-}
-
-/** The microphone for "say this word": tap, say it, and the server listens. */
-function SayWord({
-  busy,
-  onClip,
-  onSkip,
-}: {
-  busy: boolean
-  onClip: (clip: Blob) => void
-  onSkip: () => void
-}) {
-  const [recording, setRecording] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  async function record() {
-    setError(null)
-    setRecording(true)
-    try {
-      onClip(await recordClip())
-    } catch {
-      setError('The microphone isn’t available. Allow it in your browser, or skip this one.')
-    } finally {
-      setRecording(false)
-    }
-  }
-
-  return (
-    <div className="say-word">
-      <button
-        type="button"
-        className={`say-word__mic${recording ? ' say-word__mic--on' : ''}`}
-        disabled={busy || recording}
-        onClick={() => {
-          void record()
-        }}
-      >
-        <span aria-hidden="true">🎤</span>
-        {recording ? 'Listening…' : busy ? 'Checking…' : 'Tap and say it'}
-      </button>
-      {error && (
-        <p role="alert" className="form-error">
-          {error}
-        </p>
-      )}
-      <button type="button" className="link-button" onClick={onSkip}>
-        Can’t speak now
-      </button>
     </div>
   )
 }
