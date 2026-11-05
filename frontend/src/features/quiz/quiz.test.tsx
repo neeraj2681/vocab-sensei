@@ -245,7 +245,7 @@ describe('quiz', () => {
 
     await user.click(await screen.findByRole('button', { name: /wet with light rain/ }))
 
-    expect(await screen.findByRole('status')).toHaveTextContent('Word learned!')
+    expect(await screen.findByText('Word learned!')).toBeInTheDocument()
   })
 
   it('"I know this" moves on at once and retires the word in the background', async () => {

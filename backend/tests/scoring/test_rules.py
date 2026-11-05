@@ -37,10 +37,10 @@ def test_initial_progress_from_triage(triage: Triage, expected: WordProgress) ->
     assert initial_progress(triage, RULES) == expected
 
 
-def test_correct_answer_adds_five() -> None:
+def test_correct_answer_adds_ten() -> None:
     result = apply_answer(WordProgress(score=40), correct=True, now=NOW, rules=RULES)
 
-    assert result == WordProgress(score=45, status=WordStatus.LEARNING)
+    assert result == WordProgress(score=50, status=WordStatus.LEARNING)
 
 
 def test_wrong_answer_subtracts_ten() -> None:
@@ -55,9 +55,9 @@ def test_score_never_goes_below_floor() -> None:
     assert result.score == 0
 
 
-def test_new_word_needs_twenty_correct_answers() -> None:
+def test_new_word_needs_ten_correct_answers() -> None:
     progress = WordProgress()
-    for _ in range(19):
+    for _ in range(9):
         progress = apply_answer(progress, correct=True, now=NOW, rules=RULES)
     assert progress.status is WordStatus.LEARNING
 
@@ -87,7 +87,7 @@ def test_learned_word_returns_to_learning_after_a_week() -> None:
 def test_correct_answer_on_decayed_word_relearns_it_and_restarts_decay() -> None:
     result = apply_answer(learned(weeks_ago=1), correct=True, now=NOW, rules=RULES)
 
-    assert result == WordProgress(score=100, status=WordStatus.LEARNED, learned_at=NOW)
+    assert result == WordProgress(score=105, status=WordStatus.LEARNED, learned_at=NOW)
 
 
 def test_wrong_answer_on_decayed_word_starts_from_decayed_score() -> None:

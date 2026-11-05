@@ -13,7 +13,8 @@ DEFAULT_DATA_DIR = REPO_ROOT / "data"
 class ScoringSettings(BaseModel):
     """Learning-score rules (see docs/PROJECT_PLAN.md §5.4)."""
 
-    correct_delta: int = 5
+    correct_delta: int = 5  # coins for a right answer
+    word_correct_delta: int = 10  # a right answer's step towards "learned": 10 right answers
     wrong_delta: int = -10
     learned_threshold: int = 100
     weekly_decay: int = 5
@@ -30,6 +31,7 @@ class QuizSettings(BaseModel):
 
     options_per_question: int = Field(default=4, ge=2)
     spacing: int = Field(default=10, ge=0)  # a word isn't asked again within this many questions
+    learning_cap: int = Field(default=100, ge=1)  # words in progress at once; new ones wait
     daily_goal: int = Field(default=20, gt=0)  # new accounts' answers a day (about 5 minutes)
     # How often the next word is new / in progress / a learned word due for review (6:3:1).
     new_weight: int = Field(default=6, ge=0)

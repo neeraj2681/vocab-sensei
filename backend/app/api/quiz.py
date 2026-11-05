@@ -138,6 +138,7 @@ class StatsResponse(BaseModel):
     combo_after: int
     combo_multiplier: int
     double_coins_until: datetime | None  # the Shop's double coins are running until then
+    learned_today: int  # words that reached "learned" today
 
     @classmethod
     def of(cls, stats: Stats) -> Self:
@@ -150,6 +151,7 @@ class StatsResponse(BaseModel):
             combo_after=stats.combo_after,
             combo_multiplier=stats.combo_multiplier,
             double_coins_until=stats.double_coins_until,
+            learned_today=stats.learned_today,
             week=[
                 DayResponse(
                     date=d.date, answers=d.answers, met=d.met, points=d.points, frozen=d.frozen
@@ -192,6 +194,7 @@ class PractisedWordResponse(BaseModel):
     progress: int  # 0-100
     learned: bool
     known: bool  # marked "I know this": never asked again
+    later: bool  # in progress but waiting its turn (beyond the words practised now)
 
     @classmethod
     def of(cls, word: PractisedWord) -> Self:
@@ -203,6 +206,7 @@ class PractisedWordResponse(BaseModel):
             progress=word.progress,
             learned=word.learned,
             known=word.known,
+            later=word.later,
         )
 
 

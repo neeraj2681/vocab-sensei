@@ -36,6 +36,7 @@ export interface QuizStats {
   combo_after?: number // Ninja Mode (more coins for right answers) after this many in a row
   combo_multiplier?: number
   double_coins_until?: string | null // the Shop's double coins are running until then
+  learned_today?: number // words that reached "learned" today
 }
 
 export interface Day {
@@ -78,6 +79,7 @@ export interface PractisedWord {
   progress: number // 0-100: how far the word is towards "learned"
   learned: boolean
   known?: boolean // marked "I know this": never asked again
+  later?: boolean // in progress but waiting its turn (beyond the 100 practised now)
 }
 
 /** The browser's time zone decides when "today" starts for the daily goal. */

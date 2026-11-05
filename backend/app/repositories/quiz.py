@@ -154,6 +154,36 @@ class QuizRepository:
             )
         )
 
+    def learned_since(self, user_id: int, since: datetime) -> int:
+        count = self._session.scalar(
+            select(func.count())
+            .select_from(UserWord)
+            .where(
+                UserWord.user_id == user_id,
+                UserWord.status == WordStatus.LEARNED,
+                UserWord.learned_at >= since,
+            )
+        )
+        return int(count or 0)
+
+    def learning_by_priority(self, user_id: int) -> list[UserWord]:
+        """Words in progress that a current read uses, in the order they get a place among the
+        ones being practised: the highest-priority book first, then the closest to learned."""
+        priority = func.min(CurrentReading.priority).label("priority")
+        rows = self._session.execute(
+            select(UserWord, priority)
+            .join(DocumentWord, DocumentWord.word_id == UserWord.word_id)
+            .join(
+                CurrentReading,
+                (CurrentReading.document_id == DocumentWord.document_id)
+                & (CurrentReading.user_id == UserWord.user_id),
+            )
+            .where(UserWord.user_id == user_id, UserWord.status == WordStatus.LEARNING)
+            .group_by(UserWord.user_id, UserWord.word_id)
+            .order_by(priority, UserWord.score.desc(), UserWord.word_id)
+        )
+        return [row[0] for row in rows]
+
     def practised_words(self, user_id: int) -> list[tuple[UserWord, Word]]:
         """Words the user is learning or has learned (answered at least once), and every word they
         marked as already known (in the quiz or when sorting a chapter)."""
