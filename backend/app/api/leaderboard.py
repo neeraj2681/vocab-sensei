@@ -1,5 +1,5 @@
 from datetime import date, datetime
-from typing import Annotated, Self
+from typing import Annotated, Literal, Self
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import FileResponse
@@ -105,9 +105,13 @@ class ProfileResponse(BaseModel):
 
 @router.get("/leaderboard")
 def leaderboard(
-    user: CurrentUser, board: LeaderboardServiceDep, now: Now, tz: TimeZone
+    user: CurrentUser,
+    board: LeaderboardServiceDep,
+    now: Now,
+    tz: TimeZone,
+    scope: Literal["everyone", "friends"] = "everyone",
 ) -> list[RowResponse]:
-    """Everyone on the leaderboard, by coins earned today (in the viewer's time zone)."""
+    """Everyone on the leaderboard (or you and your friends), by coins earned today."""
     return [
         RowResponse(
             user_id=r.user_id,
@@ -117,7 +121,7 @@ def leaderboard(
             coins_today=r.coins_today,
             me=r.me,
         )
-        for r in board.today(user.id, now, tz)
+        for r in board.today(user.id, now, tz, friends_only=scope == "friends")
     ]
 
 

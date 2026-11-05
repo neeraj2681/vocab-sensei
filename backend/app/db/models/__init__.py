@@ -10,7 +10,7 @@ from app.db.models.learning import (
 )
 from app.db.models.library import Chapter, ChapterWord, Definition, Document, DocumentWord, Word
 from app.db.models.reminders import PushSubscription, Reminder
-from app.db.models.users import AuthSession, EmailToken, GoalChange, User
+from app.db.models.users import AuthSession, EmailToken, Friendship, GoalChange, User
 
 __all__ = [
     "AuthSession",
@@ -21,6 +21,7 @@ __all__ = [
     "Document",
     "DocumentWord",
     "EmailToken",
+    "Friendship",
     "GoalChange",
     "PushSubscription",
     "QuestClaim",

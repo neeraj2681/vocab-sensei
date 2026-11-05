@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from app.core.config import Settings
 from app.core.enums import Gender
 from app.db.models import User
+from app.repositories.friends import FriendRepository
 from app.repositories.leaderboard import LeaderboardRepository
 from app.repositories.quiz import QuizRepository
 from app.services.quiz import Day, HistoryPoint, quiz_stats
@@ -64,10 +65,14 @@ class LeaderboardService:
         self._settings = settings
         self._repo = LeaderboardRepository(session)
 
-    def today(self, viewer_id: int, now: datetime, tz: ZoneInfo) -> list[Row]:
-        """Everyone shown on the leaderboard, most coins today first (ties by name)."""
+    def today(
+        self, viewer_id: int, now: datetime, tz: ZoneInfo, friends_only: bool = False
+    ) -> list[Row]:
+        """Everyone shown on the leaderboard (or just you and your friends), most coins today
+        first (ties by name)."""
         day = now.astimezone(tz).date()
         coins = self._repo.coins_since(datetime.combine(day, time.min, tz), day)
+        friends = FriendRepository(self._session).friend_ids(viewer_id)
         rows = [
             Row(
                 user_id=user.id,
@@ -78,7 +83,8 @@ class LeaderboardService:
                 me=user.id == viewer_id,
             )
             for user in self._repo.users()
-            if user.show_on_leaderboard or user.id == viewer_id
+            if user.id == viewer_id
+            or (user.id in friends if friends_only else user.show_on_leaderboard)
         ]
         return sorted(rows, key=lambda r: (-r.coins_today, r.display_name.lower(), r.user_id))
 
@@ -145,6 +151,7 @@ class LeaderboardService:
         user = self._session.get(User, user_id)
         if user is None or not user.is_active or user.email_verified_at is None:
             raise ProfileNotFoundError("No such profile")
-        if user.id != viewer_id and not user.show_on_leaderboard:
-            raise ProfileNotFoundError("No such profile")
+        hidden = user.id != viewer_id and not user.show_on_leaderboard
+        if hidden and user.id not in FriendRepository(self._session).friend_ids(viewer_id):
+            raise ProfileNotFoundError("No such profile")  # friends still see it
         return user
