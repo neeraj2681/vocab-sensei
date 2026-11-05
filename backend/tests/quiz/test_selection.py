@@ -128,6 +128,21 @@ def test_right_answers_wait_and_wrong_ones_come_back_after_a_few() -> None:
     assert retry == [5, 4]  # oldest miss first
 
 
+def test_a_missed_word_gets_one_retry() -> None:
+    recent = [
+        (1, True),
+        (2, True),
+        (3, True),
+        (7, False),
+        (4, True),
+        (5, True),
+        (6, True),
+        (7, False),
+    ]
+
+    assert spacing_rules(recent, 3) == ({1, 2, 3, 4, 5, 6, 7}, [])  # missed on the retry too
+
+
 def test_a_missed_word_answered_right_since_waits_again() -> None:
     assert spacing_rules([(7, True), (8, True), (9, True), (7, False)], 3) == ({7, 8, 9}, [])
 

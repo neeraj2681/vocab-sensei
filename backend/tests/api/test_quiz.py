@@ -804,8 +804,11 @@ def test_words_puts_learned_first_then_learning_then_known(
     ]
 
 
-@pytest.mark.usefixtures("book", "clock")
-def test_a_known_word_can_be_learned_again(user_client: TestClient, session: Session) -> None:
+@pytest.mark.usefixtures("book")
+def test_a_known_word_can_be_learned_again(
+    user_client: TestClient, session: Session, settings: Settings, clock: Clock
+) -> None:
+    settings.quiz.learning_cap_min = 50  # room for every word: at 0% it would otherwise wait
     asked = question(user_client)
     user_client.post(f"/api/quiz/questions/{asked['id']}/know")
 
@@ -819,7 +822,10 @@ def test_a_known_word_can_be_learned_again(user_client: TestClient, session: Ses
     assert (progress.status, progress.score) == (WordStatus.LEARNING, 0)
     listed = {w["word"]: w for w in user_client.get("/api/quiz/words").json()}
     assert (listed[asked["prompt"]]["known"], listed[asked["prompt"]]["progress"]) == (False, 0)
-    asked_again = [answer(user_client, session)["word"] for _ in range(25)]
+    asked_again = []
+    for _ in range(25):  # time passes, so it's the word waiting longest
+        clock.now += timedelta(minutes=1)
+        asked_again.append(answer(user_client, session)["word"])
     assert asked["prompt"] in asked_again
 
 

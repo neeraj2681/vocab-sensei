@@ -1,5 +1,6 @@
 """Choosing what to ask next, and the daily streak, for the never-ending quiz."""
 
+from collections import Counter
 from collections.abc import Callable, Collection, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date, timedelta
@@ -98,9 +99,11 @@ def spacing_rules(
     """From the last answers (newest first, as (word, right)): the words too soon to ask again,
     and the ones answered wrong that should come back now, oldest first.
 
-    A word answered right waits for the whole window; one answered wrong comes back after
-    `retry_after` other answers, while it's still fresh.
+    A word answered right waits for the whole window; one answered wrong comes back once after
+    `retry_after` other answers, while it's still fresh. Missed again on that retry, it waits
+    like the others (so a run of wrong answers can't keep cycling the same few words).
     """
+    times = Counter(word_id for word_id, _ in recent)
     seen: set[int] = set()
     too_soon: set[int] = set()
     retry: list[int] = []
@@ -108,7 +111,7 @@ def spacing_rules(
         if word_id in seen:
             continue
         seen.add(word_id)
-        if right or position < retry_after:
+        if right or position < retry_after or times[word_id] > 1:
             too_soon.add(word_id)
         else:
             retry.append(word_id)
