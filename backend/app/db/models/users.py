@@ -29,6 +29,8 @@ class User(Base):
     show_on_leaderboard: Mapped[bool] = mapped_column(default=True, server_default=sa_true())
     show_books: Mapped[bool] = mapped_column(default=True, server_default=sa_true())  # on profile
     double_coins_until: Mapped[datetime | None] = mapped_column(UTCDateTime)  # from the Shop
+    # "Can't speak right now": no "say this word" questions until then.
+    speaking_paused_until: Mapped[datetime | None] = mapped_column(UTCDateTime)
     freezes_checked_through: Mapped[date | None] = mapped_column(Date)  # missed days looked at
     onboarded_at: Mapped[datetime | None] = mapped_column(UTCDateTime)  # finished the tour
     name_changed_at: Mapped[datetime | None] = mapped_column(UTCDateTime)  # one change allowed

@@ -1,16 +1,23 @@
+from datetime import timedelta
 from typing import Any
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_speech
 from app.core.config import Settings
 from app.core.speech import AudioError
-from app.db.models import UserWord, Word
-from tests.api.test_quiz import book, clock, only_word_in_progress, reader  # noqa: F401 (fixtures)
+from app.db.models import Question, UserWord, Word
+from tests.api.test_quiz import (  # noqa: F401 (fixtures)
+    Clock,
+    book,
+    clock,
+    only_word_in_progress,
+    reader,
+)
 
 pytestmark = pytest.mark.usefixtures("book", "clock")
 
@@ -111,17 +118,30 @@ def test_no_speaking_questions_unless_the_screen_can_record(
     assert asked["type"] != "say_word"
 
 
-def test_a_speaking_question_can_be_skipped(
-    user_client: TestClient, session: Session, settings: Settings
+@pytest.fixture
+def time(request: pytest.FixtureRequest) -> Clock:
+    found: Clock = request.getfixturevalue("clock")
+    return found
+
+
+def test_cant_speak_now_pauses_speaking_questions_for_ten_minutes(
+    user_client: TestClient, session: Session, settings: Settings, time: Clock
 ) -> None:
     settings.speech.say_word_share = 1.0
     well_known(session, "word00")
     asked = user_client.get("/api/quiz/question?speaking=true").json()
+    assert asked["type"] == "say_word"
 
     assert user_client.post(f"/api/quiz/questions/{asked['id']}/skip").status_code == 204
 
-    settings.speech.say_word_share = 0.0
+    start = time.now
+    time.now = start + timedelta(minutes=9)
     assert user_client.get("/api/quiz/question?speaking=true").json()["type"] != "say_word"
+
+    time.now = start + timedelta(minutes=11)
+    session.execute(delete(Question))  # the question kept on screen; a new one is made
+    session.commit()
+    assert user_client.get("/api/quiz/question?speaking=true").json()["type"] == "say_word"
 
 
 def test_a_normal_question_cant_be_spoken(user_client: TestClient, ears: FakeRecognizer) -> None:

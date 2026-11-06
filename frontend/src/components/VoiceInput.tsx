@@ -18,7 +18,7 @@ export function VoiceInput({
   busy?: boolean // the confirmed text is being judged
   idleLabel?: string
   onConfirm: (heard: string) => void
-  children?: ReactNode // e.g. "Can't speak now"
+  children?: ReactNode // e.g. "Can't speak right now"
 }) {
   const [state, setState] = useState<State>('idle')
   const [heard, setHeard] = useState('')

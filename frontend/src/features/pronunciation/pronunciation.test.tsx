@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AnswerResult, QuizQuestion } from '../../api/quiz'
 import { fakeApi, json, noContent, type Routes } from '../../test/fakeApi'
 import { renderApp } from '../../test/renderApp'
+import { pauseSpeaking } from '../../components/recorder'
 
 // A pretend microphone: jsdom has none.
 // Recording starts at a tap and stops at the next one, like the real thing.
@@ -11,7 +12,7 @@ vi.mock('../../components/recorder', () => ({
   quizSpeaking: vi.fn(() => true),
   speakingQuestionsOn: () => true,
   setSpeakingQuestionsOn: vi.fn(),
-  skipSpeakingThisVisit: vi.fn(),
+  pauseSpeaking: vi.fn(),
   startRecording: vi.fn(() => {
     let finish: (clip: Blob) => void = () => undefined
     const done = new Promise<Blob>((resolve) => {
@@ -101,14 +102,15 @@ describe('pronunciation', () => {
     )
   })
 
-  it('can be skipped when you can’t speak', async () => {
+  it('can be skipped when you can’t speak, pausing speaking questions', async () => {
     const api = quiz({ 'POST /api/quiz/questions/7/skip': noContent })
     const user = renderApp('/quiz')
 
-    await user.click(await screen.findByRole('button', { name: 'Can’t speak now' }))
+    await user.click(await screen.findByRole('button', { name: 'Can’t speak right now' }))
 
     expect(await screen.findByRole('heading', { name: 'serene' })).toBeInTheDocument()
     expect(api.calls('POST /api/quiz/questions/7/skip')).toHaveLength(1)
+    expect(pauseSpeaking).toHaveBeenCalledOnce()
   })
 
   it('word cards have Say it practice', async () => {
