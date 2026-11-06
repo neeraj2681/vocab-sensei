@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState, type ReactNode, type SyntheticEvent } from 'react'
-import { transcribe } from '../api/pronunciation'
-import { startRecording, type Recording } from './recorder'
+import { listen, type Listening } from './listen'
 
 type State = 'idle' | 'recording' | 'transcribing' | 'heard'
 const BARS = [0.55, 0.85, 1, 0.85, 0.55] // the wave's shape: tallest in the middle
 
 /** Say a word: tap to record (the button waves with your voice), tap to stop; what was heard
-appears in a box: Enter confirms it, or try again. Recognised on our server. */
+appears in a box: Enter confirms it, or try again. Recognised on our server (on the phone itself in
+the iPhone app). */
 export function VoiceInput({
   word,
   busy = false,
@@ -24,7 +24,7 @@ export function VoiceInput({
   const [heard, setHeard] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [levels, setLevels] = useState(BARS.map(() => 0.2))
-  const recording = useRef<Recording | null>(null)
+  const recording = useRef<Listening | null>(null)
 
   // While recording, the bars follow the voice's loudness.
   useEffect(() => {
@@ -48,12 +48,13 @@ export function VoiceInput({
   async function start() {
     setError(null)
     try {
-      const rec = await startRecording()
-      recording.current = rec
+      const listening = await listen(word)
+      recording.current = listening
       setState('recording')
-      const clip = await rec.done
-      setState('transcribing')
-      setHeard(await transcribe(word, clip))
+      void listening.stopped.then(() => {
+        setState((now) => (now === 'recording' ? 'transcribing' : now))
+      })
+      setHeard(await listening.heard)
       setState('heard')
     } catch {
       setError('Couldn’t listen: allow the microphone and try again.')
