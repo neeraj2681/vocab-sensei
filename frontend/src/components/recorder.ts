@@ -2,7 +2,8 @@
 
 export const SPEAKING_STORAGE_KEY = 'vs-speaking'
 
-let skippedThisVisit = false // "Can't speak now" in the quiz: no more speaking questions this visit
+const PAUSE_MS = 10 * 60 * 1000 // "Can't speak right now" (the server pauses them too)
+let pausedUntil = 0
 
 export function canRecord(): boolean {
   return (
@@ -30,11 +31,12 @@ export function setSpeakingQuestionsOn(on: boolean) {
 
 /** Whether the quiz may ask "say this word" questions right now. */
 export function quizSpeaking(): boolean {
-  return !skippedThisVisit && speakingQuestionsOn() && canRecord()
+  return Date.now() >= pausedUntil && speakingQuestionsOn() && canRecord()
 }
 
-export function skipSpeakingThisVisit() {
-  skippedThisVisit = true
+/** "Can't speak right now": no speaking questions for the next 10 minutes. */
+export function pauseSpeaking() {
+  pausedUntil = Date.now() + PAUSE_MS
 }
 
 export interface Recording {

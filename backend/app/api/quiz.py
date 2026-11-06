@@ -357,10 +357,10 @@ def speak(
 
 
 @router.post("/questions/{question_id}/skip", status_code=status.HTTP_204_NO_CONTENT)
-def skip(question_id: int, user: CurrentUser, quiz: QuizServiceDep) -> None:
-    """Drops a "say this word" question (can't speak right now)."""
+def skip(question_id: int, user: CurrentUser, quiz: QuizServiceDep, now: Now) -> None:
+    """Drops a "say this word" question; none come for the next 10 minutes (can't speak now)."""
     try:
-        quiz.skip(user.id, question_id)
+        quiz.skip(user.id, question_id, now)
     except (QuestionNotFoundError, AlreadyAnsweredError) as exc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from None
 

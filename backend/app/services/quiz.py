@@ -251,6 +251,12 @@ class QuizService:
 
     # Asking
 
+    def _check_speaking(self, user_id: int, now: datetime) -> None:
+        """No "say this word" questions while the user has paused them."""
+        paused = self._user(user_id).speaking_paused_until
+        if paused is not None and paused > now:
+            self._speaking = False
+
     def _pending(self, user_id: int, limit: int) -> list[Question]:
         """Unanswered questions, dropping "say this word" ones when the screen can't record."""
         if not self._speaking:
@@ -260,11 +266,14 @@ class QuizService:
             self._session.flush()
         return self._repo.unanswered(user_id, limit=limit)
 
-    def skip(self, user_id: int, question_id: int) -> None:
-        """Drops an unanswered "say this word" question (can't speak right now)."""
+    def skip(self, user_id: int, question_id: int, now: datetime) -> None:
+        """ "Can't speak right now": drops an unanswered "say this word" question, and no more
+        come for `pause_minutes`."""
         question = self._unanswered(user_id, question_id)
         if question.type is QuestionType.SAY_WORD:
             self._session.delete(question)
+            minutes = self._settings.speech.pause_minutes
+            self._user(user_id).speaking_paused_until = now + timedelta(minutes=minutes)
             self._session.commit()
 
     def unanswered_question(self, user_id: int, question_id: int) -> Question:
@@ -272,6 +281,7 @@ class QuizService:
 
     def current_question(self, user_id: int, now: datetime, focus: Focus | None = None) -> Question:
         """The question on screen: the oldest unanswered one, or a new one (from `focus`)."""
+        self._check_speaking(user_id, now)
         pending = self._pending(user_id, limit=1)
         if pending:
             return pending[0]
@@ -285,6 +295,7 @@ class QuizService:
         """The question on screen and the one kept ready after it, so the screen can move on
         without a request. Choosing the second a step early picks the same word: the first is
         excluded either way (a word isn't asked twice within `spacing` questions)."""
+        self._check_speaking(user_id, now)
         pending = self._pending(user_id, limit=2)
         if not pending:
             pending = [self._ask(user_id, now, focus)]

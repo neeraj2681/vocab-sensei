@@ -9,7 +9,7 @@ import { type Pop, ScoreBar } from './ScoreBar'
 import { Burst } from '../../components/Burst'
 import { resumingQuiz } from './visit'
 import { buzz } from '../../components/haptics'
-import { skipSpeakingThisVisit } from '../../components/recorder'
+import { pauseSpeaking } from '../../components/recorder'
 import { VoiceInput } from '../../components/VoiceInput'
 import { sounds } from '../../components/sounds'
 import { Icon } from '../../components/Icon'
@@ -211,9 +211,9 @@ export function QuizPage() {
     }
   }
 
-  /** "Can't speak now": no speaking questions for the rest of this visit. */
+  /** "Can't speak right now": no speaking questions for the next 10 minutes. */
   function skipSpeaking(question: QuizQuestion) {
-    skipSpeakingThisVisit()
+    pauseSpeaking()
     void quizApi.skip(question.id).catch(() => undefined)
     ready.current = ready.current.filter((q) => q.type !== 'say_word')
     const kept = ready.current.shift()
@@ -528,7 +528,7 @@ function QuestionCard({
         !answered && (
           <VoiceInput word={question.prompt} busy={busy} onConfirm={onSpeak}>
             <button type="button" className="link-button" onClick={onSkipSpeaking}>
-              Can’t speak now
+              Can’t speak right now
             </button>
           </VoiceInput>
         )

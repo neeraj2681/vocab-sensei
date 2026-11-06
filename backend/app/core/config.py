@@ -124,6 +124,7 @@ class SpeechSettings(BaseModel):
     model_dir: Path | None = None  # a model already downloaded (the Docker image has one)
     say_word_share: float = Field(default=0.2, ge=0, le=1)  # of well-known words in the quiz
     max_audio_bytes: int = 1_000_000
+    pause_minutes: int = Field(default=10, gt=0)  # after "Can't speak right now"
 
 
 class Settings(BaseSettings):
