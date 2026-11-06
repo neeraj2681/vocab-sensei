@@ -1,6 +1,5 @@
 """Choosing what to ask next, and the daily streak, for the never-ending quiz."""
 
-from collections import Counter
 from collections.abc import Callable, Collection, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date, timedelta
@@ -94,24 +93,23 @@ def learning_cap(daily_goal: int, smallest: int, largest: int) -> int:
 
 
 def spacing_rules(
-    recent: Sequence[tuple[int, bool]], retry_after: int
+    recent: Sequence[tuple[int, bool]], spacing: int, retry_after: int
 ) -> tuple[set[int], list[int]]:
-    """From the last answers (newest first, as (word, right)): the words too soon to ask again,
-    and the ones answered wrong that should come back now, oldest first.
+    """From the last answers (newest first, as (word, right); twice `spacing` of them): the words
+    too soon to ask again, and the ones answered wrong that should come back now, oldest first.
 
-    A word answered right waits for the whole window; one answered wrong comes back once after
-    `retry_after` other answers, while it's still fresh. Missed again on that retry, it waits
-    like the others (so a run of wrong answers can't keep cycling the same few words).
+    A word waits `spacing` answers before it's asked again. A miss is the exception: the word comes
+    back once after `retry_after` other answers, while it's still fresh. Only a miss of a word not
+    asked in the `spacing` answers before it gets that retry, so a miss on the retry itself waits
+    like any other answer (a run of wrong answers can't keep cycling the same few words).
     """
-    times = Counter(word_id for word_id, _ in recent)
-    seen: set[int] = set()
     too_soon: set[int] = set()
     retry: list[int] = []
-    for position, (word_id, right) in enumerate(recent):
-        if word_id in seen:
+    for position, (word_id, right) in enumerate(recent[:spacing]):
+        if word_id in too_soon or word_id in retry:
             continue
-        seen.add(word_id)
-        if right or position < retry_after or times[word_id] > 1:
+        before = {earlier for earlier, _ in recent[position + 1 : position + 1 + spacing]}
+        if right or position < retry_after or word_id in before:
             too_soon.add(word_id)
         else:
             retry.append(word_id)

@@ -122,7 +122,7 @@ def test_the_learning_cap_is_the_daily_goal_within_bounds() -> None:
 def test_right_answers_wait_and_wrong_ones_come_back_after_a_few() -> None:
     recent = [(1, True), (2, False), (3, True), (4, False), (5, False), (1, True)]  # newest first
 
-    too_soon, retry = spacing_rules(recent, retry_after=3)
+    too_soon, retry = spacing_rules(recent, spacing=10, retry_after=3)
 
     assert too_soon == {1, 2, 3}  # 2 was missed only 1 answer ago: not yet
     assert retry == [5, 4]  # oldest miss first
@@ -140,11 +140,11 @@ def test_a_missed_word_gets_one_retry() -> None:
         (7, False),
     ]
 
-    assert spacing_rules(recent, 3) == ({1, 2, 3, 4, 5, 6, 7}, [])  # missed on the retry too
+    assert spacing_rules(recent, 10, 3) == ({1, 2, 3, 4, 5, 6, 7}, [])  # missed on the retry too
 
 
 def test_a_missed_word_answered_right_since_waits_again() -> None:
-    assert spacing_rules([(7, True), (8, True), (9, True), (7, False)], 3) == ({7, 8, 9}, [])
+    assert spacing_rules([(7, True), (8, True), (9, True), (7, False)], 10, 3) == ({7, 8, 9}, [])
 
 
 def test_half_the_time_the_closest_to_learned_otherwise_the_oldest() -> None:
@@ -155,3 +155,13 @@ def test_half_the_time_the_closest_to_learned_otherwise_the_oldest() -> None:
 
     assert set(picks) == {"oldest", "middle"}
     assert 150 < picks["middle"] < 250
+
+
+def test_wrong_answers_in_a_row_dont_cycle_the_same_few_words() -> None:
+    # Seven words, each missed every seventh answer: each miss had its retry long ago.
+    cycle = [(word, False) for word in (7, 6, 5, 4, 3, 2, 1)] * 3
+
+    too_soon, retry = spacing_rules(cycle, 10, 3)
+
+    assert retry == []
+    assert too_soon == {1, 2, 3, 4, 5, 6, 7}  # so the quiz moves on to other words

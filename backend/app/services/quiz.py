@@ -334,8 +334,9 @@ class QuizService:
 
     def _spacing(self, user_id: int) -> tuple[set[int], list[int]]:
         """Words too soon to ask again, and words answered wrong that are due back now."""
-        recent = self._repo.recent_answers(user_id, self._quiz.spacing)
-        return spacing_rules(recent, self._quiz.retry_after)
+        spacing = self._quiz.spacing
+        recent = self._repo.recent_answers(user_id, 2 * spacing)
+        return spacing_rules(recent, spacing, self._quiz.retry_after)
 
     def _cap(self, user_id: int) -> int:
         """Words in progress at once: about one per answer of the daily goal."""
