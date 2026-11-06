@@ -28,7 +28,7 @@ export function CurrentReadings({ readings, onChange }: Props) {
   }
 
   return (
-    <section aria-labelledby="reading-heading" className="panel">
+    <section id="current-reading" tabIndex={-1} aria-labelledby="reading-heading" className="panel">
       <h3 id="reading-heading">Currently reading</h3>
       {readings.length > 0 && (
         <p className="muted">

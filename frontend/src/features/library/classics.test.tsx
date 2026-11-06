@@ -104,9 +104,31 @@ describe('classics shelf', () => {
     expect(shelf.querySelector('img.cover')).toHaveAttribute('src', '/api/documents/3/cover')
   })
 
-  it('says when two books are already being read', async () => {
+  it('says in a popup when two books are already being read', async () => {
     const OTHER = classic(7, 'Emma', 'Jane Austen', 900)
-    home([reading(PRIDE), { ...reading(OTHER), priority: 1 }], {
+    home([reading(PRIDE), { ...reading(OTHER), priority: 1 }]) // no POST: the app knows already
+    const user = renderApp('/books')
+    const start = await screen.findByRole('button', { name: `Start reading ${ALICE.title}` })
+
+    await user.click(start)
+    const dialog = await screen.findByRole('dialog', { name: "You're reading 2 books" })
+    expect(dialog).toHaveTextContent('Stop reading one of them first: its progress is kept.')
+
+    await user.click(dialog) // inside: stays
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    await user.click(document.querySelector('.word-card__backdrop') as HTMLElement) // outside
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+
+    await user.click(start)
+    await user.click(
+      await screen.findByRole('button', { name: 'Remove a book from current reads' }),
+    )
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Currently reading' })).toHaveFocus()
+  })
+
+  it('shows the popup when the server says two books are being read', async () => {
+    home([reading(PRIDE)], {
       'POST /api/readings': () =>
         json(
           {
@@ -120,6 +142,8 @@ describe('classics shelf', () => {
     expect(await screen.findByText(/Up to 2 books at once/)).toBeInTheDocument()
     await user.click(await screen.findByRole('button', { name: `Start reading ${ALICE.title}` }))
 
-    expect(await screen.findByText(/You're reading 2 books/)).toBeInTheDocument()
+    expect(
+      await screen.findByRole('dialog', { name: "You're reading 2 books" }),
+    ).toBeInTheDocument()
   })
 })

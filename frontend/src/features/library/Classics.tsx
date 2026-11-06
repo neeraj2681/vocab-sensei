@@ -1,18 +1,20 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { documentsApi, type BookDocument } from '../../api/documents'
-import { readingsApi, type Reading } from '../../api/readings'
+import { type Reading } from '../../api/readings'
 import { FormError } from '../../components/Form'
 import { useSubmit } from '../../components/useSubmit'
 import { BookCover } from './BookCover'
+import { startReading } from './startReading'
 
 interface Props {
   readings: Reading[]
   onChange: () => void
+  onFull: () => void // two books are being read already
 }
 
 /** Built-in public-domain books anyone can start without uploading anything. */
-export function Classics({ readings, onChange }: Props) {
+export function Classics({ readings, onChange, onFull }: Props) {
   const [classics, setClassics] = useState<BookDocument[]>([])
   const { busy, error, run } = useSubmit()
   const reading = new Set(readings.map((r) => r.document.id))
@@ -58,8 +60,7 @@ export function Classics({ readings, onChange }: Props) {
                 aria-label={`Start reading ${book.title}`}
                 onClick={() => {
                   void run(async () => {
-                    await readingsApi.start(book.id)
-                    onChange()
+                    if (await startReading(book.id, readings, onFull)) onChange()
                   })
                 }}
               >

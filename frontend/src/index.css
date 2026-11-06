@@ -3596,3 +3596,43 @@ a.book-card__cover:hover {
     white-space: nowrap;
   }
 }
+
+/* "You're reading 2 books" popup (on the word card's backdrop and card) */
+
+.two-books {
+  justify-items: center;
+  text-align: center;
+  animation: ninja-in 0.2s ease-out;
+}
+
+.two-books h3 {
+  margin: 0;
+  font-family: var(--display);
+}
+
+/* Currently reading, after "Remove a book from current reads" */
+.panel--flash {
+  animation: panel-flash 1.6s ease-out;
+}
+
+.panel--flash:focus {
+  outline: none;
+}
+
+@keyframes panel-flash {
+  0%,
+  40% {
+    box-shadow: 0 0 0 4px var(--accent);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .two-books,
+  .panel--flash {
+    animation: none;
+  }
+}
