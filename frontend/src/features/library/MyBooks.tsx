@@ -1,20 +1,22 @@
 import { useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { documentsApi, type BookDocument } from '../../api/documents'
-import { readingsApi, type Reading } from '../../api/readings'
+import { type Reading } from '../../api/readings'
 import { FormError } from '../../components/Form'
 import { useSubmit } from '../../components/useSubmit'
 import { BookCover } from './BookCover'
+import { startReading } from './startReading'
 import { bookSummary } from './labels'
 
 interface Props {
   books: BookDocument[]
   readings: Reading[]
   onChange: () => void
+  onFull: () => void // two books are being read already
 }
 
 /** Every uploaded book, newest first, with an upload form on top. */
-export function MyBooks({ books, readings, onChange }: Props) {
+export function MyBooks({ books, readings, onChange, onFull }: Props) {
   const { busy, error, run } = useSubmit()
   const reading = new Set(readings.map((r) => r.document.id))
 
@@ -64,7 +66,9 @@ export function MyBooks({ books, readings, onChange }: Props) {
                       type="button"
                       disabled={busy}
                       onClick={() => {
-                        act(() => readingsApi.start(book.id))
+                        void run(async () => {
+                          if (await startReading(book.id, readings, onFull)) onChange()
+                        })
                       }}
                     >
                       Start reading
