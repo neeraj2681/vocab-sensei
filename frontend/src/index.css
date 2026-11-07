@@ -1092,6 +1092,17 @@ button {
   white-space: nowrap;
 }
 
+/* "+1": the word is in another current read too (named on the word card) */
+.word-row__more {
+  margin-left: 0.3em;
+  padding: 0 0.35em;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 0.85em;
+  font-weight: 600;
+}
+
 .progress-ring,
 .word-row__known {
   flex: none;

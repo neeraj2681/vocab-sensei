@@ -210,6 +210,22 @@ class QuizRepository:
     def word_by_lemma(self, lemma: str) -> Word | None:
         return self._session.scalars(select(Word).where(Word.lemma == lemma)).one_or_none()
 
+    def current_read_titles(self, user_id: int) -> dict[int, list[str]]:
+        """For each word in the user's current reads, those books' titles in priority order."""
+        rows = self._session.execute(
+            select(DocumentWord.word_id, Document.title)
+            .join(Document, Document.id == DocumentWord.document_id)
+            .join(
+                CurrentReading,
+                (CurrentReading.document_id == Document.id) & (CurrentReading.user_id == user_id),
+            )
+            .order_by(CurrentReading.priority)
+        )
+        titles: dict[int, list[str]] = {}
+        for word_id, title in rows:
+            titles.setdefault(word_id, []).append(title)
+        return titles
+
     def occurrence(self, user_id: int, word_id: int) -> tuple[ChapterWord, Document] | None:
         """Where the user's books use the word: their current reads first, by priority, and in a
         book, the next chapter the reader meets it in (else its first appearance)."""

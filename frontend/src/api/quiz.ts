@@ -80,6 +80,7 @@ export interface PractisedWord {
   learned: boolean
   known?: boolean // marked "I know this": never asked again
   later?: boolean // in progress but waiting its turn (beyond the ones practised now)
+  also_in?: string[] // the user's other current reads that use the word
 }
 
 /** The browser's time zone decides when "today" starts for the daily goal. */

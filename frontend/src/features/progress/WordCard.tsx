@@ -52,7 +52,7 @@ export function WordCard({
         </span>
         <p className="muted">
           {word.known ? 'Known' : word.learned ? 'Learned' : `${String(word.progress)}% learned`}
-          {word.book && ` · from ${word.book}`}
+          {word.book && ` · from ${[word.book, ...(word.also_in ?? [])].join(' and ')}`}
         </p>
         {word.known && (
           <>
