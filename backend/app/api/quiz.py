@@ -195,6 +195,7 @@ class PractisedWordResponse(BaseModel):
     learned: bool
     known: bool  # marked "I know this": never asked again
     later: bool  # in progress but waiting its turn (beyond the words practised now)
+    also_in: list[str]  # the user's other current reads that use the word
 
     @classmethod
     def of(cls, word: PractisedWord) -> Self:
@@ -207,6 +208,7 @@ class PractisedWordResponse(BaseModel):
             learned=word.learned,
             known=word.known,
             later=word.later,
+            also_in=list(word.also_in),
         )
 
 

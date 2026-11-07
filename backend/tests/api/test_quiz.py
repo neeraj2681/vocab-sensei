@@ -963,3 +963,33 @@ def test_both_books_share_the_words_in_progress(
     words = user_client.get("/api/quiz/words").json()
     practised = sorted(w["word"][:4] for w in words if not w["later"])
     assert practised == ["alph", "alph", "beta", "beta"]  # equal halves
+
+
+def test_words_in_both_current_books_name_the_other_one(
+    user_client: TestClient, session: Session, clock: Clock
+) -> None:
+    user = reader(session)
+    add_book(session, user, ["word00", "word01"])
+    other = add_book(session, user, ["word01", "word02"])
+    other.title = "Walden"
+    reading = session.get(CurrentReading, (user.id, other.id))
+    assert reading is not None
+    reading.priority = 1
+    for lemma in ("word00", "word01", "word02"):
+        word = session.scalars(select(Word).where(Word.lemma == lemma)).one()
+        session.add(
+            UserWord(
+                user_id=user.id,
+                word_id=word.id,
+                score=10,
+                status=WordStatus.LEARNING,
+                last_reviewed_at=NOW,
+            )
+        )
+    session.commit()
+
+    words = {w["word"]: w for w in user_client.get("/api/quiz/words").json()}
+
+    assert (words["word01"]["book"], words["word01"]["also_in"]) == ("Moby-Dick", ["Walden"])
+    assert words["word00"]["also_in"] == []
+    assert (words["word02"]["book"], words["word02"]["also_in"]) == ("Walden", [])

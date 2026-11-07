@@ -290,7 +290,7 @@ describe('Me tab', () => {
     expect(screen.getByText(/The quiz won’t ask them again/)).toBeInTheDocument()
   })
 
-  it('keeps words beyond the 100 being practised in a Later section', async () => {
+  it('keeps words beyond the ones being practised in a Later section', async () => {
     const waiting = {
       word: 'quaint',
       book: null,
@@ -307,5 +307,23 @@ describe('Me tab', () => {
 
     const later = screen.getByText(/Later · 1/).closest('details')
     expect(later).toHaveTextContent('quaint')
+  })
+
+  it('marks a word that is in both books being read, and names both on its card', async () => {
+    const shared = { ...WORDS[1], also_in: ['Walden'] }
+    progress(HISTORY, {
+      'GET /api/quiz/words?include_known=true': () => json([WORDS[0], shared, WORDS[2]]),
+    })
+    const user = renderApp('/words')
+    await user.click(await screen.findByRole('button', { name: /^Learning/ }))
+
+    const row = await screen.findByRole('button', { name: /spleen/ })
+    expect(row).toHaveTextContent('Moby-Dick+1')
+    expect(row).toHaveAccessibleName(/also in Walden/)
+
+    await user.click(row)
+    expect(screen.getByRole('dialog', { name: 'spleen' })).toHaveTextContent(
+      'from Moby-Dick and Walden',
+    )
   })
 })

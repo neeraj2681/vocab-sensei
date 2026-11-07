@@ -170,7 +170,19 @@ function WordRows({ words, onOpen }: { words: PractisedWord[]; onOpen: (word: st
               <ProgressRing percent={word.progress} />
             )}
             <span className="word-row__word">{word.word}</span>
-            {word.book && <span className="word-row__book muted">{word.book}</span>}
+            {word.book && (
+              <span className="word-row__book muted">
+                {word.book}
+                {word.also_in && word.also_in.length > 0 && (
+                  <span
+                    className="word-row__more"
+                    aria-label={`, also in ${word.also_in.join(', ')}`}
+                  >
+                    +{word.also_in.length}
+                  </span>
+                )}
+              </span>
+            )}
           </button>
           <SpeakButton word={word.word} />
         </li>

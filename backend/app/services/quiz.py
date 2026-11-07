@@ -176,6 +176,7 @@ class PractisedWord:
     learned: bool
     known: bool = False  # marked "I know this": never asked again
     later: bool = False  # in progress but waiting: beyond the words being practised now
+    also_in: tuple[str, ...] = ()  # the user's other current reads that use the word
 
 
 def daily_goal(user: User, tz: ZoneInfo) -> DailyGoal:
@@ -728,10 +729,12 @@ class QuizService:
         """Learned words first, then the rest by progress, then the ones already known."""
         rules = self._settings.scoring
         practised_now = {w.word_id for w in self._ranked_learning(user_id)[0][: self._cap(user_id)]}
+        reads = self._repo.current_read_titles(user_id)
         words = []
         for user_word, word in self._repo.practised_words(user_id):
             progress = _progress(user_word)
             in_book = self._in_book(user_id, word)
+            also_in = tuple(title for title in reads.get(word.id, []) if title != in_book.book)
             known = user_word.status is WordStatus.KNOWN
             score = effective_score(progress, now, rules)
             words.append(
@@ -746,6 +749,7 @@ class QuizService:
                     known=known,
                     later=user_word.status is WordStatus.LEARNING
                     and user_word.word_id not in practised_now,
+                    also_in=also_in,
                 )
             )
         return sorted(words, key=lambda w: (w.known, not w.learned, -w.progress, w.lemma))
