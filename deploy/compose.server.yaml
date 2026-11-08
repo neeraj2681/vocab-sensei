@@ -1,0 +1,28 @@
+# On a server of its own (e.g. Oracle Cloud), with a domain pointing at it:
+#   docker compose -f compose.yaml -f compose.server.yaml up -d --build
+# Caddy takes ports 80 and 443 and gets the HTTPS certificate itself; no tunnel needed.
+# Set SITE_DOMAIN (e.g. vocabsensei.win) and VOCAB_EMAIL__APP_BASE_URL=https://<domain> in .env.
+
+services:
+  api:
+    environment:
+      # Visitors reach the API through Caddy only, which sets X-Forwarded-For to their address.
+      VOCAB_RATE_LIMIT__TRUST_PROXY: "true"
+      VOCAB_RATE_LIMIT__LOGIN: "10/minute;50/hour"
+      VOCAB_RATE_LIMIT__EMAIL: "5/hour"
+
+  web:
+    environment:
+      SITE_DOMAIN: ${SITE_DOMAIN:?set SITE_DOMAIN in deploy/.env}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp" # HTTP/3
+    volumes:
+      - ./Caddyfile.server:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data # the certificates: kept, so restarts don't ask Let's Encrypt again
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:

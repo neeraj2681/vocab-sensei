@@ -1,0 +1,30 @@
+# On a server of its own: Caddy faces the internet and gets the HTTPS certificate for SITE_DOMAIN
+# itself (Let's Encrypt), renewing it automatically. Used with compose.server.yaml.
+
+{$SITE_DOMAIN} {
+	encode zstd gzip
+
+	handle /api/* {
+		reverse_proxy api:8000 {
+			# Nothing sits in front of Caddy here, so a visitor could send this header to dodge
+			# the rate limits; Caddy already sets X-Forwarded-For to the real address.
+			header_up -Cf-Connecting-Ip
+		}
+	}
+
+	handle {
+		root * /srv
+		# Build files have a hash in their names, so they can be kept for good; everything else
+		# (index.html, the service worker, icons) is checked again, so updates show up at once.
+		@hashed path /assets/*
+		header @hashed Cache-Control "public, max-age=31536000, immutable"
+		@other not path /assets/*
+		header @other Cache-Control "no-cache"
+		try_files {path} /index.html # client-side routes like /quiz load the app
+		file_server
+	}
+}
+
+www.{$SITE_DOMAIN} {
+	redir https://{$SITE_DOMAIN}{uri} permanent
+}

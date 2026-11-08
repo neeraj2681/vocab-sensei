@@ -81,6 +81,24 @@ docker compose logs quick-tunnel | grep trycloudflare.com
 `TUNNEL_TOKEN` in `.env`, add a **public hostname** (e.g. `vocab.yourdomain.com`) pointing to `http://web:80`, then
 `docker compose --profile tunnel up -d`.
 
+## On a server of your own (e.g. Oracle Cloud's free tier)
+
+With a domain pointing at the server (an `A` record to its IP, "DNS only" in Cloudflare), Caddy faces the
+internet itself and gets a free HTTPS certificate from Let's Encrypt; no tunnel is needed.
+
+1. Open ports 80 and 443: in the cloud's firewall (Oracle: the subnet's security list) and on the server
+   (Oracle's Ubuntu: `sudo iptables -I INPUT 5 -p tcp --dport 80 -j ACCEPT`, the same for 443, then
+   `sudo netfilter-persistent save`).
+2. Install Docker: `sudo apt install docker.io docker-compose-v2 docker-buildx`.
+3. In `deploy/.env`, add `SITE_DOMAIN=your-domain` and set `VOCAB_EMAIL__APP_BASE_URL=https://your-domain`.
+4. Start with both files:
+
+   ```bash
+   docker compose -f compose.yaml -f compose.server.yaml up -d --build
+   ```
+
+On a small server (1 GB of memory), add swap first (`sudo fallocate -l 4G /swapfile`, `mkswap`, `swapon`).
+
 ## Everyday commands
 
 ```bash
