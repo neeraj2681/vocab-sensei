@@ -1,7 +1,8 @@
-from collections.abc import Iterator
+from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import Any
 
+import anyio
 from sqlalchemy import Engine, create_engine, event
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
@@ -38,7 +39,17 @@ def get_session_factory() -> sessionmaker[Session]:
     return SessionLocal
 
 
-def get_session() -> Iterator[Session]:
-    """FastAPI dependency: one session per request, always closed."""
-    with SessionLocal() as session:
+async def get_session() -> AsyncIterator[Session]:
+    """FastAPI dependency: one session per request, always closed.
+
+    Async on purpose. FastAPI skips the cleanup of a plain (sync) generator dependency when the
+    request is cancelled, e.g. the visitor's connection drops, so each cancelled request kept its
+    database connection "idle in transaction" until the pool ran dry and every request hung. Here
+    the session is closed in a `finally`, shielded from the cancellation, in a worker thread.
+    """
+    session = SessionLocal()
+    try:
         yield session
+    finally:
+        with anyio.CancelScope(shield=True):
+            await anyio.to_thread.run_sync(session.close)
