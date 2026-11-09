@@ -63,6 +63,9 @@ class RateLimitSettings(BaseModel):
     enabled: bool = True
     login: str = "10/minute;50/hour"
     email: str = "5/hour"  # sign-up, resend verification, forgot password: each sends an email
+    # Where counts are kept: "memory://" for one process; "valkey://valkey:6379" (Valkey) when the
+    # API runs several worker processes, so they share one count.
+    storage_uri: str = "memory://"
     trust_proxy: bool = False  # True behind Cloudflare Tunnel (reads CF-Connecting-IP)
 
 
