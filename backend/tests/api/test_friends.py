@@ -13,7 +13,7 @@ pytestmark = pytest.mark.usefixtures("book", "clock")
 
 def person(session: Session, email: str, name: str, **extra: Any) -> User:
     user = make_user(session, email)
-    user.display_name = name
+    user.display_name, user.show_on_leaderboard = name, True
     for key, value in extra.items():
         setattr(user, key, value)
     session.commit()
@@ -25,7 +25,7 @@ def test_search_finds_exact_usernames_and_emails_only(
 ) -> None:
     asha = person(session, "asha@example.com", "Asha")
     person(session, "ashwin@example.com", "Ashwin")
-    person(session, "zed@example.com", "Zed", show_on_leaderboard=False)
+    zed = person(session, "zed@example.com", "Zed", show_on_leaderboard=False)
 
     by_name = user_client.get("/api/friends/search?q=asha").json()
     by_email = user_client.get("/api/friends/search?q=ASHA@example.com").json()
@@ -33,7 +33,8 @@ def test_search_finds_exact_usernames_and_emails_only(
     assert [(p["user_id"], p["relation"]) for p in by_name] == [(asha.id, "none")]
     assert [p["display_name"] for p in by_email] == ["Asha"]
     assert user_client.get("/api/friends/search?q=ash").json() == []  # no partial matches
-    assert user_client.get("/api/friends/search?q=zed").json() == []  # keeps off the board
+    hidden = user_client.get("/api/friends/search?q=zed").json()  # off the board, still findable
+    assert [p["user_id"] for p in hidden] == [zed.id]
     assert "email" not in by_name[0]
 
 

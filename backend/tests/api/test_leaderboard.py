@@ -13,9 +13,10 @@ pytestmark = pytest.mark.usefixtures("book", "clock")
 
 
 def friend(session: Session, email: str, name: str, coins: int, **extra: Any) -> User:
-    """Another user, with `coins` earned today (from a quest, so no questions are needed)."""
+    """Another user on the board, with `coins` earned today (from a quest, so no questions are
+    needed)."""
     user = make_user(session, email)
-    user.display_name = name
+    user.display_name, user.show_on_leaderboard = name, True
     for key, value in extra.items():
         setattr(user, key, value)
     session.add(QuestClaim(user_id=user.id, day=NOW.date(), quest="answer-10", coins=coins))
@@ -113,3 +114,12 @@ def test_book_covers_on_a_profile(user_client: TestClient, session: Session, set
     other.show_books = False
     session.commit()
     assert user_client.get(f"/api/profiles/{other.id}/books/{moby.id}/cover").status_code == 404
+
+
+def test_new_accounts_keep_off_the_board_until_they_choose(
+    user_client: TestClient, session: Session
+) -> None:
+    newcomer = make_user(session, "new@example.com")
+
+    assert newcomer.show_on_leaderboard is False
+    assert all(row["user_id"] != newcomer.id for row in board(user_client))

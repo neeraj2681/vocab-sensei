@@ -282,8 +282,9 @@ describe('sound', () => {
 
 describe('privacy', () => {
   it('keeps the books I read off my profile', async () => {
-    const api = account(USER, {
-      'PUT /api/auth/me/books-visibility': () => json({ ...USER, show_books: false }),
+    const shown = { ...USER, show_on_leaderboard: true } // the books setting needs the board on
+    const api = account(shown, {
+      'PUT /api/auth/me/books-visibility': () => json({ ...shown, show_books: false }),
     })
     const user = renderApp('/settings')
 
