@@ -13,6 +13,7 @@ from app.api import (
     health,
     leaderboard,
     learning,
+    placement,
     pronunciation,
     quests,
     quiz,
@@ -76,6 +77,7 @@ def create_app() -> FastAPI:
     app.include_router(triage.router, prefix="/api")
     app.include_router(backup.router, prefix="/api")
     app.include_router(reminders.router, prefix="/api")
+    app.include_router(placement.router, prefix="/api")
     return app
 
 

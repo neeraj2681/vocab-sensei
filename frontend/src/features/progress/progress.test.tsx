@@ -326,4 +326,26 @@ describe('Me tab', () => {
       'from Moby-Dick and Walden',
     )
   })
+
+  it('lists probably known words, and takes one into learning', async () => {
+    const api = progress(HISTORY, {
+      'GET /api/placement/probably-known': () =>
+        json([
+          { word: 'house', meaning: 'a building to live in', book: 'Moby-Dick' },
+          { word: 'river', meaning: 'a large stream of water', book: 'Moby-Dick' },
+        ]),
+      'POST /api/quiz/words/house/learn': noContent,
+    })
+    const user = renderApp('/words')
+
+    const list = await screen.findByText(/Probably known · 2/)
+    await user.click(list)
+    expect(screen.getByText('a building to live in')).toBeInTheDocument()
+    const [first] = screen.getAllByRole('button', { name: 'Learn it' })
+    if (!first) throw new Error('no Learn it button')
+    await user.click(first)
+
+    expect(await screen.findByText(/Probably known · 1/)).toBeInTheDocument()
+    expect(api.calls('POST /api/quiz/words/house/learn')).toHaveLength(1)
+  })
 })

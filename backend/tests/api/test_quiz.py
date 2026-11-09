@@ -829,12 +829,14 @@ def test_a_known_word_can_be_learned_again(
     assert asked["prompt"] in asked_again
 
 
-@pytest.mark.usefixtures("book")
-@pytest.mark.parametrize("lemma", ["word00", "nosuchword"])
-def test_only_known_words_can_be_learned_again(user_client: TestClient, lemma: str) -> None:
-    response = user_client.post(f"/api/quiz/words/{lemma}/learn")
+@pytest.mark.usefixtures("book", "clock")
+def test_words_being_learned_or_unknown_cannot_be_learned_again(
+    user_client: TestClient, session: Session
+) -> None:
+    started = answer(user_client, session)["word"]
 
-    assert response.status_code == 404
+    assert user_client.post(f"/api/quiz/words/{started}/learn").status_code == 404
+    assert user_client.post("/api/quiz/words/nosuchword/learn").status_code == 404
 
 
 @pytest.mark.usefixtures("book", "clock")

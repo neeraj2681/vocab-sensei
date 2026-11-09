@@ -338,4 +338,27 @@ describe('privacy', () => {
       await screen.findByLabelText('Show the books I’m reading on my profile'),
     ).not.toBeChecked()
   })
+
+  describe('word level', () => {
+    it('invites you to the check until your level is measured', async () => {
+      account(USER)
+      renderApp('/settings')
+
+      const panel = await screen.findByRole('region', { name: 'Your word level' })
+      expect(panel).toHaveTextContent('Not measured yet')
+      expect(within(panel).getByRole('link', { name: 'Take the 2-minute check' })).toHaveAttribute(
+        'href',
+        '/placement',
+      )
+    })
+
+    it('names your level and lets you take the check again', async () => {
+      account({ ...USER, vocab_level: 2.75 })
+      renderApp('/settings')
+
+      const panel = await screen.findByRole('region', { name: 'Your word level' })
+      expect(panel).toHaveTextContent('Advanced')
+      expect(within(panel).getByRole('link', { name: 'Take the check again' })).toBeInTheDocument()
+    })
+  })
 })

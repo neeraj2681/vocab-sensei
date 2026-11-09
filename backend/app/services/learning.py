@@ -11,8 +11,9 @@ from dataclasses import dataclass
 
 from sqlalchemy.orm import Session
 
-from app.db.models import Chapter, ChapterWord, CurrentReading, Document, Word
+from app.db.models import Chapter, ChapterWord, CurrentReading, Document, User, Word
 from app.quiz.learning_list import ahead_then_earlier, mix_by_priority, reading_chapters
+from app.quiz.placement import probably_known_above
 from app.repositories.learning import LearningRepository
 from app.repositories.readings import ReadingRepository
 
@@ -28,8 +29,16 @@ class LearningWord:
 
 class LearningService:
     def __init__(self, session: Session) -> None:
+        self._session = session
         self._learning = LearningRepository(session)
         self._readings = ReadingRepository(session)
+
+    def easy_above(self, user_id: int) -> float | None:
+        """Words more common than this are probably known to the user (None: no level yet, so
+        only the general cutoff applies)."""
+        user = self._session.get(User, user_id)
+        level = user.vocab_level if user else None
+        return probably_known_above(level) if level is not None else None
 
     def next_new_words(
         self, user_id: int, count: int, only: Collection[int] | None = None
@@ -38,6 +47,7 @@ class LearningService:
         # Words shared with other books may be dropped as duplicates; at most `count` are, so
         # twice as many always leaves enough.
         limit = 2 * count
+        max_zipf = self.easy_above(user_id)  # probably known words don't come in
         queues = []
         for reading in self._readings.list_for(user_id):
             if only is not None and reading.document_id not in only:
@@ -70,7 +80,12 @@ class LearningService:
                 if earlier:
                     return items(
                         self._learning.new_words(
-                            user_id, reading.document_id, chosen[0], limit, earlier=True
+                            user_id,
+                            reading.document_id,
+                            chosen[0],
+                            limit,
+                            earlier=True,
+                            max_zipf=max_zipf,
                         ),
                         earlier=True,
                     )
@@ -79,12 +94,14 @@ class LearningService:
                     for index in chosen
                     for item in items(
                         self._learning.new_words_in_chapter(
-                            user_id, reading.document_id, index, limit
+                            user_id, reading.document_id, index, limit, max_zipf
                         )
                     )
                 ]
                 rest = items(
-                    self._learning.new_words(user_id, reading.document_id, chosen[0], limit)
+                    self._learning.new_words(
+                        user_id, reading.document_id, chosen[0], limit, max_zipf=max_zipf
+                    )
                 )
                 return first + rest
 

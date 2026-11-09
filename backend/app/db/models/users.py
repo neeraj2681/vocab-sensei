@@ -35,6 +35,9 @@ class User(Base):
     double_coins_until: Mapped[datetime | None] = mapped_column(UTCDateTime)  # from the Shop
     # "Can't speak right now": no "say this word" questions until then.
     speaking_paused_until: Mapped[datetime | None] = mapped_column(UTCDateTime)
+    # From the placement check (or past answers): the Zipf value where words stop being known;
+    # new words much more common than this are "probably known" and skipped. None: the default.
+    vocab_level: Mapped[float | None]
     freezes_checked_through: Mapped[date | None] = mapped_column(Date)  # missed days looked at
     onboarded_at: Mapped[datetime | None] = mapped_column(UTCDateTime)  # finished the tour
     name_changed_at: Mapped[datetime | None] = mapped_column(UTCDateTime)  # one change allowed

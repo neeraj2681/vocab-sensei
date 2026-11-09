@@ -13,6 +13,7 @@ export interface User {
   show_on_leaderboard?: boolean
   show_books?: boolean // others see the books being read on the profile
   newsletter?: boolean // gets the newsletter about improvements
+  vocab_level?: number | null // from the placement check; null: not measured yet
   avatar_stamp?: number // client-only: changes when the picture does, so the <img> reloads
 }
 

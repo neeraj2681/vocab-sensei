@@ -626,12 +626,17 @@ class QuizService:
         self._session.commit()
 
     def learn_again(self, user_id: int, lemma: str) -> None:
-        """Undoes "I know this": the word goes back to learning from 0 and the quiz asks it again
-        (soon, while one of the user's current reads uses it)."""
+        """Undoes "I know this", or takes a "probably known" word into learning: it starts from 0
+        and the quiz asks it (soon, while one of the user's current reads uses it)."""
         word = self._repo.word_by_lemma(lemma)
-        user_word = self._repo.user_word(user_id, word.id) if word else None
-        if user_word is None or user_word.status is not WordStatus.KNOWN:
-            raise WordNotKnownError(f"{lemma!r} isn't one of your known words")
+        if word is None:
+            raise WordNotKnownError(f"{lemma!r} isn't one of your words")
+        user_word = self._repo.user_word(user_id, word.id)
+        if user_word is None:  # never started: e.g. skipped as probably known
+            user_word = UserWord(user_id=user_id, word_id=word.id, score=0)
+            self._repo.add(user_word)
+        elif user_word.status not in (WordStatus.KNOWN, WordStatus.NEW):
+            raise WordNotKnownError(f"{lemma!r} is already being learned")
         user_word.status, user_word.score, user_word.learned_at = WordStatus.LEARNING, 0, None
         self._session.commit()
 
