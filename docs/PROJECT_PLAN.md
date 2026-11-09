@@ -312,6 +312,12 @@ because git and the workflow files carry over.
   - Steps by score: 0–69 the usual options, 70–89 one or two close ones, 90+ all close.
   - A little badge ("Tricky") on the question, and the threshold configurable in settings.
 - [ ] Spaced-repetition option (FSRS) alongside the point system
+- [ ] **Next-word recommender** (requested 9 Nov 2026): choose each quiz word with a model of the learner instead of
+  fixed rules (pools, closest-or-oldest, retries). Start from each person's word level (the placement check) and a
+  per-word difficulty learned from everyone's answers (a Rasch/IRT model: P(right) = σ(ability − difficulty)); predict
+  how likely each candidate is to be answered right and how soon it will be forgotten, and ask the word that teaches
+  most (about 70–85% expected success, due for review, from the chapters being read). Compare it with today's rules
+  on the answer log before switching (offline replay), then as an A/B test.
 - [x] Mobile-friendly layout + installable PWA (`feat/mobile-pwa`)
 - [x] Daily reminder by push notification or email at a chosen time, only if the goal isn't met (`feat/reminders`, `feat/reminders-ui`)
 - [ ] **OCR for scanned PDFs** (requested again 3 Nov 2026): a PDF made of page photos has no text to read, so
