@@ -2,7 +2,7 @@ import { Link } from 'react-router'
 import { readingsApi, type Reading } from '../../api/readings'
 import { FormError } from '../../components/Form'
 import { useSubmit } from '../../components/useSubmit'
-import { chapterLabel } from './labels'
+import { chapterLabel, chaptersLabel } from './labels'
 import { BookCover } from './BookCover'
 
 interface Props {
@@ -55,7 +55,9 @@ export function CurrentReadings({ readings, onChange }: Props) {
                     {title}
                   </Link>
                   <span className="muted">
-                    {chapterLabel(reading.current_chapter_index, reading.current_chapter_title)}
+                    {reading.chapters && reading.chapters.length > 1
+                      ? chaptersLabel(reading.chapters)
+                      : chapterLabel(reading.current_chapter_index, reading.current_chapter_title)}
                     {reading.current_chapter_readiness != null &&
                       ` · ${String(reading.current_chapter_readiness)}% ready`}
                   </span>

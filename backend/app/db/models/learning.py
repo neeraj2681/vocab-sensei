@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import JSON, Date, ForeignKey, String, Text, UniqueConstraint
+from sqlalchemy import JSON, Date, ForeignKey, String, Text, UniqueConstraint, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.enums import QuestionType, WordStatus
@@ -25,7 +25,9 @@ class CurrentReading(Base):
     document_id: Mapped[int] = mapped_column(
         ForeignKey("documents.id", ondelete="CASCADE"), primary_key=True
     )
-    current_chapter_index: Mapped[int] = mapped_column(default=0)
+    current_chapter_index: Mapped[int] = mapped_column(default=0)  # the first chapter being read
+    # The chapters being read (their words come first); empty: the current one and the next two.
+    chapters: Mapped[list[int]] = mapped_column(JSON, default=list, server_default=text("'[]'"))
     priority: Mapped[int] = mapped_column(default=0)  # 0 = highest
     started_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
 

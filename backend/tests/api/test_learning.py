@@ -143,3 +143,12 @@ def test_empty_without_current_reads(user_client: TestClient) -> None:
 
 def test_requires_login(client: TestClient) -> None:
     assert client.get("/api/learning/next").status_code == 401
+
+
+def test_the_chapters_being_read_come_first(user_client: TestClient, tmp_path: Path) -> None:
+    document_id = add_book(user_client, tmp_path, "a", BOOK_A)  # one rare word per chapter
+
+    user_client.put(f"/api/readings/{document_id}/chapters", json={"chapters": [0, 2]})
+
+    assert next_lemmas(user_client)[:2] == ["lugubrious", "obsequious"]  # chapter 1 waits
+    assert "perfunctory" in next_lemmas(user_client)  # then the rest of the book

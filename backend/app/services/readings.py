@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.core.enums import DocumentStatus
 from app.db.models import CurrentReading, Document
-from app.quiz.learning_list import MAX_READING
+from app.quiz.learning_list import MAX_READING, reading_chapters, suggested_chapters
 from app.repositories.readings import ReadingRepository
 
 
@@ -44,6 +44,7 @@ class ReadingService:
             document_id=document.id,
             priority=reading_now,
             current_chapter_index=0,
+            chapters=suggested_chapters(0, len(document.chapters)),
         )
         self._readings.add(reading)
         self._session.commit()
@@ -54,6 +55,25 @@ class ReadingService:
         if not 0 <= index < chapters:
             raise ReadingError(f"This book has chapters 0 to {chapters - 1}")
         reading.current_chapter_index = index
+        reading.chapters = suggested_chapters(index, chapters)
+        self._session.commit()
+
+    def chapters(self, reading: CurrentReading) -> list[int]:
+        """The chapters being read, in order."""
+        return reading_chapters(
+            reading.chapters, reading.current_chapter_index, len(reading.document.chapters)
+        )
+
+    def set_chapters(self, reading: CurrentReading, indexes: list[int]) -> None:
+        """Marks exactly these chapters as being read; their words come first."""
+        total = len(reading.document.chapters)
+        if not indexes:
+            raise ReadingError("Pick at least one chapter")
+        if any(not 0 <= index < total for index in indexes):
+            raise ReadingError(f"This book has chapters 0 to {total - 1}")
+        chosen = sorted(set(indexes))
+        reading.chapters = chosen  # a new list, so the change is saved
+        reading.current_chapter_index = chosen[0]
         self._session.commit()
 
     def reorder(self, user_id: int, document_ids: list[int]) -> list[CurrentReading]:

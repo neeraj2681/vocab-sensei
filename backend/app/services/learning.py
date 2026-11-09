@@ -1,17 +1,18 @@
 """The learning list: new words from the user's current reads, in the order they'll be learned.
 
-Per book, in reading order and skipping words already in progress, learned or known: mostly words
-from the current chapter on (each at the next chapter that uses it), with 1 in 4 from the chapters
-before it. Books take turns (see app.quiz.learning_list).
+Per book, skipping words already in progress, learned or known: first the words of the chapters
+being read (the reader chooses them; by default the current chapter and the next two), then the
+rest of the book from the first of them, in reading order (each word at the next chapter that uses
+it), with 1 in 4 from the chapters before it. Books take turns (see app.quiz.learning_list).
 """
 
-from collections.abc import Collection
+from collections.abc import Collection, Iterable
 from dataclasses import dataclass
 
 from sqlalchemy.orm import Session
 
 from app.db.models import Chapter, ChapterWord, CurrentReading, Document, Word
-from app.quiz.learning_list import ahead_then_earlier, mix_by_priority
+from app.quiz.learning_list import ahead_then_earlier, mix_by_priority, reading_chapters
 from app.repositories.learning import LearningRepository
 from app.repositories.readings import ReadingRepository
 
@@ -42,14 +43,15 @@ class LearningService:
             if only is not None and reading.document_id not in only:
                 continue
 
-            def words(earlier: bool, reading: CurrentReading = reading) -> list[LearningWord]:
-                rows = self._learning.new_words(
-                    user_id,
-                    reading.document_id,
-                    reading.current_chapter_index,
-                    limit,
-                    earlier=earlier,
-                )
+            chosen = reading_chapters(
+                reading.chapters, reading.current_chapter_index, len(reading.document.chapters)
+            )
+
+            def items(
+                rows: Iterable[tuple[ChapterWord, Word, Chapter]],
+                earlier: bool = False,
+                reading: CurrentReading = reading,
+            ) -> list[LearningWord]:
                 return [
                     LearningWord(
                         word=word,
@@ -60,6 +62,31 @@ class LearningService:
                     )
                     for occurrence, word, chapter in rows
                 ]
+
+            def words(
+                earlier: bool, reading: CurrentReading = reading, chosen: list[int] = chosen
+            ) -> list[LearningWord]:
+                # The chosen chapters' words first, then the book on from the first of them.
+                if earlier:
+                    return items(
+                        self._learning.new_words(
+                            user_id, reading.document_id, chosen[0], limit, earlier=True
+                        ),
+                        earlier=True,
+                    )
+                first = [
+                    item
+                    for index in chosen
+                    for item in items(
+                        self._learning.new_words_in_chapter(
+                            user_id, reading.document_id, index, limit
+                        )
+                    )
+                ]
+                rest = items(
+                    self._learning.new_words(user_id, reading.document_id, chosen[0], limit)
+                )
+                return first + rest
 
             queues.append(ahead_then_earlier(words(False), words(True), limit, _word_id))
         return mix_by_priority(queues, count, key=_word_id)

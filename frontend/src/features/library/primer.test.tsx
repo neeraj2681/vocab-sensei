@@ -145,7 +145,7 @@ describe('chapter path', () => {
 
     const first = await screen.findByRole('button', { name: 'Chapter 1, ETYMOLOGY., 100% ready' })
     const current = screen.getByRole('button', {
-      name: 'Chapter 2, CHAPTER 1. Loomings., 61% ready',
+      name: 'Chapter 2, CHAPTER 1. Loomings., 61% ready, being read',
     })
     expect(current).toHaveAttribute('aria-pressed', 'true') // the chapter being read
     expect(current).toHaveClass('path__node--current')
@@ -208,10 +208,10 @@ describe('chapter path', () => {
     const user = renderApp('/books/1')
 
     await screen.findByRole('button', { name: /^Chapter 1, / })
-    expect(screen.getAllByRole('button', { name: /% ready$/ })).toHaveLength(9) // 0-8
+    expect(screen.getAllByRole('button', { name: /% ready/ })).toHaveLength(9) // 0-8
 
     await user.click(screen.getByRole('button', { name: 'Show all 30 chapters' }))
 
-    expect(screen.getAllByRole('button', { name: /% ready$/ })).toHaveLength(30)
+    expect(screen.getAllByRole('button', { name: /% ready/ })).toHaveLength(30)
   })
 })

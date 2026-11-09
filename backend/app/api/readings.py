@@ -9,6 +9,7 @@ from app.api.documents import DocumentResponse, DocumentServiceDep, ReadableDocu
 from app.db.models import CurrentReading
 from app.db.session import get_session
 from app.db.types import utcnow
+from app.quiz.learning_list import reading_chapters
 from app.services.library import LibraryService
 from app.services.readiness import ReadinessService
 from app.services.readings import ReadingError, ReadingService
@@ -19,9 +20,10 @@ router = APIRouter(prefix="/readings", tags=["readings"])
 class ReadingResponse(BaseModel):
     document: DocumentResponse
     priority: int  # 0 = read first
-    current_chapter_index: int
+    current_chapter_index: int  # the first chapter being read
     current_chapter_title: str | None
     current_chapter_readiness: int | None = None  # 0-100, see /documents/{id}/readiness
+    chapters: list[int]  # the chapters being read, in order; their words come first
 
     @classmethod
     def of(cls, reading: CurrentReading, word_count: int, readiness: int | None = None) -> Self:
@@ -30,6 +32,7 @@ class ReadingResponse(BaseModel):
         return cls(
             document=DocumentResponse.of(reading.document, word_count),
             priority=reading.priority,
+            chapters=reading_chapters(reading.chapters, index, len(chapters)),
             current_chapter_index=index,
             current_chapter_title=chapters[index].title if index < len(chapters) else None,
             current_chapter_readiness=readiness,
@@ -41,7 +44,11 @@ class StartReadingRequest(BaseModel):
 
 
 class SetChapterRequest(BaseModel):
-    current_chapter_index: int
+    current_chapter_index: int  # also marks it and the next two as being read
+
+
+class SetChaptersRequest(BaseModel):
+    chapters: list[int]  # every chapter being read (0-based)
 
 
 class ReorderRequest(BaseModel):
@@ -146,6 +153,22 @@ def set_chapter(
 ) -> ReadingResponse:
     try:
         readings.set_chapter(reading, body.current_chapter_index)
+    except ReadingError as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from None
+    return responses([reading], documents, readiness)[0]
+
+
+@router.put("/{document_id}/chapters")
+def set_chapters(
+    body: SetChaptersRequest,
+    reading: CurrentReadingDep,
+    readings: ReadingServiceDep,
+    documents: DocumentServiceDep,
+    readiness: ReadinessDep,
+) -> ReadingResponse:
+    """Marks the chapters being read: their words come first, then the book on from them."""
+    try:
+        readings.set_chapters(reading, body.chapters)
     except ReadingError as exc:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from None
     return responses([reading], documents, readiness)[0]

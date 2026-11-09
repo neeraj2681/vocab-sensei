@@ -1,4 +1,9 @@
-from app.quiz.learning_list import mix_by_priority, share_places
+from app.quiz.learning_list import (
+    mix_by_priority,
+    reading_chapters,
+    share_places,
+    suggested_chapters,
+)
 
 
 def mix(queues: list[list[str]], count: int) -> list[str]:
@@ -43,3 +48,15 @@ def test_a_word_shared_by_two_books_is_taken_once() -> None:
 def test_stops_when_every_book_runs_out() -> None:
     assert mix([["a1"], []], 5) == ["a1"]
     assert mix([], 5) == []
+
+
+def test_reading_a_chapter_suggests_it_and_the_next_two() -> None:
+    assert suggested_chapters(4, 20) == [4, 5, 6]
+    assert suggested_chapters(19, 20) == [19]
+    assert suggested_chapters(0, 0) == [0]
+
+
+def test_chosen_chapters_win_and_vanished_ones_are_dropped() -> None:
+    assert reading_chapters([7, 2, 2], current=0, total=10) == [2, 7]
+    assert reading_chapters([12], current=3, total=10) == [3, 4, 5]  # none left: suggest
+    assert reading_chapters([], current=8, total=10) == [8, 9]

@@ -12,6 +12,7 @@ the same way at a lower weight: 1 in `EARLIER_CHAPTERS_EVERY` new words.
 from collections.abc import Callable, Hashable, Sequence
 
 EARLIER_CHAPTERS_EVERY = 4  # 3 words from the current chapter on, then 1 from before it
+SUGGESTED_CHAPTERS = 3  # starting a book, or picking "I'm here": that chapter and the next two
 MAX_READING = 2  # books read at once
 
 
@@ -65,3 +66,15 @@ def mix_by_priority[T](
             taken.add(key(item))
             picked.append(item)
     return picked
+
+
+def suggested_chapters(index: int, total: int) -> list[int]:
+    """The chapters marked as being read when the reader is at `index`: it and the next two."""
+    return list(range(index, min(index + SUGGESTED_CHAPTERS, total))) or [0]
+
+
+def reading_chapters(saved: Sequence[int], current: int, total: int) -> list[int]:
+    """The chapters being read, in order: those the reader chose (that still exist), or the
+    suggested ones around `current` for reads that never chose."""
+    chosen = sorted({index for index in saved if 0 <= index < total})
+    return chosen or suggested_chapters(current, total)

@@ -248,7 +248,10 @@ describe('book page', () => {
     expect(row).toHaveTextContent('A sentence with spleen.')
     expect(screen.getByLabelText('Chapter')).toHaveValue('1')
     expect(screen.getByText('2 words')).toBeInTheDocument()
-    expect(screen.getByText('You’re on this chapter')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '✓ Reading this chapter' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
   })
 
   it('switches chapters', async () => {
@@ -261,17 +264,27 @@ describe('book page', () => {
     expect(await screen.findByText('No words to learn in this chapter.')).toBeInTheDocument()
   })
 
-  it('records the chapter you are on', async () => {
-    const api = bookApi([reading(MOBY, 0, 1)], {
-      'PATCH /api/readings/1': () => json(reading(MOBY, 0, 0)),
+  it('marks several chapters as being read', async () => {
+    const api = bookApi([{ ...reading(MOBY, 0, 1), chapters: [1] }], {
+      'PUT /api/readings/1/chapters': () => json({ ...reading(MOBY, 0, 0), chapters: [0, 1] }),
     })
     const user = renderApp('/books/1')
 
     await user.selectOptions(await screen.findByLabelText('Chapter'), '1 · ETYMOLOGY.')
     await user.click(screen.getByRole('button', { name: 'I’m reading this chapter' }))
 
-    expect(await screen.findByText('You’re on this chapter')).toBeInTheDocument()
-    expect(api.calls('PATCH /api/readings/1')).toEqual([{ current_chapter_index: 0 }])
+    expect(await screen.findByRole('button', { name: '✓ Reading this chapter' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    expect(api.calls('PUT /api/readings/1/chapters')).toEqual([{ chapters: [0, 1] }])
+  })
+
+  it('keeps at least one chapter marked', async () => {
+    bookApi([{ ...reading(MOBY, 0, 1), chapters: [1] }])
+    renderApp('/books/1')
+
+    expect(await screen.findByRole('button', { name: '✓ Reading this chapter' })).toBeDisabled()
   })
 
   it('says so when the book does not exist', async () => {
