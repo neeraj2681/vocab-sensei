@@ -105,7 +105,7 @@ class LeaderboardService:
             []
             if hidden
             else [
-                Book(d.id, d.title, d.author, d.cover_path is not None)
+                Book(d.id, d.title, d.author, d.cover_path is not None and (me or d.is_classic))
                 for d in self._repo.reading(user.id)
             ]
         )
@@ -135,14 +135,16 @@ class LeaderboardService:
         return path if path.is_file() else None
 
     def book_cover(self, viewer_id: int, user_id: int, document_id: int) -> Path | None:
-        """The cover of a book on a profile: one they're reading, if they share their books."""
+        """The cover of a book on a profile: one they're reading, if they share their books. Others
+        see covers of public-domain classics only, never of someone's own uploads (cover art
+        belongs to its publisher)."""
         user = self._visible(viewer_id, user_id)
         if user.id != viewer_id and not user.show_books:
             raise ProfileNotFoundError("No such book")
         book = next((d for d in self._repo.reading(user.id) if d.id == document_id), None)
         if book is None:
             raise ProfileNotFoundError("No such book")
-        if not book.cover_path:
+        if not book.cover_path or (user.id != viewer_id and not book.is_classic):
             return None
         path = self._settings.data_dir / book.cover_path
         return path if path.is_file() else None

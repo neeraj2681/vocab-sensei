@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
+import { LegalLinks } from '../legal/LegalPages'
 import { authApi } from '../../api/auth'
 import { AppIntro } from './AppIntro'
 import { AuthCard, Field, FormError } from '../../components/Form'
@@ -63,10 +64,15 @@ export function RegisterPage() {
             {busy ? 'Creating…' : 'Create account'}
           </button>
         </form>
+        <p className="muted auth-consent">
+          By creating an account you agree to the <Link to="/terms">Terms of use</Link> and the{' '}
+          <Link to="/privacy">Privacy policy</Link>.
+        </p>
         <p className="auth-links">
           Already have an account? <Link to="/login">Log in</Link>
         </p>
       </AuthCard>
+      <LegalLinks />
     </div>
   )
 }

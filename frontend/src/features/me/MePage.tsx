@@ -3,6 +3,7 @@ import { Link } from 'react-router'
 import { friendsApi } from '../../api/friends'
 import { Icon } from '../../components/Icon'
 import { useAuth } from '../auth/AuthContext'
+import { LegalLinks } from '../legal/LegalPages'
 import { ProfileView } from '../profile/ProfileView'
 import { RecapsPanel } from '../recaps/RecapsPanel'
 import { useProfile } from '../profile/useProfile'
@@ -68,6 +69,7 @@ export function MePage() {
       >
         <Icon name="door" size={24} /> Log out
       </button>
+      <LegalLinks />
     </section>
   )
 }

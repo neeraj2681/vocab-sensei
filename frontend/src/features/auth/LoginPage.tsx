@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { LegalLinks } from '../legal/LegalPages'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router'
 import { authApi } from '../../api/auth'
 import { ApiError } from '../../api/client'
@@ -79,6 +80,7 @@ export function LoginPage() {
           <Link to="/register">Create an account</Link>
         </p>
       </AuthCard>
+      <LegalLinks />
     </div>
   )
 }

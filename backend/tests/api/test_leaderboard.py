@@ -99,6 +99,7 @@ def test_book_covers_on_a_profile(user_client: TestClient, session: Session, set
     other = friend(session, "asha@example.com", "Asha", 0)
     session.add(CurrentReading(user_id=other.id, document_id=moby.id, priority=0))
     moby.cover_path = f"covers/{moby.id}.jpg"
+    moby.owner_user_id = None  # a built-in classic: its cover may be shown to anyone
     cover = settings.data_dir / moby.cover_path
     cover.parent.mkdir(parents=True, exist_ok=True)
     cover.write_bytes(b"jpeg bytes")
@@ -114,6 +115,24 @@ def test_book_covers_on_a_profile(user_client: TestClient, session: Session, set
     other.show_books = False
     session.commit()
     assert user_client.get(f"/api/profiles/{other.id}/books/{moby.id}/cover").status_code == 404
+
+
+def test_covers_of_someones_own_uploads_stay_private(
+    user_client: TestClient, session: Session, settings: Any
+) -> None:
+    other = friend(session, "asha@example.com", "Asha", 0)
+    upload = session.scalars(select(Document)).one()  # from the book fixture
+    upload.owner_user_id, upload.cover_path = other.id, f"covers/{upload.id}.jpg"
+    session.add(CurrentReading(user_id=other.id, document_id=upload.id, priority=0))
+    cover = settings.data_dir / upload.cover_path
+    cover.parent.mkdir(parents=True, exist_ok=True)
+    cover.write_bytes(b"jpeg bytes")
+    session.commit()
+
+    listed = user_client.get(f"/api/profiles/{other.id}?tz=UTC").json()["books"]
+
+    assert [(b["title"], b["has_cover"]) for b in listed] == [(upload.title, False)]  # title only
+    assert user_client.get(f"/api/profiles/{other.id}/books/{upload.id}/cover").status_code == 404
 
 
 def test_new_accounts_keep_off_the_board_until_they_choose(
