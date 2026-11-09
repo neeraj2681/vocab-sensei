@@ -39,7 +39,12 @@ jobs:
       - name: Install dependencies
         # One package (the spaCy English model) comes from a GitHub release, which sometimes
         # answers 504 for a moment: try again before giving up.
-        run: uv sync --locked || (sleep 30 && uv sync --locked) || (sleep 90 && uv sync --locked)
+        run: |
+          for wait in 30 60 90 120 0; do
+            uv sync --locked && exit 0
+            [ "$wait" = 0 ] || { echo "retrying in ${wait}s"; sleep "$wait"; }
+          done
+          exit 1
       - name: Format
         run: uv run ruff format --check .
       - name: Lint
@@ -82,7 +87,12 @@ jobs:
       - name: Install dependencies
         # One package (the spaCy English model) comes from a GitHub release, which sometimes
         # answers 504 for a moment: try again before giving up.
-        run: uv sync --locked || (sleep 30 && uv sync --locked) || (sleep 90 && uv sync --locked)
+        run: |
+          for wait in 30 60 90 120 0; do
+            uv sync --locked && exit 0
+            [ "$wait" = 0 ] || { echo "retrying in ${wait}s"; sleep "$wait"; }
+          done
+          exit 1
       - name: Tests on PostgreSQL
         run: uv run pytest -p no:cacheprovider --no-cov
         env:
