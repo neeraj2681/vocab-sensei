@@ -118,7 +118,7 @@ export function BookPage() {
             <ChapterPath
               documentId={documentId}
               chapters={readiness}
-              current={reading?.current_chapter_index ?? null}
+              reading={reading ? (reading.chapters ?? [reading.current_chapter_index]) : []}
               selected={chapter}
               onSelect={setChosenChapter}
             />
@@ -143,24 +143,26 @@ export function BookPage() {
                 {shown.length.toLocaleString()} {shown.length === 1 ? 'word' : 'words'}
               </span>
             )}
-            {reading &&
-              (reading.current_chapter_index === chapter ? (
-                <span className="muted">You’re on this chapter</span>
-              ) : (
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => {
-                    void run(async () => {
-                      const updated = await readingsApi.setChapter(documentId, chapter)
-                      setBook({ detail, reading: updated })
-                    })
-                  }}
-                >
-                  I’m reading this chapter
-                </button>
-              ))}
+            {reading && (
+              <ReadingToggle
+                chosen={reading.chapters ?? [reading.current_chapter_index]}
+                chapter={chapter}
+                busy={busy}
+                onChange={(chapters) => {
+                  void run(async () => {
+                    const updated = await readingsApi.setChapters(documentId, chapters)
+                    setBook({ detail, reading: updated })
+                  })
+                }}
+              />
+            )}
           </div>
+          {reading && (
+            <p className="muted">
+              Words from the chapters you’re reading come first in your quiz, then the rest of the
+              book. Mark as many as you like.
+            </p>
+          )}
           {readiness?.[chapter] && (
             <div className="primer">
               <ReadinessBar chapter={readiness[chapter]} />
@@ -227,5 +229,37 @@ function WordTable({ words }: { words: BookWord[] | null }) {
         })}
       </tbody>
     </table>
+  )
+}
+
+/** Marks the chapter as being read (or not): their words come first in the quiz. */
+function ReadingToggle({
+  chosen,
+  chapter,
+  busy,
+  onChange,
+}: {
+  chosen: number[]
+  chapter: number
+  busy: boolean
+  onChange: (chapters: number[]) => void
+}) {
+  const on = chosen.includes(chapter)
+  const last = on && chosen.length === 1 // at least one chapter stays chosen
+  return (
+    <button
+      type="button"
+      className="reading-toggle"
+      aria-pressed={on}
+      disabled={busy || last}
+      title={last ? 'Pick another chapter first' : undefined}
+      onClick={() => {
+        onChange(
+          on ? chosen.filter((c) => c !== chapter) : [...chosen, chapter].sort((a, b) => a - b),
+        )
+      }}
+    >
+      {on ? '✓ Reading this chapter' : 'I’m reading this chapter'}
+    </button>
   )
 }

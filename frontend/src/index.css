@@ -3676,3 +3676,26 @@ a.book-card__cover:hover {
     animation: none;
   }
 }
+
+/* "I'm reading this chapter": several chapters can be on at once */
+.reading-toggle {
+  padding: 0.35rem 0.85rem;
+  border: 2px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--fg);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.reading-toggle[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.reading-toggle:disabled {
+  cursor: default;
+  opacity: 0.7;
+}

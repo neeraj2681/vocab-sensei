@@ -12,13 +12,13 @@ const AFTER = 7
 interface Props {
   documentId: number
   chapters: ChapterReadiness[]
-  current: number | null // the chapter being read, if this is a current read
+  reading: number[] // the chapters being read, if this is a current read
   selected: number
   onSelect: (index: number) => void
 }
 
 /** The book as a path of chapters, each ring filled by how ready you are for it. */
-export function ChapterPath({ documentId, chapters, current, selected, onSelect }: Props) {
+export function ChapterPath({ documentId, chapters, reading, selected, onSelect }: Props) {
   const [all, setAll] = useState(false)
   const [open, setOpen] = useState<number | null>(null) // the chapter whose bubble is showing
 
@@ -39,7 +39,7 @@ export function ChapterPath({ documentId, chapters, current, selected, onSelect 
       document.removeEventListener('keydown', onKey)
     }
   }, [open])
-  const anchor = current ?? selected
+  const anchor = reading[0] ?? selected
   const from = all ? 0 : Math.max(0, anchor - BEFORE)
   const to = all ? chapters.length : Math.min(chapters.length, anchor + AFTER + 1)
   const shown = chapters.slice(from, to)
@@ -54,11 +54,11 @@ export function ChapterPath({ documentId, chapters, current, selected, onSelect 
               type="button"
               className={[
                 'path__node',
-                chapter.index === current ? 'path__node--current' : '',
+                reading.includes(chapter.index) ? 'path__node--current' : '',
                 chapter.index === selected ? 'path__node--selected' : '',
               ].join(' ')}
               aria-pressed={chapter.index === selected}
-              aria-label={`Chapter ${String(chapter.index + 1)}, ${chapterLabel(chapter.index, chapter.title)}, ${String(chapter.readiness)}% ready`}
+              aria-label={`Chapter ${String(chapter.index + 1)}, ${chapterLabel(chapter.index, chapter.title)}, ${String(chapter.readiness)}% ready${reading.includes(chapter.index) ? ', being read' : ''}`}
               aria-expanded={open === chapter.index}
               onClick={() => {
                 onSelect(chapter.index)
@@ -78,7 +78,7 @@ export function ChapterPath({ documentId, chapters, current, selected, onSelect 
                   />
                 </svg>
                 <span className="path__face">
-                  <Icon name={nodeIcon(chapter, current)} size={34} />
+                  <Icon name={nodeIcon(chapter, reading)} size={34} />
                 </span>
               </span>
               <span className="path__caption" aria-hidden="true">
@@ -155,8 +155,8 @@ function PracticeBubble({
   )
 }
 
-function nodeIcon(chapter: ChapterReadiness, current: number | null): IconName {
+function nodeIcon(chapter: ChapterReadiness, reading: number[]): IconName {
   if (chapter.readiness >= 100) return 'star'
-  if (chapter.index === current) return 'open_book'
+  if (reading.includes(chapter.index)) return 'open_book'
   return chapter.readiness > 0 ? 'direct_hit' : 'seedling'
 }

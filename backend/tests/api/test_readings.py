@@ -168,3 +168,18 @@ def test_other_users_books_cannot_be_started(
 
 def test_requires_login(client: TestClient) -> None:
     assert client.get("/api/readings").status_code == 401
+
+
+def test_several_chapters_can_be_read_at_once(user_client: TestClient, tmp_path: Path) -> None:
+    document_id = book(user_client, tmp_path)
+    assert start(user_client, document_id)["chapters"] == [0, 1, 2]  # the first three
+
+    response = user_client.put(f"/api/readings/{document_id}/chapters", json={"chapters": [2, 0]})
+
+    assert response.status_code == 200, response.text
+    assert (response.json()["chapters"], response.json()["current_chapter_index"]) == ([0, 2], 0)
+    for wrong in ([], [3], [-1]):
+        bad = user_client.put(f"/api/readings/{document_id}/chapters", json={"chapters": wrong})
+        assert bad.status_code == 422
+    moved = user_client.patch(f"/api/readings/{document_id}", json={"current_chapter_index": 1})
+    assert moved.json()["chapters"] == [1, 2]  # that chapter and the next (the book has three)
