@@ -3699,3 +3699,82 @@ a.book-card__cover:hover {
   cursor: default;
   opacity: 0.7;
 }
+
+/* Your photo with a camera band across its lower part (Settings, Me) */
+
+.photo-editor {
+  display: grid;
+  justify-items: center;
+  gap: 0.5rem;
+}
+
+.photo-editor__photo {
+  position: relative;
+  flex: none;
+}
+
+.photo-editor__clip {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: 50%;
+  pointer-events: none; /* only the band takes taps */
+}
+
+.photo-editor__band {
+  position: absolute;
+  inset: auto 0 0;
+  display: grid;
+  place-items: start center;
+  height: 34%;
+  padding: 4% 0 0;
+  border: 0;
+  border-radius: 0;
+  background: rgb(18 30 22 / 55%);
+  cursor: pointer;
+  pointer-events: auto;
+  transition: background 0.15s;
+}
+
+.photo-editor__band:hover,
+.photo-editor__band:focus-visible {
+  background: rgb(18 30 22 / 72%);
+}
+
+.photo-editor__band:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -4px;
+}
+
+.photo-editor__band .icon {
+  filter: drop-shadow(0 1px 1px rgb(0 0 0 / 40%));
+}
+
+.photo-menu {
+  justify-items: stretch;
+  text-align: center;
+  width: min(20rem, 100%);
+}
+
+.photo-menu h3 {
+  margin: 0 0 0.25rem;
+  font-family: var(--display);
+}
+
+.photo-menu .primary {
+  margin-top: 0;
+}
+
+.photo-menu__remove {
+  padding: 0.7rem 1rem;
+  border: 2px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--bad);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.photo-menu__remove:hover {
+  border-color: var(--bad);
+}
