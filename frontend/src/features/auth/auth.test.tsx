@@ -112,11 +112,16 @@ describe('logout', () => {
 })
 
 describe('register', () => {
-  async function fillForm(user: ReturnType<typeof renderApp>, confirm = 'correct horse battery') {
+  async function fillForm(
+    user: ReturnType<typeof renderApp>,
+    confirm = 'correct horse battery',
+    newsletter = false,
+  ) {
     await user.type(await screen.findByLabelText('Name'), 'Reader')
     await user.type(screen.getByLabelText('Email'), 'reader@example.com')
     await user.type(screen.getByLabelText(/^Password/), 'correct horse battery')
     await user.type(screen.getByLabelText('Repeat password'), confirm)
+    if (newsletter) await user.click(screen.getByLabelText(/Email me about new features/))
     await user.click(screen.getByRole('button', { name: 'Create account' }))
   }
 
@@ -132,8 +137,27 @@ describe('register', () => {
     expect(await screen.findByRole('heading', { name: 'Check your email' })).toBeInTheDocument()
     expect(screen.getByText('reader@example.com')).toBeInTheDocument()
     expect(api.calls('POST /api/auth/register')).toEqual([
-      { email: 'reader@example.com', password: 'correct horse battery', display_name: 'Reader' },
+      {
+        email: 'reader@example.com',
+        password: 'correct horse battery',
+        display_name: 'Reader',
+        newsletter: false,
+      },
     ])
+  })
+
+  it('subscribes to the newsletter only when the box is ticked', async () => {
+    const api = fakeApi({
+      ...loggedOut,
+      'POST /api/auth/register': () => json({ message: 'sent' }, 202),
+    })
+    const user = renderApp('/register')
+    expect(await screen.findByLabelText(/Email me about new features/)).not.toBeChecked()
+
+    await fillForm(user, 'correct horse battery', true)
+
+    await screen.findByRole('heading', { name: 'Check your email' })
+    expect(api.calls('POST /api/auth/register')).toMatchObject([{ newsletter: true }])
   })
 
   it('catches mismatched passwords before calling the server', async () => {

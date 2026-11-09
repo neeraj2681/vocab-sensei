@@ -5,6 +5,7 @@ import { useSubmit } from '../../components/useSubmit'
 import { timeZone } from '../../api/quiz'
 import {
   EmailPanel,
+  NewsletterPanel,
   PasswordPanel,
   ProfilePanel,
   SoundPanel,
@@ -182,6 +183,7 @@ export function SettingsPage() {
         <FormError message={error} />
         {notice && <p role="status">{notice}</p>}
       </section>
+      <NewsletterPanel />
       <EmailPanel />
       <PasswordPanel />
     </section>

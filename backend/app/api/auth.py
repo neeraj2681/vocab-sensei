@@ -3,15 +3,32 @@ from contextlib import contextmanager
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Response, UploadFile, status
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    Header,
+    HTTPException,
+    Response,
+    UploadFile,
+    status,
+)
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 from sqlalchemy.orm import Session
 
-from app.api.deps import AuthServiceDep, CurrentUser, SettingsDep, get_session_token
+from app.api.deps import (
+    AuthServiceDep,
+    BackgroundNewsletterList,
+    CurrentUser,
+    SettingsDep,
+    get_newsletter_list,
+    get_session_token,
+)
 from app.api.rate_limit import EmailLimit, LoginLimit
 from app.core.enums import Gender
 from app.core.images import NotAnImageError
+from app.core.newsletter import NewsletterList
 from app.db.session import get_session
 from app.db.types import utcnow
 from app.services.auth import (
@@ -31,6 +48,7 @@ class RegisterRequest(BaseModel):
     email: EmailStr
     password: Password
     display_name: Annotated[str, Field(min_length=1, max_length=100)]
+    newsletter: bool = False  # the "send me news" box, unticked unless the user ticks it
 
 
 class LoginRequest(BaseModel):
@@ -56,6 +74,10 @@ class GenderRequest(BaseModel):
 
 class LeaderboardRequest(BaseModel):
     show: bool
+
+
+class NewsletterRequest(BaseModel):
+    subscribe: bool
 
 
 class ChangeEmailRequest(BaseModel):
@@ -90,6 +112,7 @@ class UserResponse(BaseModel):
     pending_email: str | None  # a new address waiting for its link to be opened
     show_on_leaderboard: bool
     show_books: bool  # others see the books being read on the profile
+    newsletter: bool  # gets the newsletter about improvements
 
 
 class MessageResponse(BaseModel):
@@ -111,7 +134,7 @@ def invalid_token_as_400() -> Iterator[None]:
 
 @router.post("/register", status_code=status.HTTP_202_ACCEPTED)
 def register(body: RegisterRequest, auth: AuthServiceDep, _: EmailLimit) -> MessageResponse:
-    auth.register(body.email, body.password, body.display_name)
+    auth.register(body.email, body.password, body.display_name, newsletter=body.newsletter)
     return CHECK_EMAIL
 
 
@@ -208,9 +231,12 @@ def reset_password(body: ResetPasswordRequest, auth: AuthServiceDep, _: LoginLim
 
 
 def get_profile_service(
-    session: Annotated[Session, Depends(get_session)], settings: SettingsDep
+    session: Annotated[Session, Depends(get_session)],
+    settings: SettingsDep,
+    newsletter: Annotated[NewsletterList, Depends(get_newsletter_list)],
+    background: BackgroundTasks,
 ) -> ProfileService:
-    return ProfileService(session, settings)
+    return ProfileService(session, settings, BackgroundNewsletterList(newsletter, background))
 
 
 ProfileServiceDep = Annotated[ProfileService, Depends(get_profile_service)]
@@ -249,6 +275,15 @@ def set_show_books(
 ) -> UserResponse:
     """Whether others see the books this user is reading on their profile."""
     profile.set_show_books(user, body.show)
+    return UserResponse.model_validate(user)
+
+
+@router.put("/me/newsletter")
+def set_newsletter(
+    body: NewsletterRequest, user: CurrentUser, profile: ProfileServiceDep
+) -> UserResponse:
+    """Whether the user gets the newsletter about improvements (written and sent in Brevo)."""
+    profile.set_newsletter(user, body.subscribe, utcnow())
     return UserResponse.model_validate(user)
 
 

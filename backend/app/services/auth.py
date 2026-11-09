@@ -15,6 +15,7 @@ from app.core import security
 from app.core.config import Settings
 from app.core.email import Email, EmailSender
 from app.core.enums import EmailTokenPurpose
+from app.core.newsletter import NewsletterList, NoNewsletterList
 from app.db.models import AuthSession, EmailToken, User
 from app.db.types import utcnow
 from app.repositories.users import AuthSessionRepository, EmailTokenRepository, UserRepository
@@ -58,8 +59,10 @@ class AuthService:
         email_sender: EmailSender,
         settings: Settings,
         clock: Callable[[], datetime] = utcnow,
+        newsletter: NewsletterList | None = None,
     ) -> None:
         self._session = session
+        self._newsletter = newsletter or NoNewsletterList()
         self._email = email_sender
         self._settings = settings
         self._now = clock
@@ -69,7 +72,10 @@ class AuthService:
 
     # --- sign-up and verification -------------------------------------------------------------
 
-    def register(self, email: str, password: str, display_name: str) -> None:
+    def register(
+        self, email: str, password: str, display_name: str, newsletter: bool = False
+    ) -> None:
+        """`newsletter`: the box was ticked; the list gets the address once it is verified."""
         email = normalize_email(email)
         if existing := self._users.get_by_email(email):
             self._email.send(self._already_registered_email(existing))
@@ -81,6 +87,7 @@ class AuthService:
                 password_hash=security.hash_password(password),
                 display_name=display_name.strip(),
                 daily_goal=self._settings.quiz.daily_goal,
+                newsletter_since=self._now() if newsletter else None,
             )
         )
         email_to_send = self._verification_email(user)
@@ -99,9 +106,12 @@ class AuthService:
         user = self._users.get(email_token.user_id)
         if user is None:
             raise InvalidTokenError
-        if user.email_verified_at is None:
+        newly_verified = user.email_verified_at is None
+        if newly_verified:
             user.email_verified_at = self._now()
         self._session.commit()
+        if newly_verified and user.newsletter:
+            self._newsletter.add(user.email, user.display_name)
 
     # --- login sessions -----------------------------------------------------------------------
 
@@ -171,8 +181,10 @@ class AuthService:
             raise InvalidCredentialsError
         uploads = self._settings.data_dir / "uploads" / str(user.id)
         avatar = self._settings.data_dir / user.avatar_path if user.avatar_path else None
+        email = user.email
         self._users.delete(user)
         self._session.commit()
+        self._newsletter.remove(email)  # also when unsubscribed: Brevo may still have the contact
         shutil.rmtree(uploads, ignore_errors=True)
         if avatar is not None:
             avatar.unlink(missing_ok=True)
@@ -208,9 +220,13 @@ class AuthService:
             raise InvalidTokenError
         if self._users.get_by_email(user.pending_email) is not None:  # taken in the meantime
             raise InvalidTokenError
+        old_email = user.email
         user.email, user.pending_email = user.pending_email, None
         user.email_verified_at = self._now()
         self._session.commit()
+        if user.newsletter:  # the list follows the new address
+            self._newsletter.remove(old_email)
+            self._newsletter.add(user.email, user.display_name)
 
     def change_password(self, user: User, current: str, new: str) -> None:
         if not security.verify_password(user.password_hash, current):

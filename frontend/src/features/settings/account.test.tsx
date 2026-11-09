@@ -301,6 +301,27 @@ describe('sound', () => {
 })
 
 describe('privacy', () => {
+  it('subscribes to the newsletter and back out', async () => {
+    const api = account(USER, {
+      'PUT /api/auth/me/newsletter': (body) =>
+        json({ ...USER, newsletter: (body as { subscribe: boolean }).subscribe }),
+    })
+    const user = renderApp('/settings')
+
+    const toggle = await screen.findByLabelText('Email me about new features and improvements')
+    expect(toggle).not.toBeChecked()
+    await user.click(toggle)
+    expect(
+      await screen.findByLabelText('Email me about new features and improvements'),
+    ).toBeChecked()
+    await user.click(screen.getByLabelText('Email me about new features and improvements'))
+
+    expect(api.calls('PUT /api/auth/me/newsletter')).toEqual([
+      { subscribe: true },
+      { subscribe: false },
+    ])
+  })
+
   it('keeps the books I read off my profile', async () => {
     const shown = { ...USER, show_on_leaderboard: true } // the books setting needs the board on
     const api = account(shown, {

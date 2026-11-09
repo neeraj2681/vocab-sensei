@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import Settings, get_settings
 from app.core.email import Email, EmailSender, SmtpEmailSender
+from app.core.newsletter import NewsletterList, newsletter_list
 from app.core.speech import Recognizer, get_recognizer
 from app.db.models import User
 from app.db.session import get_session
@@ -57,6 +58,31 @@ def _send_and_log_failures(sender: EmailSender, email: Email) -> None:
         logger.exception("couldn't send the %r email", email.subject)
 
 
+def get_newsletter_list(settings: SettingsDep) -> NewsletterList:
+    return newsletter_list(settings.newsletter)
+
+
+class BackgroundNewsletterList:
+    """Updates the mailing list after the response, so Brevo being slow or down never breaks one."""
+
+    def __init__(self, target: NewsletterList, tasks: BackgroundTasks) -> None:
+        self._target = target
+        self._tasks = tasks
+
+    def add(self, email: str, name: str) -> None:
+        self._tasks.add_task(_update_and_log_failures, self._target.add, email, name)
+
+    def remove(self, email: str) -> None:
+        self._tasks.add_task(_update_and_log_failures, self._target.remove, email)
+
+
+def _update_and_log_failures(change: Callable[..., None], *args: str) -> None:
+    try:
+        change(*args)
+    except Exception:
+        logger.exception("couldn't update the newsletter list (%s)", change.__name__)
+
+
 DictionaryLoader = Callable[[], Dictionary]
 
 
@@ -74,10 +100,16 @@ def get_dictionary(settings: SettingsDep) -> DictionaryLoader:
 def get_auth_service(
     session: Annotated[Session, Depends(get_session)],
     email_sender: Annotated[EmailSender, Depends(get_email_sender)],
+    newsletter: Annotated[NewsletterList, Depends(get_newsletter_list)],
     background: BackgroundTasks,
     settings: SettingsDep,
 ) -> AuthService:
-    return AuthService(session, BackgroundEmailSender(email_sender, background), settings)
+    return AuthService(
+        session,
+        BackgroundEmailSender(email_sender, background),
+        settings,
+        newsletter=BackgroundNewsletterList(newsletter, background),
+    )
 
 
 AuthServiceDep = Annotated[AuthService, Depends(get_auth_service)]

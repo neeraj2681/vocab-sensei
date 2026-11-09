@@ -127,6 +127,37 @@ export function VibrationPanel() {
   )
 }
 
+/** The newsletter about improvements: off unless the user turns it on. */
+export function NewsletterPanel() {
+  const { user, updateUser } = useAuth()
+  const { busy, error, run } = useSubmit()
+  if (!user) return null
+
+  return (
+    <section aria-labelledby="newsletter-heading" className="panel">
+      <h3 id="newsletter-heading">Newsletter</h3>
+      <label className="check">
+        <input
+          type="checkbox"
+          checked={user.newsletter ?? false}
+          disabled={busy}
+          onChange={(event) => {
+            const subscribe = event.target.checked
+            void run(async () => {
+              updateUser(await authApi.setNewsletter(subscribe))
+            })
+          }}
+        />{' '}
+        Email me about new features and improvements
+      </label>
+      <p className="muted">
+        A few emails a year at most. Every one has a link to unsubscribe, or turn it off here.
+      </p>
+      <FormError message={error} />
+    </section>
+  )
+}
+
 /** Picture, name (one free change, then one per name change bought in the Shop) and gender,
 which picks the figure when there's no picture. */
 export function ProfilePanel() {
