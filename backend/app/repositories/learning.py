@@ -17,6 +17,13 @@ _NOT_STARTED = or_(UserWord.word_id.is_(None), UserWord.status == WordStatus.NEW
 _UNSORTED = UserWord.word_id.is_(None)
 
 
+def _not_started(max_zipf: float | None) -> ColumnElement[bool]:
+    """Not started yet, and (with `max_zipf`) not so common that it's probably known."""
+    if max_zipf is None:
+        return _NOT_STARTED
+    return and_(_NOT_STARTED, or_(Word.zipf_frequency.is_(None), Word.zipf_frequency <= max_zipf))
+
+
 class LearningRepository:
     def __init__(self, session: Session) -> None:
         self._session = session
@@ -29,18 +36,28 @@ class LearningRepository:
         limit: int,
         *,
         earlier: bool = False,
+        max_zipf: float | None = None,
     ) -> list[tuple[ChapterWord, Word, Chapter]]:
         """A book's words the user hasn't started on, in reading order: from `from_chapter` on
-        (each at its next appearance), or with `earlier`, those used only before it."""
-        query = self._frontier(user_id, document_id, from_chapter, _NOT_STARTED, earlier=earlier)
+        (each at its next appearance), or with `earlier`, those used only before it. With
+        `max_zipf`, only words at most that common (the rest are probably known to this reader)."""
+        query = self._frontier(
+            user_id, document_id, from_chapter, _not_started(max_zipf), earlier=earlier
+        )
         return [(cw, w, c) for cw, w, c in self._session.execute(query.limit(limit))]
 
     def new_words_in_chapter(
-        self, user_id: int, document_id: int, chapter_index: int, limit: int
+        self,
+        user_id: int,
+        document_id: int,
+        chapter_index: int,
+        limit: int,
+        max_zipf: float | None = None,
     ) -> list[tuple[ChapterWord, Word, Chapter]]:
-        """Every word one chapter uses that the user hasn't started on, in the chapter's order."""
+        """Every word one chapter uses that the user hasn't started on, in the chapter's order
+        (with `max_zipf`, only words at most that common)."""
         query = (
-            self._appearances(user_id, document_id, _NOT_STARTED)
+            self._appearances(user_id, document_id, _not_started(max_zipf))
             .where(Chapter.index == chapter_index)
             .order_by(ChapterWord.first_position)
             .limit(limit)

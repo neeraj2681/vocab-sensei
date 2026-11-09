@@ -14,6 +14,7 @@ import {
 } from './AccountPanels'
 import { GoalPanel } from './GoalPanel'
 import { pushSupported, subscribeThisDevice, thisDeviceSubscribed } from './push'
+import { LevelPanel } from '../placement/LevelPanel'
 
 export function SettingsPage() {
   const [settings, setSettings] = useState<ReminderSettings | null>(null)
@@ -102,6 +103,7 @@ export function SettingsPage() {
       <SoundPanel />
       <VibrationPanel />
       <GoalPanel />
+      <LevelPanel />
       <section aria-labelledby="reminder-heading" className="panel">
         <h3 id="reminder-heading">Daily reminder</h3>
         <p className="muted">

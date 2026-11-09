@@ -113,6 +113,7 @@ class UserResponse(BaseModel):
     show_on_leaderboard: bool
     show_books: bool  # others see the books being read on the profile
     newsletter: bool  # gets the newsletter about improvements
+    vocab_level: float | None  # from the placement check; None: not measured yet
 
 
 class MessageResponse(BaseModel):

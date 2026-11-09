@@ -3815,3 +3815,66 @@ a.book-card__cover:hover {
   margin: 0.75rem 0 0;
   font-size: 0.9rem;
 }
+
+/* The placement check: one big word at a time */
+.placement {
+  display: grid;
+  gap: 0.75rem;
+  max-width: 30rem;
+}
+
+.placement h2,
+.placement p {
+  margin: 0;
+}
+
+.placement__word {
+  padding: 1.5rem 0;
+  font-family: var(--display);
+  font-size: clamp(2rem, 9vw, 2.75rem);
+  font-weight: 700;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.placement__answers {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.placement__answers button {
+  padding: 0.85rem 1rem;
+  font-size: 1.05rem;
+}
+
+/* Words: the ones kept out of quizzes as easier than your level */
+.probably-known summary {
+  cursor: pointer;
+}
+
+.probably-known__list {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.probably-known__list li {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.probably-known__word {
+  font-weight: 600;
+}
+
+.probably-known__meaning {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

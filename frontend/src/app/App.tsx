@@ -11,6 +11,7 @@ import { ResetPasswordPage } from '../features/auth/ResetPasswordPage'
 import { ConfirmEmailPage } from '../features/auth/ConfirmEmailPage'
 import { VerifyEmailPage } from '../features/auth/VerifyEmailPage'
 import { CopyrightPage, PrivacyPage, TermsPage } from '../features/legal/LegalPages'
+import { PlacementPage } from '../features/placement/PlacementPage'
 import { BookPage } from '../features/library/BookPage'
 import { LibraryPage } from '../features/library/LibraryPage'
 import { MePage } from '../features/me/MePage'
@@ -135,6 +136,14 @@ function AppRoutes() {
         }
       />
       <Route path="/login" element={<LoginPage />} />
+      <Route
+        path="/placement"
+        element={
+          <RequireAuth>
+            <PlacementPage />
+          </RequireAuth>
+        }
+      />
       <Route path="/terms" element={<TermsPage />} />
       <Route path="/privacy" element={<PrivacyPage />} />
       <Route path="/copyright" element={<CopyrightPage />} />

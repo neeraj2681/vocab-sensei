@@ -10,6 +10,7 @@ const NEW_USER = {
   display_name: 'Reader',
   email_verified_at: 'x',
   onboarded_at: null,
+  vocab_level: 3, // the placement check is done (it has its own tests below)
 }
 const PRIDE: Reading = {
   document: {
@@ -102,5 +103,53 @@ describe('first-run tour', () => {
     await user.click(await screen.findByRole('button', { name: 'Go to Books' }))
 
     expect(await screen.findByRole('link', { name: 'Books' })).toHaveClass('active')
+  })
+
+  it('starts with the placement check for someone without a level, then the tour', async () => {
+    const words = [
+      'ebullient',
+      'plontish',
+      ...Array.from({ length: 18 }, (_, i) => `w${String(i)}`),
+    ]
+    const api = tour([PRIDE], {
+      'GET /api/auth/me': () => json({ ...NEW_USER, vocab_level: null }),
+      'GET /api/placement': () => json({ words }),
+      'PUT /api/placement': () => json({ level: 2.75, name: 'Advanced' }),
+    })
+    const user = renderApp('/welcome')
+
+    expect(
+      await screen.findByRole('heading', { name: 'Let’s find your level' }),
+    ).toBeInTheDocument()
+    expect(await screen.findByText('ebullient')).toBeInTheDocument()
+    expect(screen.getByText('1 of 20')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'I know it' }))
+    expect(screen.getByText('plontish')).toBeInTheDocument()
+    await user.keyboard('{ArrowLeft}') // Not sure
+    for (let i = 0; i < 18; i++) await user.click(screen.getByRole('button', { name: 'I know it' }))
+
+    expect(await screen.findByRole('heading', { name: 'Your level: Advanced' })).toBeInTheDocument()
+    const sent = api.calls('PUT /api/placement')[0] as {
+      answers: { word: string; known: boolean }[]
+    }
+    expect(sent.answers).toHaveLength(20)
+    expect(sent.answers.slice(0, 2)).toEqual([
+      { word: 'ebullient', known: true },
+      { word: 'plontish', known: false },
+    ])
+    await user.click(screen.getByRole('button', { name: 'Continue' }))
+    expect(screen.queryByRole('heading', { name: 'Let’s find your level' })).not.toBeInTheDocument()
+  })
+
+  it('the placement check can be skipped', async () => {
+    tour([PRIDE], {
+      'GET /api/auth/me': () => json({ ...NEW_USER, vocab_level: null }),
+      'GET /api/placement': () => json({ words: ['ebullient'] }),
+    })
+    const user = renderApp('/welcome')
+
+    await user.click(await screen.findByRole('button', { name: 'Skip for now' }))
+
+    expect(screen.queryByRole('heading', { name: 'Let’s find your level' })).not.toBeInTheDocument()
   })
 })

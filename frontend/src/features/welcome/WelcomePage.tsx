@@ -4,6 +4,7 @@ import { quizApi } from '../../api/quiz'
 import { readingsApi, type Reading } from '../../api/readings'
 import { Icon } from '../../components/Icon'
 import { useAuth } from '../auth/AuthContext'
+import { PlacementCheck } from '../placement/PlacementCheck'
 import { GOALS } from '../settings/goals'
 
 type Start = 'reading' | 'upload'
@@ -11,7 +12,9 @@ const STEPS = 4
 
 /** The first-run tour for new accounts: what the app does, a book, a daily goal, go. */
 export function WelcomePage() {
-  const { finishOnboarding } = useAuth()
+  const { user, finishOnboarding } = useAuth()
+  // First, the placement check (skippable) for anyone without a level yet.
+  const [placed, setPlaced] = useState(() => user?.vocab_level != null)
   const navigate = useNavigate()
   const [step, setStep] = useState(0)
   const [reading, setReading] = useState<Reading | null>(null)
@@ -65,6 +68,19 @@ export function WelcomePage() {
     }
     await finish(
       start === 'reading' && reading ? `/books/${String(reading.document.id)}/sort` : '/books',
+    )
+  }
+
+  if (!placed) {
+    return (
+      <PlacementCheck
+        onDone={() => {
+          setPlaced(true)
+        }}
+        onSkip={() => {
+          setPlaced(true)
+        }}
+      />
     )
   }
 
