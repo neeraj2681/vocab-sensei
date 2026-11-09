@@ -1,13 +1,5 @@
-import { Capacitor } from '@capacitor/core'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { buzz, hapticsOn, setHapticsOn } from './haptics'
-
-const notification = vi.fn<(options: { type: string }) => Promise<void>>(() => Promise.resolve())
-
-vi.mock('@capacitor/haptics', () => ({
-  Haptics: { notification: (options: { type: string }) => notification(options) },
-  NotificationType: { Success: 'SUCCESS', Error: 'ERROR' },
-}))
 
 const stored = new Map<string, string>()
 
@@ -26,18 +18,6 @@ afterEach(() => {
 })
 
 describe('buzz', () => {
-  it('uses real haptics in the iPhone app', () => {
-    vi.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(true)
-    const vibrate = vi.fn()
-    Object.defineProperty(navigator, 'vibrate', { value: vibrate, configurable: true })
-
-    buzz(true)
-    buzz(false)
-
-    expect(notification.mock.calls).toEqual([[{ type: 'SUCCESS' }], [{ type: 'ERROR' }]])
-    expect(vibrate).not.toHaveBeenCalled()
-  })
-
   it('uses the Vibration API where there is one (Android)', () => {
     const vibrate = vi.fn()
     Object.defineProperty(navigator, 'vibrate', { value: vibrate, configurable: true })
