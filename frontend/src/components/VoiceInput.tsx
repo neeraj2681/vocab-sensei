@@ -5,8 +5,7 @@ type State = 'idle' | 'recording' | 'transcribing' | 'heard'
 const BARS = [0.55, 0.85, 1, 0.85, 0.55] // the wave's shape: tallest in the middle
 
 /** Say a word: tap to record (the button waves with your voice), tap to stop; what was heard
-appears in a box: Enter confirms it, or try again. Recognised on our server (on the phone itself in
-the iPhone app). */
+appears in a box: Enter confirms it, or try again. Recognised on our server. */
 export function VoiceInput({
   word,
   busy = false,
