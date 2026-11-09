@@ -106,12 +106,28 @@ class DocumentService:
         except Exception:
             logger.exception("processing document %s failed", document_id)
             self._fail(document, "Something went wrong while reading this file")
+        finally:
+            self.discard_upload(document)
+
+    def discard_upload(self, document: Document) -> bool:
+        """Deletes an uploaded book's file once it has been read: only the word list, chapter
+        titles, a short sentence per word and the cover thumbnail are kept, never the book itself.
+        Built-in classics (public domain) keep theirs. True if a file was deleted."""
+        if document.is_classic:
+            return False
+        path = self._path(document)
+        if not path.is_file():
+            return False
+        path.unlink()
+        return True
 
     def reindex_chapters(self, document_id: int) -> bool:
         """Re-reads a ready book to record every chapter its words appear in (for books processed
         before that was stored). Its word list and everyone's progress are untouched."""
         document = self._documents.get(document_id)
         if document is None or document.status != DocumentStatus.READY:
+            return False
+        if not self._path(document).is_file():  # uploads are deleted once read
             return False
         try:
             parsed = self._parse(document)
@@ -160,6 +176,8 @@ class DocumentService:
         """Makes a cover for a ready book processed before covers existed. True if one was made."""
         document = self._documents.get(document_id)
         if document is None or document.status != DocumentStatus.READY or document.cover_path:
+            return False
+        if not self._path(document).is_file():  # uploads are deleted once read
             return False
         self._save_cover(document)
         self._session.commit()

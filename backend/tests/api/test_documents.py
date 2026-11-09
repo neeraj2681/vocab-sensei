@@ -8,7 +8,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.api.deps import get_dictionary
-from app.commands import make_covers, reindex_chapters
+from app.commands import discard_uploads, make_covers, reindex_chapters
 from app.core.config import Settings
 from app.dictionary.types import DictionaryUnavailableError, Sense
 from app.extraction.types import ParsedChapter, ParsedDocument
@@ -65,16 +65,51 @@ def test_upload_parses_the_book_into_chapters(user_client: TestClient, tmp_path:
     ]
 
 
-def test_file_is_stored_under_the_users_folder(
+def test_the_uploaded_file_is_deleted_once_read(
     user_client: TestClient, tmp_path: Path, settings: Settings
 ) -> None:
-    content = epub_bytes(tmp_path)  # built once: zip files embed timestamps
+    created = upload(user_client, epub_bytes(tmp_path))
+
+    assert list((settings.data_dir / "uploads").glob("*/*")) == []  # never the book itself
+    detail = user_client.get(f"/api/documents/{created['id']}").json()
+    assert detail["status"] == "ready"
+    words = user_client.get(f"/api/documents/{created['id']}/words?chapter=0").json()
+    assert words  # what the quiz needs stays
+
+
+def test_a_file_that_cannot_be_read_is_deleted_too(
+    user_client: TestClient, settings: Settings
+) -> None:
+    created = upload(user_client, b"not really an epub", "broken.epub")
+
+    assert user_client.get(f"/api/documents/{created['id']}").json()["status"] == "failed"
+    assert list((settings.data_dir / "uploads").glob("*/*")) == []
+
+
+def put_file_back(
+    session_factory: sessionmaker[Session], settings: Settings, content: bytes
+) -> None:
+    """Gives every uploaded book its file again, as books uploaded before files were deleted."""
+    with session_factory() as session:
+        for (relative,) in session.execute(text("SELECT file_path FROM documents")):
+            path = settings.data_dir / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(content)
+
+
+def test_files_left_from_before_can_be_cleared(
+    user_client: TestClient,
+    tmp_path: Path,
+    session_factory: sessionmaker[Session],
+    settings: Settings,
+) -> None:
+    content = epub_bytes(tmp_path)
     upload(user_client, content)
+    put_file_back(session_factory, settings, content)
 
-    stored = list((settings.data_dir / "uploads").glob("*/*.epub"))
-
-    assert len(stored) == 1
-    assert stored[0].read_bytes() == content
+    assert discard_uploads.discard(session_factory, settings) == 1
+    assert list((settings.data_dir / "uploads").glob("*/*")) == []
+    assert discard_uploads.discard(session_factory, settings) == 0  # safe to run again
 
 
 def test_list_shows_newest_first(user_client: TestClient, tmp_path: Path) -> None:
@@ -378,7 +413,9 @@ def test_reindexing_records_later_chapters_of_books_processed_before(
     session_factory: sessionmaker[Session],
     settings: Settings,
 ) -> None:
-    created = upload(user_client, epub_bytes(tmp_path))
+    content = epub_bytes(tmp_path)
+    created = upload(user_client, content)
+    put_file_back(session_factory, settings, content)
     with session_factory() as session:  # as the migration left older books: first uses only
         session.execute(text("DELETE FROM chapter_words"))
         session.execute(
@@ -405,8 +442,10 @@ def test_reindexing_carries_on_past_a_book_that_fails(
     settings: Settings,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    first = upload(user_client, epub_bytes(tmp_path), "one.epub")
-    upload(user_client, epub_bytes(tmp_path), "two.epub")
+    content = epub_bytes(tmp_path)
+    first = upload(user_client, content, "one.epub")
+    upload(user_client, content, "two.epub")
+    put_file_back(session_factory, settings, content)
     real = documents_service.DocumentService.reindex_chapters
 
     def flaky(self: documents_service.DocumentService, document_id: int) -> bool:
@@ -458,7 +497,9 @@ def test_older_books_get_their_covers_added(
     session_factory: sessionmaker[Session],
     settings: Settings,
 ) -> None:
-    created = upload(user_client, epub_with_cover(tmp_path))
+    content = epub_with_cover(tmp_path)
+    created = upload(user_client, content)
+    put_file_back(session_factory, settings, content)
     with session_factory() as session:  # as books processed before covers existed
         session.execute(text("UPDATE documents SET cover_path = NULL"))
         session.commit()
