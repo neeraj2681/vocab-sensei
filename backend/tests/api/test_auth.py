@@ -209,7 +209,9 @@ def test_deleting_an_account_removes_its_data_and_files(
     log_in(client, user.email)
     upload = client.post("/api/documents", files={"file": ("book.txt", b"A lugubrious tale " * 20)})
     assert upload.status_code == 202
-    assert list((settings.data_dir / "uploads" / str(user.id)).iterdir())
+    assert (
+        settings.data_dir / "uploads" / str(user.id)
+    ).is_dir()  # the file itself: gone once read
 
     response = client.request("DELETE", "/api/auth/me", json={"password": PASSWORD})
 
