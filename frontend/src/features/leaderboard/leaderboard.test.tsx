@@ -51,6 +51,22 @@ describe('leaderboard', () => {
     expect(rows[1]).toHaveClass('leaderboard__row--me')
   })
 
+  it('tells you when others can’t see you, with the way to join', async () => {
+    app()
+    renderApp('/leaderboard')
+
+    expect(await screen.findByText(/Others can’t see you here/)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Settings' })).toHaveAttribute('href', '/settings')
+  })
+
+  it('says nothing about it once you are on the board', async () => {
+    app({ 'GET /api/auth/me': () => json({ ...USER, show_on_leaderboard: true }) })
+    renderApp('/leaderboard')
+
+    await screen.findByRole('list')
+    expect(screen.queryByText(/Others can’t see you here/)).not.toBeInTheDocument()
+  })
+
   it('is a tab in the main menu', async () => {
     app()
     renderApp('/leaderboard')

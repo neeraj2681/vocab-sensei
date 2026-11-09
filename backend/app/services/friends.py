@@ -48,14 +48,12 @@ class FriendService:
         self._repo = FriendRepository(session)
 
     def search(self, viewer_id: int, query: str) -> list[Person]:
-        """Exact matches only, so nobody can browse everyone's names or email addresses. People
-        who keep off the leaderboard can't be found."""
+        """Exact matches only (email or username), so nobody can browse everyone's names or email
+        addresses. Found whether or not they show on the leaderboard: friends need a way in."""
         if len(query.strip()) < 2:
             return []
         return [
-            self._person(viewer_id, user)
-            for user in self._repo.find(query)
-            if user.id != viewer_id and user.show_on_leaderboard
+            self._person(viewer_id, user) for user in self._repo.find(query) if user.id != viewer_id
         ]
 
     def request(self, viewer_id: int, user_id: int, now: datetime) -> Person:

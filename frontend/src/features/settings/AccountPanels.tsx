@@ -298,7 +298,7 @@ export function ProfilePanel() {
       <label className="check">
         <input
           type="checkbox"
-          checked={user.show_on_leaderboard ?? true}
+          checked={user.show_on_leaderboard ?? false}
           disabled={busy}
           onChange={(event) => {
             const show = event.target.checked
@@ -309,11 +309,14 @@ export function ProfilePanel() {
         />{' '}
         Show me on the leaderboard (others can open my profile: photo, username and stats)
       </label>
+      <p className="muted">
+        Off unless you turn it on. Friends can still find you by your exact email or username.
+      </p>
       <label className="check">
         <input
           type="checkbox"
           checked={user.show_books ?? true}
-          disabled={busy || user.show_on_leaderboard === false}
+          disabled={busy || !user.show_on_leaderboard}
           onChange={(event) => {
             const show = event.target.checked
             void run(async () => {

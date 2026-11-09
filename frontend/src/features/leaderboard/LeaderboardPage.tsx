@@ -35,6 +35,12 @@ export function LeaderboardPage() {
         <Icon name="trophy" size={36} /> Leaderboard
       </h2>
       <p className="muted">Coins earned today. It starts again at midnight.</p>
+      {user && !user.show_on_leaderboard && (
+        <p className="muted">
+          Others can’t see you here. To join the board, turn on “Show me on the leaderboard” in{' '}
+          <Link to="/settings">Settings</Link>.
+        </p>
+      )}
       <div className="word-tabs" role="group" aria-label="Show">
         {(['everyone', 'friends'] as const).map((tab) => (
           <button
