@@ -30,13 +30,14 @@ export function RegisterPage() {
       <AuthCard title="Create an account">
         <form
           onSubmit={(event) => {
-            const { display_name = '', email = '', password = '', confirm = '' } = formValues(event)
+            const values = formValues(event)
+            const { display_name = '', email = '', password = '', confirm = '' } = values
             if (password !== confirm) {
               setError('The passwords do not match')
               return
             }
             void run(async () => {
-              await authApi.register(email, password, display_name)
+              await authApi.register(email, password, display_name, 'newsletter' in values)
               setSentTo(email)
             })
           }}
@@ -59,6 +60,10 @@ export function RegisterPage() {
             autoComplete="new-password"
             required
           />
+          <label className="check">
+            <input type="checkbox" name="newsletter" /> Email me about new features and improvements
+            (a few times a year, unsubscribe any time)
+          </label>
           <FormError message={error} />
           <button type="submit" disabled={busy}>
             {busy ? 'Creating…' : 'Create account'}

@@ -162,6 +162,10 @@ export function PrivacyPage() {
           gives us for sending them.
         </li>
         <li>
+          <strong>Newsletter:</strong> whether you chose to get it, and when. Only if you tick the
+          box at sign-up or turn it on in Settings.
+        </li>
+        <li>
           <strong>Technical:</strong> your IP address is kept briefly in memory to limit repeated
           login and email attempts. Server logs are kept for a short time to fix problems.
         </li>
@@ -170,7 +174,8 @@ export function PrivacyPage() {
       <h3>Why we use it</h3>
       <p>
         To run your account and quizzes, to send the emails you ask for (address confirmation,
-        password reset, reminders and recaps), and to protect the service from abuse.
+        password reset, reminders and recaps), to send the newsletter if you chose it, and to
+        protect the service from abuse.
       </p>
 
       <h3>Cookies and storage</h3>
@@ -182,7 +187,10 @@ export function PrivacyPage() {
       <h3>Who else handles it</h3>
       <ul>
         <li>Oracle Cloud hosts our server and database in Mumbai, India.</li>
-        <li>Google (Gmail) sends our emails.</li>
+        <li>
+          Brevo sends our emails and, if you subscribe, keeps your name and email address on the
+          newsletter list until you unsubscribe or delete your account.
+        </li>
         <li>Cloudflare provides the domain name and forwards email sent to us.</li>
         <li>
           If you turn on notifications, your browser’s push service (from Apple, Google or Mozilla)
@@ -210,7 +218,9 @@ export function PrivacyPage() {
         <li>see your data: download a copy from Me → Backup;</li>
         <li>correct it: in Settings;</li>
         <li>delete it: delete your account in Settings, or ask us;</li>
-        <li>withdraw consent: for example, turn off reminders or the leaderboard;</li>
+        <li>
+          withdraw consent: for example, turn off reminders, the leaderboard or the newsletter;
+        </li>
         <li>
           nominate someone to act for you, and complain to us or to the Data Protection Board.
         </li>

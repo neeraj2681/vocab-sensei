@@ -12,7 +12,7 @@ from sqlalchemy import Engine, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.api import rate_limit
-from app.api.deps import get_dictionary, get_email_sender
+from app.api.deps import get_dictionary, get_email_sender, get_newsletter_list
 from app.core import security
 from app.core.config import Settings, get_settings
 from app.core.email import Email
@@ -33,6 +33,19 @@ class FakeEmailSender:
 
     def send(self, email: Email) -> None:
         self.outbox.append(email)
+
+
+class FakeNewsletterList:
+    """Records changes to the mailing list instead of calling Brevo."""
+
+    def __init__(self) -> None:
+        self.changes: list[tuple[str, ...]] = []
+
+    def add(self, email: str, name: str) -> None:
+        self.changes.append(("add", email, name))
+
+    def remove(self, email: str) -> None:
+        self.changes.append(("remove", email))
 
 
 class FakeDictionary:
@@ -119,6 +132,11 @@ def mailer() -> FakeEmailSender:
 
 
 @pytest.fixture
+def newsletter() -> FakeNewsletterList:
+    return FakeNewsletterList()
+
+
+@pytest.fixture
 def dictionary() -> FakeDictionary:
     return FakeDictionary()
 
@@ -129,6 +147,7 @@ def client(
     session_factory: sessionmaker[Session],
     settings: Settings,
     mailer: FakeEmailSender,
+    newsletter: FakeNewsletterList,
     dictionary: FakeDictionary,
 ) -> Iterator[TestClient]:
     app = create_app()
@@ -136,6 +155,7 @@ def client(
     app.dependency_overrides[get_session_factory] = lambda: session_factory
     app.dependency_overrides[get_settings] = lambda: settings
     app.dependency_overrides[get_email_sender] = lambda: mailer
+    app.dependency_overrides[get_newsletter_list] = lambda: newsletter
     app.dependency_overrides[get_dictionary] = lambda: lambda: dictionary
     with TestClient(app) as c:
         yield c

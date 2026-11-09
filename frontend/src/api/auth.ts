@@ -12,6 +12,7 @@ export interface User {
   pending_email?: string | null // a new address waiting for its link to be opened
   show_on_leaderboard?: boolean
   show_books?: boolean // others see the books being read on the profile
+  newsletter?: boolean // gets the newsletter about improvements
   avatar_stamp?: number // client-only: changes when the picture does, so the <img> reloads
 }
 
@@ -25,8 +26,8 @@ export const authApi = {
   me: () => apiGet<User>('/auth/me'),
   login: (email: string, password: string) => apiPost<User>('/auth/login', { email, password }),
   logout: () => apiPost('/auth/logout'),
-  register: (email: string, password: string, display_name: string) =>
-    apiPost<Message>('/auth/register', { email, password, display_name }),
+  register: (email: string, password: string, display_name: string, newsletter = false) =>
+    apiPost<Message>('/auth/register', { email, password, display_name, newsletter }),
   verifyEmail: (token: string) => apiPost('/auth/verify-email', { token }),
   resendVerification: (email: string) => apiPost<Message>('/auth/resend-verification', { email }),
   forgotPassword: (email: string) => apiPost<Message>('/auth/forgot-password', { email }),
@@ -38,6 +39,7 @@ export const authApi = {
   setGender: (gender: Gender) => apiPut<User>('/auth/me/gender', { gender }),
   setOnLeaderboard: (show: boolean) => apiPut<User>('/auth/me/leaderboard', { show }),
   setShowBooks: (show: boolean) => apiPut<User>('/auth/me/books-visibility', { show }),
+  setNewsletter: (subscribe: boolean) => apiPut<User>('/auth/me/newsletter', { subscribe }),
   setAvatar: (file: File) => {
     const form = new FormData()
     form.append('file', file)

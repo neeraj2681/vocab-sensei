@@ -29,6 +29,9 @@ class User(Base):
     # Listed on the leaderboard, with a profile others can open: off until turned on in Settings.
     show_on_leaderboard: Mapped[bool] = mapped_column(default=False, server_default=sa_false())
     show_books: Mapped[bool] = mapped_column(default=True, server_default=sa_true())  # on profile
+    # When the user chose to get the newsletter (their consent); None: not subscribed. Brevo's
+    # mailing list gets the address once it's verified.
+    newsletter_since: Mapped[datetime | None] = mapped_column(UTCDateTime)
     double_coins_until: Mapped[datetime | None] = mapped_column(UTCDateTime)  # from the Shop
     # "Can't speak right now": no "say this word" questions until then.
     speaking_paused_until: Mapped[datetime | None] = mapped_column(UTCDateTime)
@@ -47,6 +50,10 @@ class User(Base):
     @property
     def has_avatar(self) -> bool:
         return self.avatar_path is not None
+
+    @property
+    def newsletter(self) -> bool:
+        return self.newsletter_since is not None
 
     sessions: Mapped[list[AuthSession]] = relationship(
         back_populates="user", cascade="all, delete-orphan", passive_deletes=True

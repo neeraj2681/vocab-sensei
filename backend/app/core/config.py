@@ -3,7 +3,7 @@
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -130,6 +130,19 @@ class SpeechSettings(BaseModel):
     pause_minutes: int = Field(default=10, gt=0)  # after "Can't speak right now"
 
 
+class NewsletterSettings(BaseModel):
+    """Brevo keeps the newsletter's mailing list; without a key and list nothing is sent there."""
+
+    brevo_api_key: str | None = None  # Brevo: SMTP & API -> API Keys
+    brevo_list_id: int | None = None  # Brevo: Contacts -> Lists -> the list's ID
+    brevo_api_url: str = "https://api.brevo.com/v3"
+
+    @field_validator("brevo_api_key", "brevo_list_id", mode="before")
+    @classmethod
+    def _empty_is_unset(cls, value: object) -> object:
+        return None if value == "" else value  # `VOCAB_NEWSLETTER__BREVO_LIST_ID=` in .env
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="VOCAB_", env_nested_delimiter="__", env_file=".env", extra="ignore"
@@ -149,6 +162,7 @@ class Settings(BaseSettings):
     reminders: ReminderSettings = ReminderSettings()
     library: LibrarySettings = LibrarySettings()
     speech: SpeechSettings = SpeechSettings()
+    newsletter: NewsletterSettings = NewsletterSettings()
 
     @property
     def dictionary_dir(self) -> Path:

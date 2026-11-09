@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.core.config import Settings
 from app.core.enums import Gender
 from app.core.images import square_avatar
+from app.core.newsletter import NewsletterList, NoNewsletterList
 from app.db.models import User
 from app.quiz.shop import Item
 from app.repositories.quiz import QuizRepository
@@ -24,9 +25,12 @@ class NameAlreadyChangedError(ProfileError):
 
 
 class ProfileService:
-    def __init__(self, session: Session, settings: Settings) -> None:
+    def __init__(
+        self, session: Session, settings: Settings, newsletter: NewsletterList | None = None
+    ) -> None:
         self._session = session
         self._settings = settings
+        self._newsletter = newsletter or NoNewsletterList()
 
     def change_name(self, user: User, name: str, now: datetime) -> None:
         """The first change is free; after it, each change uses a name change bought in the Shop."""
@@ -54,6 +58,17 @@ class ProfileService:
     def set_show_books(self, user: User, show: bool) -> None:
         user.show_books = show
         self._session.commit()
+
+    def set_newsletter(self, user: User, subscribe: bool, now: datetime) -> None:
+        """Brevo's list follows at once for a verified address, otherwise when it gets verified."""
+        if subscribe == user.newsletter:
+            return
+        user.newsletter_since = now if subscribe else None
+        self._session.commit()
+        if not subscribe:
+            self._newsletter.remove(user.email)
+        elif user.email_verified_at is not None:
+            self._newsletter.add(user.email, user.display_name)
 
     def set_avatar(self, user: User, data: bytes) -> None:
         if len(data) > MAX_AVATAR_BYTES:
