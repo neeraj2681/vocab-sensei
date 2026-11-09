@@ -29,12 +29,17 @@ jobs:
     defaults:
       run:
         working-directory: backend
+    env:
+      UV_NO_SYNC: "1" # install once (below); later `uv run` steps don't touch dependencies again
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
-      - run: uv sync --locked
+      - name: Install dependencies
+        # One package (the spaCy English model) comes from a GitHub release, which sometimes
+        # answers 504 for a moment: try again before giving up.
+        run: uv sync --locked || (sleep 30 && uv sync --locked) || (sleep 90 && uv sync --locked)
       - name: Format
         run: uv run ruff format --check .
       - name: Lint
@@ -68,12 +73,16 @@ jobs:
         working-directory: backend
     env:
       PG_URL: postgresql+psycopg://vocab:vocab@localhost:5432/vocab_test
+      UV_NO_SYNC: "1" # install once (below); later `uv run` steps don't touch dependencies again
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
-      - run: uv sync --locked
+      - name: Install dependencies
+        # One package (the spaCy English model) comes from a GitHub release, which sometimes
+        # answers 504 for a moment: try again before giving up.
+        run: uv sync --locked || (sleep 30 && uv sync --locked) || (sleep 90 && uv sync --locked)
       - name: Tests on PostgreSQL
         run: uv run pytest -p no:cacheprovider --no-cov
         env:

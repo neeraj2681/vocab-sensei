@@ -12,7 +12,10 @@ ENV UV_COMPILE_BYTECODE=1 \
 WORKDIR /app
 # Dependencies first, so code changes don't reinstall them (Docker caches this layer).
 COPY pyproject.toml uv.lock ./
-RUN uv sync --locked --no-dev --no-install-project
+# (Retried: the spaCy English model comes from a GitHub release, which sometimes answers 504.)
+RUN uv sync --locked --no-dev --no-install-project \
+    || (sleep 30 && uv sync --locked --no-dev --no-install-project) \
+    || (sleep 90 && uv sync --locked --no-dev --no-install-project)
 # Pronunciation practice: the English speech model (~140 MB, MIT), downloaded once into the image
 # so speech is recognised on this server and never sent anywhere.
 RUN python -c "from faster_whisper import download_model; download_model('base.en', output_dir='/opt/whisper')"
