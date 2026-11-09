@@ -17,11 +17,24 @@ services:
       timeout: 5s
       retries: 10
 
+  # Rate-limit counts shared by the API's worker processes. Only counts: nothing is saved to disk.
+  valkey:
+    image: valkey/valkey:8.1-alpine
+    restart: unless-stopped
+    command: valkey-server --save "" --appendonly no --maxmemory 64mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
   api:
     build: ../backend
     restart: unless-stopped
     depends_on:
       db:
+        condition: service_healthy
+      valkey:
         condition: service_healthy
     env_file: .env
     environment:
@@ -33,6 +46,11 @@ services:
       # limits could be shared by everyone (to check, then restore 10/minute;50/hour and 5/hour).
       VOCAB_RATE_LIMIT__LOGIN: "60/minute;300/hour"
       VOCAB_RATE_LIMIT__EMAIL: "30/hour"
+      # Several worker processes (WEB_CONCURRENCY, read by uvicorn) share rate-limit counts in
+      # Valkey, and the reminder checks run once, in the `reminders` service, not in each worker.
+      WEB_CONCURRENCY: ${API_WORKERS:-2}
+      VOCAB_RATE_LIMIT__STORAGE_URI: valkey://valkey:6379
+      VOCAB_REMINDERS__SCHEDULER_ENABLED: "false"
     volumes:
       - appdata:/data # uploads + WordNet
     healthcheck: # the first start downloads WordNet (~1 minute)
@@ -40,6 +58,21 @@ services:
       interval: 10s
       timeout: 5s
       start_period: 5m
+
+  # Daily reminders and weekly recaps: one process, so nobody gets the same reminder twice.
+  reminders:
+    build: ../backend
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy # the API applies database migrations first
+    env_file: .env
+    environment:
+      VOCAB_DATABASE_URL: postgresql+psycopg://vocab:${POSTGRES_PASSWORD}@db:5432/vocab_sensei
+      VOCAB_DATA_DIR: /data
+    volumes:
+      - appdata:/data # the push-notification keys
+    command: ["python", "-m", "app.commands.run_reminders"]
 
   web:
     build: ../frontend

@@ -1,9 +1,10 @@
 """Per-client request limits for endpoints that attract abuse (logins, sign-ups, email sending).
 
-Counts live in memory: fine for the single server process this app runs as. Behind Cloudflare
-Tunnel every request arrives from the tunnel, so the visitor's address is read from
-`CF-Connecting-IP`, but only when `rate_limit.trust_proxy` says a proxy is really in front
-(otherwise anyone could send that header to dodge the limit).
+Counts live where `rate_limit.storage_uri` says: in memory for a single process (development,
+tests), or in Valkey ("valkey://valkey:6379") when the API runs several worker processes, so they
+all share one count instead of each allowing the full limit. Behind a proxy the visitor's address
+is read from `CF-Connecting-IP` or `X-Forwarded-For`, but only when `rate_limit.trust_proxy` says
+a proxy is really in front (otherwise anyone could send that header to dodge the limit).
 """
 
 import math
@@ -13,19 +14,29 @@ from typing import Annotated
 
 from fastapi import Depends, HTTPException, Request, status
 from limits import parse
-from limits.storage import MemoryStorage
+from limits.storage import Storage, storage_from_string
 from limits.strategies import MovingWindowRateLimiter
 
 from app.api.deps import SettingsDep
 from app.core.config import RateLimitSettings
 
-_storage = MemoryStorage()
-_limiter = MovingWindowRateLimiter(_storage)
+_storages: dict[str, Storage] = {}
+
+
+def _limiter(storage_uri: str) -> MovingWindowRateLimiter:
+    """One storage per address, connected on first use and kept for the life of the process."""
+    if storage_uri not in _storages:
+        storage = storage_from_string(storage_uri)
+        if not isinstance(storage, Storage):  # "async+..." addresses give an asyncio storage
+            raise ValueError(f"rate_limit.storage_uri needs a synchronous storage: {storage_uri}")
+        _storages[storage_uri] = storage
+    return MovingWindowRateLimiter(_storages[storage_uri])
 
 
 def reset() -> None:
     """Forget all counts (tests start from a clean slate)."""
-    _storage.reset()
+    for storage in _storages.values():
+        storage.reset()
 
 
 def client_address(request: Request, settings: RateLimitSettings) -> str:
@@ -47,8 +58,9 @@ def rate_limited(name: str, limit: Callable[[RateLimitSettings], str]) -> object
             return
         item = parse(limit(config))
         key = client_address(request, config)
-        if not _limiter.hit(item, name, key):
-            reset_at = _limiter.get_window_stats(item, name, key).reset_time
+        limiter = _limiter(config.storage_uri)
+        if not limiter.hit(item, name, key):
+            reset_at = limiter.get_window_stats(item, name, key).reset_time
             wait = max(1, math.ceil(reset_at - time.time()))
             raise HTTPException(
                 status.HTTP_429_TOO_MANY_REQUESTS,

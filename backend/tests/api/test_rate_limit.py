@@ -65,3 +65,15 @@ def test_limits_can_be_switched_off(client: TestClient, settings: Settings) -> N
     codes = {client.post("/api/auth/login", json=LOGIN).status_code for _ in range(3)}
 
     assert codes == {401}
+
+
+def test_counts_live_in_the_configured_store(client: TestClient, settings: Settings) -> None:
+    # Worker processes share one store (Valkey) so each can't allow the full limit on its own;
+    # a different store has counts of its own.
+    settings.rate_limit.login = "1/minute"
+    assert client.post("/api/auth/login", json=LOGIN).status_code == 401
+    assert client.post("/api/auth/login", json=LOGIN).status_code == 429
+
+    settings.rate_limit.storage_uri = "memory://another-store"
+
+    assert client.post("/api/auth/login", json=LOGIN).status_code == 401

@@ -10,6 +10,7 @@ services:
       VOCAB_RATE_LIMIT__TRUST_PROXY: "true"
       VOCAB_RATE_LIMIT__LOGIN: "10/minute;50/hour"
       VOCAB_RATE_LIMIT__EMAIL: "5/hour"
+      WEB_CONCURRENCY: ${API_WORKERS:-4} # one worker per CPU
 
   web:
     environment:
