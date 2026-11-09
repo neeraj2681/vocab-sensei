@@ -1,3 +1,10 @@
+/* Widths include padding and borders, so a full-width box never sticks out past the screen. */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 /* Theme: fresh green, light and dark (dark follows the system unless the user picks one), plus the
    original sepia reading look as a third choice. The picked theme is html[data-theme]. */
 :root {
@@ -526,6 +533,10 @@ button {
 
 .status--failed {
   color: var(--bad);
+}
+
+input[type='file'] {
+  max-width: 100%; /* its natural width ("Choose file" + "No file chosen") is wider than a small phone */
 }
 
 .upload input[type='file'] {
@@ -1588,6 +1599,10 @@ a.primary:active {
   display: grid;
   gap: 1rem;
   max-width: 34rem;
+}
+
+.me > * {
+  min-width: 0; /* grid items would otherwise grow to their widest content (e.g. a file picker) */
 }
 
 .me > h2,
@@ -3177,6 +3192,20 @@ a.secondary {
     font-size: 0.68rem;
     letter-spacing: -0.01em;
     white-space: nowrap;
+  }
+
+  .tabs__short {
+    display: none;
+  }
+
+  @media (max-width: 379px) {
+    .tabs__long {
+      display: none;
+    }
+
+    .tabs__short {
+      display: inline;
+    }
   }
 
   .app__main {
