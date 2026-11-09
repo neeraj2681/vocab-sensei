@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router'
 import { goodreadsUrl, leaderboardApi, type Profile } from '../../api/leaderboard'
 import { Avatar } from '../../components/Avatar'
+import { PhotoEditor } from '../../components/PhotoEditor'
 import { Icon } from '../../components/Icon'
 import { useAuth } from '../auth/AuthContext'
 import { BookCover } from '../library/BookCover'
@@ -19,11 +20,15 @@ export function ProfileView({ profile }: { profile: Profile }) {
   return (
     <div className="profile-view">
       <div className="profile-view__head">
-        <Avatar
-          user={own ? user : { gender: profile.gender, has_avatar: profile.has_avatar }}
-          src={own ? undefined : leaderboardApi.avatarUrl(profile.user_id)}
-          size={112}
-        />
+        {own ? (
+          <PhotoEditor size={112} />
+        ) : (
+          <Avatar
+            user={{ gender: profile.gender, has_avatar: profile.has_avatar }}
+            src={leaderboardApi.avatarUrl(profile.user_id)}
+            size={112}
+          />
+        )}
         <h2>{profile.display_name}</h2>
         {own && user && <p className="muted">{user.email}</p>}
       </div>

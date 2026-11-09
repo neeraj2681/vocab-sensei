@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState, type SyntheticEvent } from 'react'
+import { useEffect, useState, type SyntheticEvent } from 'react'
 import { authApi, type Gender } from '../../api/auth'
 import { shopApi } from '../../api/shop'
-import { Avatar } from '../../components/Avatar'
+import { PhotoEditor } from '../../components/PhotoEditor'
 import { Icon } from '../../components/Icon'
 import { Field, FormError } from '../../components/Form'
 import { MIN_PASSWORD_LENGTH } from '../auth/RegisterPage'
@@ -135,7 +135,6 @@ export function ProfilePanel() {
   const [renaming, setRenaming] = useState(false)
   const [name, setName] = useState('')
   const [bought, setBought] = useState(0) // name changes from the Shop, not used yet
-  const fileInput = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     let current = true
@@ -154,14 +153,6 @@ export function ProfilePanel() {
   const nameUsed = Boolean(user.name_changed_at)
   const canChange = !nameUsed || bought > 0
 
-  function upload(file: File | undefined) {
-    if (!file) return
-    void run(async () => {
-      const saved = await authApi.setAvatar(file)
-      updateUser({ ...saved, avatar_stamp: Date.now() })
-    })
-  }
-
   function rename(event: SyntheticEvent) {
     event.preventDefault()
     void run(async () => {
@@ -175,38 +166,7 @@ export function ProfilePanel() {
     <section aria-labelledby="profile-heading" className="panel">
       <h3 id="profile-heading">Profile</h3>
       <div className="profile__photo">
-        <Avatar user={user} size={88} />
-        <div className="profile__photo-actions">
-          <button type="button" disabled={busy} onClick={() => fileInput.current?.click()}>
-            {user.has_avatar ? 'Change photo' : 'Upload a photo'}
-          </button>
-          {user.has_avatar && (
-            <button
-              type="button"
-              className="link-button"
-              disabled={busy}
-              onClick={() => {
-                void run(async () => {
-                  await authApi.removeAvatar()
-                  updateUser({ has_avatar: false })
-                })
-              }}
-            >
-              Remove photo
-            </button>
-          )}
-          <input
-            ref={fileInput}
-            type="file"
-            accept="image/*"
-            aria-label="Profile photo"
-            hidden
-            onChange={(event) => {
-              upload(event.target.files?.[0])
-              event.target.value = ''
-            }}
-          />
-        </div>
+        <PhotoEditor size={96} />
       </div>
 
       <div className="profile__row">

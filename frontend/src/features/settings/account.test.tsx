@@ -124,8 +124,11 @@ describe('icon and photo', () => {
     const photo = new File(['png'], 'me.png', { type: 'image/png' })
     await user.upload(await screen.findByLabelText('Profile photo'), photo)
 
-    expect(await screen.findByRole('button', { name: 'Remove photo' })).toBeInTheDocument()
     expect(meTabIcon()?.getAttribute('src')).toMatch(/^\/api\/auth\/me\/avatar\?v=\d+$/)
+    await user.click(await screen.findByRole('button', { name: 'Change or remove your photo' }))
+    const menu = screen.getByRole('dialog', { name: 'Profile photo' })
+    expect(within(menu).getByRole('button', { name: 'Change photo' })).toBeInTheDocument()
+    expect(within(menu).getByRole('button', { name: 'Remove photo' })).toBeInTheDocument()
   })
 
   it('a photo can be removed', async () => {
@@ -135,10 +138,27 @@ describe('icon and photo', () => {
     )
     const user = renderApp('/settings')
 
-    await user.click(await screen.findByRole('button', { name: 'Remove photo' }))
+    await user.click(await screen.findByRole('button', { name: 'Change or remove your photo' }))
+    await user.click(screen.getByRole('button', { name: 'Remove photo' }))
 
-    expect(await screen.findByRole('button', { name: 'Upload a photo' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Add a photo' })).toBeInTheDocument()
     expect(meTabIcon()?.getAttribute('src')).toBe('/icons/man.png')
+  })
+
+  it('the photo menu closes with Cancel or a tap outside it', async () => {
+    account(USER)
+    const user = renderApp('/settings')
+
+    await user.click(await screen.findByRole('button', { name: 'Add a photo' }))
+    const menu = screen.getByRole('dialog', { name: 'Profile photo' })
+    expect(within(menu).getByRole('button', { name: 'Upload a photo' })).toBeInTheDocument()
+    expect(within(menu).queryByRole('button', { name: 'Remove photo' })).not.toBeInTheDocument()
+    await user.click(within(menu).getByRole('button', { name: 'Cancel' }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Add a photo' }))
+    await user.click(document.querySelector('.word-card__backdrop') as HTMLElement)
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 })
 
