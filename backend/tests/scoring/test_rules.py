@@ -1,3 +1,4 @@
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -13,6 +14,7 @@ from app.scoring.rules import (
     effective_score,
     initial_progress,
     mark_known,
+    miss_penalty,
 )
 
 RULES = ScoringSettings()
@@ -43,10 +45,10 @@ def test_correct_answer_adds_ten() -> None:
     assert result == WordProgress(score=50, status=WordStatus.LEARNING)
 
 
-def test_wrong_answer_subtracts_ten() -> None:
+def test_wrong_answer_subtracts_five() -> None:
     result = apply_answer(WordProgress(score=40), correct=False, now=NOW, rules=RULES)
 
-    assert result.score == 30
+    assert result.score == 35
 
 
 def test_score_never_goes_below_floor() -> None:
@@ -63,7 +65,9 @@ def test_new_word_needs_ten_correct_answers() -> None:
 
     progress = apply_answer(progress, correct=True, now=NOW, rules=RULES)
 
-    assert progress == WordProgress(score=100, status=WordStatus.LEARNED, learned_at=NOW)
+    assert progress == WordProgress(
+        score=100, status=WordStatus.LEARNED, learned_at=NOW, was_learned=True
+    )
 
 
 @pytest.mark.parametrize(("weeks_ago", "expected"), [(0, 100), (0.9, 100), (1, 95), (3, 85)])
@@ -87,13 +91,16 @@ def test_learned_word_returns_to_learning_after_a_week() -> None:
 def test_correct_answer_on_decayed_word_relearns_it_and_restarts_decay() -> None:
     result = apply_answer(learned(weeks_ago=1), correct=True, now=NOW, rules=RULES)
 
-    assert result == WordProgress(score=105, status=WordStatus.LEARNED, learned_at=NOW)
+    assert result == WordProgress(
+        score=105, status=WordStatus.LEARNED, learned_at=NOW, was_learned=True
+    )
 
 
 def test_wrong_answer_on_decayed_word_starts_from_decayed_score() -> None:
     result = apply_answer(learned(weeks_ago=2), correct=False, now=NOW, rules=RULES)
 
-    assert result == WordProgress(score=80, status=WordStatus.LEARNING)
+    # 90 after two weeks; a miss on a word learned before costs 10
+    assert result == WordProgress(score=80, status=WordStatus.LEARNING, was_learned=True)
 
 
 def test_known_words_cannot_be_answered() -> None:
@@ -116,7 +123,7 @@ def test_rules_come_from_settings() -> None:
 
 @pytest.mark.parametrize(
     ("total", "correct", "expected"),
-    [(0, True, 5), (50, False, -10), (0, False, 0), (4, False, -4)],
+    [(0, True, 5), (50, False, -5), (0, False, 0), (4, False, -4)],
 )
 def test_answer_points_always_move_the_total_but_never_below_zero(
     total: int, correct: bool, expected: int
@@ -126,3 +133,54 @@ def test_answer_points_always_move_the_total_but_never_below_zero(
 
 def test_answers_that_do_not_count_give_no_points() -> None:
     assert answer_points(50, correct=False, counted=False, rules=RULES) == 0
+
+
+def test_a_miss_costs_five() -> None:
+    after = apply_answer(WordProgress(score=40), correct=False, now=NOW, rules=RULES)
+
+    assert (after.score, after.was_learned) == (35, False)
+
+
+def test_a_miss_on_a_word_learned_before_costs_ten_until_it_falls_to_fifty() -> None:
+    learned = WordProgress(score=100, status=WordStatus.LEARNED, learned_at=NOW, was_learned=True)
+    week_later = NOW + timedelta(days=7)  # decayed to 95: back to learning, asked again
+
+    scores = []
+    progress = learned
+    for _ in range(7):
+        progress = apply_answer(progress, correct=False, now=week_later, rules=RULES)
+        scores.append((progress.score, progress.was_learned))
+
+    assert scores == [
+        (85, True),  # 95 - 10
+        (75, True),
+        (65, True),
+        (55, True),
+        (45, False),  # 55 - 10: at or below 50, so the word is treated as new again...
+        (40, False),  # ...and misses are back to -5
+        (35, False),
+    ]
+
+
+def test_learning_a_word_again_makes_its_misses_cost_ten_again() -> None:
+    progress = WordProgress(score=95, status=WordStatus.LEARNING)  # never learned yet
+
+    learned = apply_answer(progress, correct=True, now=NOW, rules=RULES)
+    slipped = apply_answer(learned, correct=False, now=NOW, rules=RULES)
+
+    assert (learned.status, learned.was_learned) == (WordStatus.LEARNED, True)
+    assert (slipped.score, slipped.status, slipped.was_learned) == (
+        95,
+        WordStatus.LEARNING,
+        True,
+    )
+
+
+def test_the_miss_penalty_follows_the_word() -> None:
+    reviewed = WordProgress(score=80, status=WordStatus.LEARNING, was_learned=True)
+
+    assert miss_penalty(WordProgress(score=80), NOW, RULES) == -5
+    assert miss_penalty(reviewed, NOW, RULES) == -10
+    assert miss_penalty(replace(reviewed, score=50), NOW, RULES) == -5
+    assert answer_points(100, correct=False, counted=True, rules=RULES, miss=-10) == -10
+    assert answer_points(100, correct=False, counted=True, rules=RULES, miss=-5) == -5

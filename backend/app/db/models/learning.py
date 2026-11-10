@@ -6,6 +6,7 @@ from datetime import date, datetime
 from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import JSON, Date, ForeignKey, String, Text, UniqueConstraint, text
+from sqlalchemy import false as sa_false
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.enums import QuestionType, WordStatus
@@ -48,6 +49,8 @@ class UserWord(Base):
     score: Mapped[int] = mapped_column(default=0)
     status: Mapped[WordStatus] = mapped_column(str_enum(WordStatus), default=WordStatus.NEW)
     learned_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
+    # Learned at some point and not dropped to 50 since: misses cost more (see miss_penalty).
+    was_learned: Mapped[bool] = mapped_column(default=False, server_default=sa_false())
     last_reviewed_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
     updated_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, onupdate=utcnow)
 

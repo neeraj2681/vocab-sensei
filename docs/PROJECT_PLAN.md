@@ -99,7 +99,8 @@ Extract text per chapter ──► tokenize + lemmatize ──► filter (stopwo
 - **Never-ending quiz** (decided, replaces rounds): the screen always shows a question (the word; 4 definitions,
   exactly one correct). Answering, right or wrong, leads straight to the next one; there is no end screen.
   An unanswered question stays on screen when the user comes back (reloading can't skip a hard word).
-- **Live score** at the top: **lifetime points**. Every counted answer moves it: +5 right, −10 wrong, even when
+- **Live score** at the top: **lifetime points**. Every counted answer moves it: +5 right, and a miss costs what the
+  word loses (−5, or −10 on a word learned before; 10 Nov 2026), even when
   the word's own score is already 0 (decided 30 Oct 2026). Only the total never goes below 0. Word scores keep
   their own rules (§5.4); the two are logged separately (`quiz_answers.points` and `score_delta`). A green "+5" or red "−10" pops over it on each
   answer, next to a sparkline of the visit's last ~20 answers.
@@ -126,8 +127,9 @@ Extract text per chapter ──► tokenize + lemmatize ──► filter (stopwo
 
 | Event | Effect |
 |-------|--------|
-| Correct answer | `+5` |
-| Wrong answer | `−10` |
+| Correct answer | `+10` (10 right answers to learn) |
+| Wrong answer | `−5` (soft miss, since 10 Nov 2026) |
+| Wrong answer on a word **learned before**, while its score is above 50 | `−10`; at 50 or below it's `−5` again, until learned again |
 | Score ≥ 100 | status = **learned**, removed from learning list |
 | Every week after learned | `−5` (decay) |
 | Learned word drops below 100 | back to **learning** list |

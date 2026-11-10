@@ -59,7 +59,7 @@ def test_last_weeks_recap(user_client: TestClient, session: Session, time: Clock
     ]
     week = recaps["weeks"][1]
     assert week["last"] == "2026-10-25"
-    assert (week["answers"], week["right"], week["coins"]) == (4, 3, 15)  # 3x5 - 10 + 10
+    assert (week["answers"], week["right"], week["coins"]) == (4, 3, 20)  # 3x5 - 5 + 10
     assert (week["goal_days"], week["days"]) == (1, 5)  # Wednesday to Sunday
     assert week["streak"] == 0  # Sunday was missed
     assert week["best_day"] == "2026-10-21"

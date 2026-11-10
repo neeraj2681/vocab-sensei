@@ -69,7 +69,7 @@ def test_a_profile_shows_stats_graphs_and_books_never_the_email(
     own = user_client.get(f"/api/profiles/{me.id}?tz=UTC").json()
     theirs = user_client.get(f"/api/profiles/{other.id}?tz=UTC")
 
-    assert (own["me"], own["answers"], own["right"], own["coins"]) == (True, 3, 2, 0)
+    assert (own["me"], own["answers"], own["right"], own["coins"]) == (True, 3, 2, 5)
     assert len(own["history"]) == 3
     assert len(own["week"]) == 7
     assert [(b["title"], b["author"]) for b in own["books"]] == [("Moby-Dick", None)]
