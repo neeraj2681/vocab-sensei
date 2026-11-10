@@ -1,8 +1,9 @@
 """The never-ending quiz (docs/PROJECT_PLAN.md §5.3).
 
 There are no rounds: the screen always shows the user's newest unanswered question, and answering it
-makes the next one. Each answer changes the word's score (+5 / -10, never below 0) and the lifetime
-score at the top (+5 / -10 every time; only the total never goes below 0). Both changes are
+makes the next one. Each answer changes the word's score (+10 / -5, never below 0; -10 for a miss
+on a word learned before, while it's above 50) and the lifetime score at the top (+5 / the same
+miss penalty every time; only the total never goes below 0). Both changes are
 logged; the lifetime score is the sum of the points. A word isn't asked again within
 `spacing` questions (one answered wrong comes back after `retry_after`, while it's fresh); if the
 user has fewer words than that, it may come back sooner, but then the answer is practice and
@@ -61,6 +62,7 @@ from app.scoring.rules import (
     current_status,
     effective_score,
     mark_known,
+    miss_penalty,
 )
 from app.services.learning import LearningService
 from app.services.words import definitions_in_context
@@ -220,7 +222,12 @@ def quiz_stats(repo: QuizRepository, user: User, now: datetime, tz: ZoneInfo) ->
 
 
 def _progress(word: UserWord) -> WordProgress:
-    return WordProgress(score=word.score, status=word.status, learned_at=word.learned_at)
+    return WordProgress(
+        score=word.score,
+        status=word.status,
+        learned_at=word.learned_at,
+        was_learned=word.was_learned,
+    )
 
 
 class QuizService:
@@ -515,18 +522,21 @@ class QuizService:
         counted = question.word_id not in self._spacing(user_id)[0]
         word = self._user_word(user_id, question.word_id)
         delta = 0
+        rules = self._settings.scoring
+        miss = miss_penalty(_progress(word), now, rules)  # coins lose what the word loses
         if counted and word.status is not WordStatus.KNOWN:
-            rules = self._settings.scoring
             before = effective_score(_progress(word), now, rules)
             after = apply_answer(_progress(word), correct=correct, now=now, rules=rules)
             word.score, word.status, word.learned_at = after.score, after.status, after.learned_at
+            word.was_learned = after.was_learned
             delta = after.score - before
         word.last_reviewed_at = now
         points = answer_points(
             self._repo.total_points(user_id),
             correct=correct,
             counted=counted,
-            rules=self._settings.scoring,
+            rules=rules,
+            miss=miss,
         )
         user = self._user(user_id)
         if correct:  # Ninja Mode: doubled coins once the run is long enough, then the run grows
@@ -581,7 +591,13 @@ class QuizService:
             sentence=question.source_sentence,
             counted=counted,
             points_if_right=answer_points(total, correct=True, counted=counted, rules=rules),
-            points_if_wrong=answer_points(total, correct=False, counted=counted, rules=rules),
+            points_if_wrong=answer_points(
+                total,
+                correct=False,
+                counted=counted,
+                rules=rules,
+                miss=miss_penalty(progress, now, rules),
+            ),
             learned_if_right=status_if_right is WordStatus.LEARNED,
         )
 
@@ -638,6 +654,7 @@ class QuizService:
         elif user_word.status not in (WordStatus.KNOWN, WordStatus.NEW):
             raise WordNotKnownError(f"{lemma!r} is already being learned")
         user_word.status, user_word.score, user_word.learned_at = WordStatus.LEARNING, 0, None
+        user_word.was_learned = False
         self._session.commit()
 
     def _unanswered(self, user_id: int, question_id: int) -> Question:

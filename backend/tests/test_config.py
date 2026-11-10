@@ -6,7 +6,7 @@ from app.core.config import Settings
 def test_scoring_defaults_match_plan() -> None:
     scoring = Settings().scoring
 
-    assert (scoring.correct_delta, scoring.wrong_delta) == (5, -10)
+    assert (scoring.correct_delta, scoring.wrong_delta) == (5, -5)
     assert scoring.learned_threshold == 100
     assert scoring.weekly_decay == 5
     assert scoring.unsure_start == 50

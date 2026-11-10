@@ -15,7 +15,11 @@ class ScoringSettings(BaseModel):
 
     correct_delta: int = 5  # coins for a right answer
     word_correct_delta: int = 10  # a right answer's step towards "learned": 10 right answers
-    wrong_delta: int = -10
+    wrong_delta: int = -5  # a miss, for words and coins alike...
+    # ...but a miss on a word learned before (reached `learned_threshold`) costs this while its
+    # score is above `review_strict_above`; at or below it, misses are back to `wrong_delta`.
+    review_wrong_delta: int = -10
+    review_strict_above: int = 50
     learned_threshold: int = 100
     weekly_decay: int = 5
     unsure_start: int = 50

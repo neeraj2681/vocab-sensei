@@ -1,5 +1,5 @@
 from collections.abc import Callable, Iterator
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 import pytest
@@ -19,6 +19,7 @@ from app.db.models import (
     Definition,
     Document,
     DocumentWord,
+    QuestClaim,
     Question,
     User,
     UserWord,
@@ -214,7 +215,29 @@ class TestAnswering:
             "learned_today": 0,
         }
 
-    def test_a_wrong_answer_always_takes_ten_from_the_total(
+    def test_a_miss_on_a_word_learned_before_costs_ten(
+        self, user_client: TestClient, session: Session
+    ) -> None:
+        word = session.scalars(select(Word).where(Word.lemma == "word01")).one()
+        session.add(
+            UserWord(
+                user_id=reader(session).id,
+                word_id=word.id,
+                score=80,
+                status="learning",
+                was_learned=True,  # learned once, then slipped back for review
+            )
+        )
+        session.add(  # coins to lose, without answering (which could ask word01 first)
+            QuestClaim(user_id=reader(session).id, day=date(2026, 1, 1), quest="test", coins=1000)
+        )
+        session.commit()
+        while (result := answer(user_client, session, right=False))["word"] != "word01":
+            assert result["points"] == -5  # words never learned: the usual miss
+
+        assert (result["score_delta"], result["word_score"], result["points"]) == (-10, 70, -10)
+
+    def test_a_wrong_answer_always_takes_five_from_the_total(
         self, user_client: TestClient, session: Session
     ) -> None:
         answer(user_client, session)
@@ -222,7 +245,7 @@ class TestAnswering:
 
         result = answer(user_client, session, right=False)  # a new word, its score stays at 0
 
-        assert (result["points"], result["stats"]["total"]) == (-10, 0)
+        assert (result["points"], result["stats"]["total"]) == (-5, 5)
         assert (result["score_delta"], result["word_score"]) == (0, 0)
 
     def test_the_total_never_drops_below_zero(
@@ -245,7 +268,7 @@ class TestAnswering:
         while (result := answer(user_client, session, right=False))["word"] != "word01":
             pass
 
-        assert (result["score_delta"], result["word_score"]) == (-10, 20)
+        assert (result["score_delta"], result["word_score"]) == (-5, 25)
 
     def test_the_answer_reveals_the_correct_option(
         self, user_client: TestClient, session: Session
@@ -260,7 +283,7 @@ class TestAnswering:
         for right in (True, True, False, True):
             result = answer(user_client, session, right=right)
 
-        assert result["stats"]["total"] == 5  # 5, 10, 0, 5
+        assert result["stats"]["total"] == 10  # 5, 10, 5, 10
 
     def test_a_question_can_only_be_answered_once(
         self, user_client: TestClient, session: Session
@@ -639,7 +662,7 @@ class TestStats:
         assert [(p["number"], p["total"], p["correct"]) for p in history] == [
             (1, 5, True),
             (2, 10, True),
-            (3, 0, False),
+            (3, 5, False),
         ]
 
 
@@ -859,7 +882,7 @@ class TestNinjaMode:
         wrong = answer(user_client, session, right=False)
         after = answer(user_client, session)
 
-        assert (wrong["points"], after["points"]) == (-10, 5)
+        assert (wrong["points"], after["points"]) == (-5, 5)
         assert wrong["stats"]["combo"] == 0
         assert after["stats"]["combo"] == 1
 

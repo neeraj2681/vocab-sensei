@@ -51,7 +51,7 @@ def test_export_has_progress_answers_and_reads(
     assert played["version"] == 1
     assert len(played["words"]) == 5
     assert {w["status"] for w in played["words"]} == {"learning", "known"}
-    assert [a["points"] for a in played["answers"]] == [5, 5, -10, 5, 0]
+    assert [a["points"] for a in played["answers"]] == [5, 5, -5, 5, 0]
     assert played["answers"][-1]["knew_it"] is True
     assert played["readings"] == [{"title": "Moby-Dick", "priority": 0, "chapter_index": 0}]
 
@@ -84,7 +84,7 @@ def test_a_backup_restores_into_another_account(
     }
     assert progress_of(session, other) == progress_of(session, reader(session))
     assert user_client.get("/api/quiz/history").json() == before
-    assert user_client.get("/api/quiz/stats").json()["total"] == 5
+    assert user_client.get("/api/quiz/stats").json()["total"] == 10
     assert [r["document"]["title"] for r in user_client.get("/api/readings").json()] == [
         "Moby-Dick"
     ]

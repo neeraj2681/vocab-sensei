@@ -81,7 +81,7 @@ def test_double_coins_double_right_answers_for_half_an_hour(
     points = [answer(user_client, session)["points"] for _ in range(6)]
     assert points == [10, 10, 10, 10, 10, 20]  # the sixth is in Ninja Mode too: 4x
     time.now = SUNDAY + timedelta(minutes=31)
-    assert answer(user_client, session, right=False)["points"] == -10  # wrong stays -10
+    assert answer(user_client, session, right=False)["points"] == -5  # a miss is never doubled
     assert answer(user_client, session)["points"] == 5  # over
     assert user_client.post("/api/shop/use/double_coins?tz=UTC").status_code == 409
 
