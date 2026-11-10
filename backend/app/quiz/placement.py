@@ -21,6 +21,12 @@ FAKES = 4  # 8 bands x 2 + 4 = 20 questions
 BAND_WIDTH = 0.25  # a word belongs to a band within this distance of it
 FAKE_PENALTY = 0.35  # Zipf added to the level for each made-up word "known"
 MARGIN = 0.5  # words more common than level + MARGIN count as probably known
+# Without a level, words more common than this count as probably known ("accomplish" is 3.7,
+# "lugubrious" 1.9); books keep words up to Zipf 4.0, which let in too many easy ones.
+DEFAULT_EASY_ABOVE = 3.5
+# When a level is set, easy words already being learned with less than this score leave the quiz
+# (as probably known); words with more progress stay.
+SET_ASIDE_BELOW = 30
 LOWEST, HIGHEST = 1.0, 6.0  # the level always stays within these
 QUIZ_KNOWN = 0.9  # from quiz history, a band counts as known at this share answered right
 
@@ -115,6 +121,11 @@ def level_from_quiz(answers: Sequence[Answer], min_per_band: int = 10) -> float 
 def probably_known_above(level: float) -> float:
     """Words more common than this (higher Zipf) are probably known at `level`."""
     return level + MARGIN
+
+
+def easy_above(level: float | None) -> float:
+    """Words more common than this are probably known: from the reader's level, or by default."""
+    return probably_known_above(level) if level is not None else DEFAULT_EASY_ABOVE
 
 
 def level_name(level: float) -> str:

@@ -29,9 +29,11 @@ def estimate(session_factory: Callable[[], Session], settings: Settings) -> int:
         for user in session.scalars(select(User).where(User.vocab_level.is_(None))):
             level = service.estimate_from_history(user.id)
             if level is not None:
-                user.vocab_level = level
+                saved = service.set_level(user.id, level)
                 given += 1
-                logger.info("user %s: level %s", user.id, level)
+                logger.info(
+                    "user %s: level %s, %s easy words set aside", user.id, level, saved.set_aside
+                )
         session.commit()
     return given
 

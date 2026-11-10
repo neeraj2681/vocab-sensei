@@ -14,11 +14,12 @@ from app.quiz.placement import (
     BANDS,
     FAKES,
     PSEUDOWORDS,
+    SET_ASIDE_BELOW,
     Answer,
+    easy_above,
     estimate_level,
     level_from_quiz,
     pick_items,
-    probably_known_above,
 )
 from app.repositories.placement import PlacementRepository
 
@@ -58,6 +59,12 @@ _EASY_LIMIT = 300
 
 class PlacementError(Exception):
     """A request the API rejects with the message as the reason."""
+
+
+@dataclass(frozen=True)
+class SavedLevel:
+    level: float
+    set_aside: int  # easy words in learning that went back to probably known
 
 
 @dataclass(frozen=True)
@@ -112,16 +119,21 @@ class PlacementService:
             fakes = list(PSEUDOWORDS)
         return pick_items(_candidates(dictionary), fakes, self._rng)
 
-    def save(self, user_id: int, answers: Sequence[tuple[str, bool]]) -> float:
+    def save(self, user_id: int, answers: Sequence[tuple[str, bool]]) -> SavedLevel:
         """Works out and keeps the user's level from their answers to the check."""
         if len(answers) < len(BANDS):
             raise PlacementError("Answer all the words first")
         level = estimate_level(
             [Answer(zipf(word.strip().lower()), known) for word, known in answers]
         )
+        return self.set_level(user_id, level)
+
+    def set_level(self, user_id: int, level: float) -> SavedLevel:
+        """Keeps the level, and takes easy words with little progress out of the quiz."""
         self._user(user_id).vocab_level = level
+        moved = self._repo.set_aside_easy(user_id, easy_above(level), SET_ASIDE_BELOW)
         self._session.commit()
-        return level
+        return SavedLevel(level, moved)
 
     def level(self, user_id: int) -> float | None:
         return self._user(user_id).vocab_level
@@ -136,11 +148,10 @@ class PlacementService:
         return level_from_quiz(answers)
 
     def probably_known(self, user_id: int) -> list[EasyWord]:
-        """Words from the user's current reads that their level says they already know."""
-        level = self._user(user_id).vocab_level
-        if level is None:
-            return []
-        rows = self._repo.probably_known(user_id, probably_known_above(level), _EASY_LIMIT)
+        """Words from the user's current reads that are probably known to them (by their level,
+        or the default cutoff without one): the quiz skips these."""
+        above = easy_above(self._user(user_id).vocab_level)
+        rows = self._repo.probably_known(user_id, above, _EASY_LIMIT)
         return [
             EasyWord(word.lemma, word.definitions[0].text if word.definitions else None, title)
             for word, title in rows

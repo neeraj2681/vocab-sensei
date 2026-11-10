@@ -45,6 +45,22 @@ class PlacementRepository:
             )
         )
 
+    def set_aside_easy(self, user_id: int, above: float, below_score: int) -> int:
+        """Words being learned that are more common than `above` and scored under `below_score`
+        go back to not started (so probably known: out of the quiz, one tap to learn). How many."""
+        easy = select(Word.id).where(Word.zipf_frequency > above)
+        rows = self._session.scalars(
+            select(UserWord).where(
+                UserWord.user_id == user_id,
+                UserWord.status == WordStatus.LEARNING,
+                UserWord.score < below_score,
+                UserWord.word_id.in_(easy),
+            )
+        ).all()
+        for progress in rows:
+            progress.status, progress.score = WordStatus.NEW, 0
+        return len(rows)
+
     def probably_known(self, user_id: int, above: float, limit: int) -> list[tuple[Word, str]]:
         """Words in the user's current reads, not started, more common than `above`: (word, book
         title), most common first."""

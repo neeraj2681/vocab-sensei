@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { placementApi, type Level } from '../../api/placement'
+import { placementApi, type Level, type SavedLevel } from '../../api/placement'
 import { FormError } from '../../components/Form'
 import { useAuth } from '../auth/AuthContext'
 
@@ -15,7 +15,7 @@ export function PlacementCheck({
   const { updateUser } = useAuth()
   const [words, setWords] = useState<string[] | null>(null)
   const [answers, setAnswers] = useState<{ word: string; known: boolean }[]>([])
-  const [result, setResult] = useState<Level | null>(null)
+  const [result, setResult] = useState<SavedLevel | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -75,6 +75,13 @@ export function PlacementCheck({
           your quizzes focus on the ones worth learning. You’ll find them on the Words page, one tap
           away if you want any back.
         </p>
+        {result.set_aside > 0 && (
+          <p>
+            {result.set_aside === 1
+              ? '1 easy word you’d only just started was moved there too.'
+              : `${String(result.set_aside)} easy words you’d only just started were moved there too.`}
+          </p>
+        )}
         <button
           type="button"
           className="primary"
