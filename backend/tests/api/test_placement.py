@@ -104,11 +104,54 @@ def test_a_probably_known_word_can_be_learned(user_client: TestClient, session: 
 
 
 @pytest.mark.usefixtures("mixed_book", "clock")
-def test_without_a_level_every_word_comes(user_client: TestClient, session: Session) -> None:
-    asked = {answer(user_client, session)["word"] for _ in range(12)}
+def test_without_a_level_very_common_words_are_kept_aside(
+    user_client: TestClient, session: Session
+) -> None:
+    asked = {answer(user_client, session)["word"] for _ in range(6)}
+    easy = user_client.get("/api/placement/probably-known").json()
 
-    assert asked & set(EASY)
-    assert user_client.get("/api/placement/probably-known").json() == []
+    assert asked == set(HARD)  # Zipf 1.8
+    assert sorted(w["word"] for w in easy) == EASY  # Zipf 3.8: over the default cutoff (3.5)
+
+
+@pytest.mark.usefixtures("candidates", "mixed_book")
+def test_taking_the_check_sets_aside_easy_words_with_little_progress(
+    user_client: TestClient, session: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(
+        placement_service,
+        "zipf_frequency",
+        lambda word, _lang: float(word.split("w")[0].removeprefix("band")),
+    )
+    user_id = reader(session).id
+    words = {w.lemma: w.id for w in session.scalars(select(Word))}
+    progress = {  # word: (status, score) before the check
+        "easy0": (WordStatus.LEARNING, 10),  # easy, barely started: set aside
+        "easy1": (WordStatus.LEARNING, 29),  # easy, just under the line: set aside
+        "easy2": (WordStatus.LEARNING, 30),  # easy, real progress: stays
+        "easy3": (WordStatus.LEARNED, 100),  # learned: stays
+        "hard0": (WordStatus.LEARNING, 5),  # rare: stays
+    }
+    for lemma, (state, score) in progress.items():
+        session.add(UserWord(user_id=user_id, word_id=words[lemma], status=state, score=score))
+    session.commit()
+
+    saved = set_level(user_client, known_down_to=3.0)  # level ~2.75: easy above ~3.25
+
+    assert saved["set_aside"] == 2
+    session.expire_all()
+    after = {
+        lemma: (p.status, p.score)
+        for lemma in progress
+        if (p := session.get(UserWord, (user_id, words[lemma])))
+    }
+    assert after["easy0"] == after["easy1"] == (WordStatus.NEW, 0)
+    assert {k: after[k] for k in ("easy2", "easy3", "hard0")} == {
+        k: progress[k] for k in ("easy2", "easy3", "hard0")
+    }
+    easy = {w["word"] for w in user_client.get("/api/placement/probably-known").json()}
+    assert {"easy0", "easy1"} <= easy
+    assert not easy & {"easy2", "easy3", "hard0"}
 
 
 @pytest.mark.usefixtures("mixed_book", "clock")

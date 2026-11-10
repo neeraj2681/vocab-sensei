@@ -114,7 +114,7 @@ describe('first-run tour', () => {
     const api = tour([PRIDE], {
       'GET /api/auth/me': () => json({ ...NEW_USER, vocab_level: null }),
       'GET /api/placement': () => json({ words }),
-      'PUT /api/placement': () => json({ level: 2.75, name: 'Advanced' }),
+      'PUT /api/placement': () => json({ level: 2.75, name: 'Advanced', set_aside: 3 }),
     })
     const user = renderApp('/welcome')
 
@@ -129,6 +129,9 @@ describe('first-run tour', () => {
     for (let i = 0; i < 18; i++) await user.click(screen.getByRole('button', { name: 'I know it' }))
 
     expect(await screen.findByRole('heading', { name: 'Your level: Advanced' })).toBeInTheDocument()
+    expect(
+      screen.getByText('3 easy words you’d only just started were moved there too.'),
+    ).toBeInTheDocument()
     const sent = api.calls('PUT /api/placement')[0] as {
       answers: { word: string; known: boolean }[]
     }

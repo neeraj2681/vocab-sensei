@@ -27,7 +27,7 @@ export function ProbablyKnown() {
     <details className="panel probably-known">
       <summary>
         <strong>Probably known · {words.length}</strong>{' '}
-        <span className="muted">(easier than your level, so not in your quizzes)</span>
+        <span className="muted">(easy for you, so not in your quizzes)</span>
       </summary>
       <ul className="probably-known__list">
         {words.map((w) => (

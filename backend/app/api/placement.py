@@ -40,6 +40,10 @@ class LevelResponse(BaseModel):
     name: str | None  # e.g. "Advanced"
 
 
+class SavedLevelResponse(LevelResponse):
+    set_aside: int  # easy words being learned (little progress) that went to probably known
+
+
 class EasyWordResponse(BaseModel):
     word: str
     meaning: str | None
@@ -59,13 +63,14 @@ def new_check(user: CurrentUser, placement: PlacementServiceDep) -> CheckRespons
 @router.put("")
 def save_check(
     body: SaveRequest, user: CurrentUser, placement: PlacementServiceDep
-) -> LevelResponse:
+) -> SavedLevelResponse:
     """Works out the user's word level from their answers; new words easier than it are skipped."""
     try:
-        level = placement.save(user.id, [(a.word, a.known) for a in body.answers])
+        saved = placement.save(user.id, [(a.word, a.known) for a in body.answers])
     except PlacementError as exc:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from None
-    return _level(level)
+    level = _level(saved.level)
+    return SavedLevelResponse(level=level.level, name=level.name, set_aside=saved.set_aside)
 
 
 @router.get("/level")
@@ -75,8 +80,8 @@ def my_level(user: CurrentUser, placement: PlacementServiceDep) -> LevelResponse
 
 @router.get("/probably-known")
 def probably_known(user: CurrentUser, placement: PlacementServiceDep) -> list[EasyWordResponse]:
-    """Words from the books being read that the user's level says they already know (not quizzed;
-    POST /quiz/words/{word}/learn takes one into learning)."""
+    """Words from the books being read that are probably known, by level or the default cutoff
+    (not quizzed; POST /quiz/words/{word}/learn takes one into learning)."""
     return [
         EasyWordResponse(word=w.lemma, meaning=w.meaning, book=w.book)
         for w in placement.probably_known(user.id)

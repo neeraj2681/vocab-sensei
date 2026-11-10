@@ -8,6 +8,7 @@ from app.quiz.placement import (
     PER_BAND,
     PSEUDOWORDS,
     Answer,
+    easy_above,
     estimate_level,
     level_name,
     pick_items,
@@ -80,3 +81,8 @@ def test_quiz_history_needs_ninety_percent_right_to_count_as_known() -> None:
     assert probably_known_above(level) == 3.25
     assert level_from_quiz(band(4.0, 20, 25)) is None  # 80% isn't enough to skip anything
     assert level_from_quiz(band(4.0, 5, 5)) is None  # too few to tell
+
+
+def test_easy_comes_from_the_level_or_a_default() -> None:
+    assert easy_above(2.5) == 3.0
+    assert easy_above(None) == 3.5  # no level yet: "accomplish" (3.7) is easy, "lugubrious" not
