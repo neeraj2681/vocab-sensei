@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block content %}
+<p><a href="/classics">All books</a></p>
+<h1>{{ book.title }}</h1>
+{% if book.author %}<p class="muted">by {{ book.author }}</p>{% endif %}
+<ul class="plain">
+{% for c in book.chapters %}<li><a href="/classics/{{ book.slug }}/chapter-{{ c.number }}">Chapter {{ c.number }}{% if c.title %}: {{ c.title }}{% endif %}</a> <span class="muted">· {{ c.word_count }} word{{ "" if c.word_count == 1 else "s" }}</span></li>
+{% endfor %}</ul>
+<a class="button" href="/register">Learn these words with Vocab Sensei</a>
+{% endblock %}

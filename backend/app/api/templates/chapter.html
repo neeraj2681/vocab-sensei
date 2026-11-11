@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+<p><a href="/classics/{{ book.slug }}">{{ book.title }}</a></p>
+<h1>Hard words in {{ book.title }}, chapter {{ chapter.number }}</h1>
+{% if chapter.title %}<p class="muted">{{ chapter.title }}</p>{% endif %}
+<a class="button" href="/register">Learn these words with Vocab Sensei</a>
+{% for word, parts in words %}
+<section class="word">
+<h2>{{ word.lemma }}</h2>
+{% if word.meaning %}<p>{{ word.meaning }}</p>{% endif %}
+{% if parts %}<p class="sentence">{{ parts[0] }}<mark>{{ parts[1] }}</mark>{{ parts[2] }}</p>
+{% elif word.sentence %}<p class="sentence">{{ word.sentence }}</p>{% endif %}
+</section>
+{% endfor %}
+<nav class="pager">
+<span>{% if previous %}<a href="/classics/{{ book.slug }}/chapter-{{ previous }}">&larr; Chapter {{ previous }}</a>{% endif %}</span>
+<span>{% if next %}<a href="/classics/{{ book.slug }}/chapter-{{ next }}">Chapter {{ next }} &rarr;</a>{% endif %}</span>
+</nav>
+<a class="button" href="/register">Learn these words with Vocab Sensei</a>
+{% endblock %}
