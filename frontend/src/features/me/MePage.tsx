@@ -7,12 +7,10 @@ import { LegalLinks } from '../legal/LegalPages'
 import { ProfileView } from '../profile/ProfileView'
 import { RecapsPanel } from '../recaps/RecapsPanel'
 import { useProfile } from '../profile/useProfile'
-import { BackupPanel } from '../progress/BackupPanel'
-import { DeleteAccountPanel } from '../progress/DeleteAccountPanel'
 import { usePageTitle } from '../../components/usePageTitle'
 
 /** Your profile (as others see it on the leaderboard, plus your email), then your account:
-settings, backup, deleting it, and logging out. */
+settings and logging out. */
 export function MePage() {
   usePageTitle('Me')
   const { user, logout } = useAuth()
@@ -59,8 +57,6 @@ export function MePage() {
           <strong>Settings</strong>
         </Link>
       </nav>
-      <BackupPanel />
-      <DeleteAccountPanel />
 
       <button
         type="button"

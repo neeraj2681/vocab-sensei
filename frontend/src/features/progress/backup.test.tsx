@@ -18,6 +18,15 @@ const SUMMARY: RestoreSummary = {
 function progressPage(extra: Routes = {}) {
   return fakeApi({
     'GET /api/auth/me': () => json(USER),
+    'GET /api/reminders': () =>
+      json({
+        enabled: false,
+        time: '20:00',
+        timezone: 'UTC',
+        push: true,
+        email: false,
+        devices: 0,
+      }),
     'GET /api/quiz/stats?tz=UTC': () => json({ total: 0, today: 0, daily_goal: 10, streak: 0 }),
     'GET /api/quiz/history': () => json([]),
     'GET /api/profiles/1?tz=UTC': () =>
@@ -47,7 +56,7 @@ describe('backup', () => {
   it('offers the backup as a download', async () => {
     progressPage()
 
-    renderApp('/me')
+    renderApp('/settings')
 
     const link = await screen.findByRole('link', { name: 'Download a backup' })
     expect(link).toHaveAttribute('href', '/api/backup')
@@ -56,7 +65,7 @@ describe('backup', () => {
 
   it('restores a backup file and says what came back', async () => {
     const api = progressPage({ 'POST /api/backup': () => json(SUMMARY) })
-    const user = renderApp('/me')
+    const user = renderApp('/settings')
 
     await user.upload(
       await screen.findByLabelText('Restore from a backup'),
@@ -73,7 +82,7 @@ describe('backup', () => {
     progressPage({
       'POST /api/backup': () => json({ ...SUMMARY, readings_added: 0, books_missing: ['Emma'] }),
     })
-    const user = renderApp('/me')
+    const user = renderApp('/settings')
 
     await user.upload(
       await screen.findByLabelText('Restore from a backup'),
@@ -87,7 +96,7 @@ describe('backup', () => {
 
   it('rejects files that are not JSON', async () => {
     const api = progressPage()
-    const user = renderApp('/me')
+    const user = renderApp('/settings')
 
     await user.upload(await screen.findByLabelText('Restore from a backup'), file('not json'))
 
@@ -97,7 +106,7 @@ describe('backup', () => {
 
   it('shows why the server refused a backup', async () => {
     progressPage({ 'POST /api/backup': () => fail(422, 'This backup is version 2; expected 1') })
-    const user = renderApp('/me')
+    const user = renderApp('/settings')
 
     await user.upload(
       await screen.findByLabelText('Restore from a backup'),
