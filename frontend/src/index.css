@@ -3878,3 +3878,25 @@ a.book-card__cover:hover {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* Project Gutenberg search under the Classics shelf. */
+.gutenberg-results {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.gutenberg-results__item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.gutenberg-results__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
