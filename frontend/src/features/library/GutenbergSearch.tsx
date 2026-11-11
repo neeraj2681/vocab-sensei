@@ -18,7 +18,8 @@ export function GutenbergSearch({ onAdded }: Props) {
   const [outcome, setOutcome] = useState<{
     term: string
     results: GutenbergBook[]
-    notice: string | null // muted: the catalogue is not ready, or the search failed
+    notice: string | null // the catalogue is being prepared (muted), or what went wrong
+    failed: boolean // an unexpected error: shown as an error, not a muted note
   } | null>(null)
   const [added, setAdded] = useState<string | null>(null)
   const { busy, error, run } = useSubmit()
@@ -32,7 +33,7 @@ export function GutenbergSearch({ onAdded }: Props) {
       documentsApi
         .searchGutenberg(term)
         .then((found) => {
-          if (current) setOutcome({ term, results: found, notice: null })
+          if (current) setOutcome({ term, results: found, notice: null, failed: false })
         })
         .catch((err: unknown) => {
           if (!current) return
@@ -41,6 +42,7 @@ export function GutenbergSearch({ onAdded }: Props) {
             results: [],
             notice:
               err instanceof ApiError ? err.message : 'Could not reach the server. Try again.',
+            failed: !(err instanceof ApiError && err.status === 503),
           })
         })
     }, DELAY_MS)
@@ -53,6 +55,7 @@ export function GutenbergSearch({ onAdded }: Props) {
   const shown = term.length >= MIN_QUERY && outcome?.term === term ? outcome : null
   const results = shown?.results ?? []
   const notice = shown?.notice ?? null
+  const failed = shown?.failed ?? false
 
   function add(book: GutenbergBook) {
     setAdded(null)
@@ -75,7 +78,8 @@ export function GutenbergSearch({ onAdded }: Props) {
           setQuery(event.target.value)
         }}
       />
-      {notice && <p className="muted">{notice}</p>}
+      {notice && !failed && <p className="muted">{notice}</p>}
+      {failed && <FormError message={notice} />}
       {results.length > 0 && (
         <ul className="gutenberg-results">
           {results.map((book) => (

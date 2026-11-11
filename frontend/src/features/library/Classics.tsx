@@ -75,7 +75,9 @@ export function Classics({ readings, onChange, onFull }: Props) {
                   </span>
                 )}
               </span>
-              {book.gutenberg && isPending(book) ? null : reading.has(book.id) ? (
+              {book.gutenberg && (isPending(book) || book.status === 'failed') ? null : reading.has(
+                  book.id,
+                ) ? (
                 <span className="muted">Reading</span>
               ) : (
                 <button
