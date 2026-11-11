@@ -731,7 +731,6 @@ function SessionSummary({
       <Burst />
       <Icon name="trophy" size={112} />
       <h1>Session complete!</h1>
-      <DailyLine stats={stats} />
       <p className="muted">
         {milestone
           ? `${String(stats.streak)}-day streak! Keep it burning.`
