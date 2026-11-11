@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { Suspense, lazy, useEffect, useState } from 'react'
 import { Link, Navigate } from 'react-router'
 import { quizApi, type Day, type QuizStats } from '../../api/quiz'
 import { readingsApi, type Reading } from '../../api/readings'
@@ -10,8 +10,10 @@ import { BookCover } from '../library/BookCover'
 import { chapterLabel } from '../library/labels'
 import { QuestsPanel } from './QuestsPanel'
 import { RecapToday } from './RecapToday'
-import { WeekChart } from './WeekChart'
 import { usePageTitle } from '../../components/usePageTitle'
+
+// The chart library loads when this chart first renders.
+const WeekChart = lazy(() => import('./WeekChart').then((m) => ({ default: m.WeekChart })))
 
 const SECONDS_PER_ANSWER = 15 // measured from real sessions
 const DAY_NAMES = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
@@ -95,7 +97,11 @@ export function TodayPage() {
             setToday((t) => t && { ...t, stats: { ...t.stats, total } })
           }}
         />
-        {stats.week && <WeekChart days={stats.week} />}
+        {stats.week && (
+          <Suspense fallback={null}>
+            <WeekChart days={stats.week} />
+          </Suspense>
+        )}
       </div>
       <div className="today__side">
         {stats.week && (

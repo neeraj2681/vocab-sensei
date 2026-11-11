@@ -88,7 +88,7 @@ describe('Me page', () => {
 
     expect(toggle).toHaveAttribute('aria-expanded', 'true')
     expect(
-      screen.getByRole('img', { name: 'Score after each of your 4 answers' }),
+      await screen.findByRole('img', { name: 'Score after each of your 4 answers' }),
     ).toBeInTheDocument()
   })
 

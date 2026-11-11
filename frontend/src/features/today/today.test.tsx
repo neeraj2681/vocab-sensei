@@ -148,7 +148,7 @@ describe('this week', () => {
     renderApp('/')
 
     expect(await screen.findByRole('heading', { name: 'Score this week' })).toBeInTheDocument()
-    expect(screen.getByText('+80 points · best: Thursday +40')).toBeInTheDocument()
+    expect(await screen.findByText('+80 points · best: Thursday +40')).toBeInTheDocument()
     const table = screen.getByRole('table', { name: 'Points per day' })
     expect(within(table).getByRole('row', { name: 'Wednesday -10' })).toBeInTheDocument()
     expect(within(table).getByRole('row', { name: 'Today +10' })).toBeInTheDocument()

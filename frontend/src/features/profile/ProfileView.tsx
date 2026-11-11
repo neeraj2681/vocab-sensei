@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { Suspense, lazy, useState } from 'react'
 import { Link } from 'react-router'
 import { goodreadsUrl, leaderboardApi, type Profile } from '../../api/leaderboard'
 import { Avatar } from '../../components/Avatar'
@@ -6,8 +6,12 @@ import { PhotoEditor } from '../../components/PhotoEditor'
 import { Icon } from '../../components/Icon'
 import { useAuth } from '../auth/AuthContext'
 import { BookCover } from '../library/BookCover'
-import { ScoreChart } from '../progress/ScoreChart'
-import { WeekChart } from '../today/WeekChart'
+
+// The chart libraries load when a chart first renders.
+const ScoreChart = lazy(() =>
+  import('../progress/ScoreChart').then((m) => ({ default: m.ScoreChart })),
+)
+const WeekChart = lazy(() => import('../today/WeekChart').then((m) => ({ default: m.WeekChart })))
 
 /** A profile as anyone sees it: photo at the top, stats, this week's and all-time scores, and
 the books being read (each opening Goodreads). Never the email or settings. */
@@ -41,7 +45,9 @@ export function ProfileView({ profile }: { profile: Profile }) {
         <Tile label="Right" value={accuracy === null ? '—' : `${String(accuracy)}%`} />
       </dl>
 
-      <WeekChart days={profile.week} />
+      <Suspense fallback={null}>
+        <WeekChart days={profile.week} />
+      </Suspense>
 
       {profile.history.length === 0 ? (
         <p className="muted">
@@ -66,7 +72,11 @@ export function ProfileView({ profile }: { profile: Profile }) {
             📈 Score over time <span className="muted">· every answer since the first</span>
             <span aria-hidden="true">{showGraph ? ' ▴' : ' ▾'}</span>
           </button>
-          {showGraph && <ScoreChart history={profile.history} />}
+          {showGraph && (
+            <Suspense fallback={null}>
+              <ScoreChart history={profile.history} />
+            </Suspense>
+          )}
         </div>
       )}
 

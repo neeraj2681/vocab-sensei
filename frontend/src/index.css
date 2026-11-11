@@ -1280,10 +1280,7 @@ button[type='submit'].danger__confirm {
 }
 
 .tabs__tab .icon {
-  filter: grayscale(0.85) opacity(0.75);
-  transition:
-    filter 0.15s,
-    transform 0.15s;
+  transition: transform 0.15s;
 }
 
 .tabs__tab.active {
@@ -3232,7 +3229,7 @@ a.secondary {
     gap: 0.1rem;
     min-width: 0;
     padding: 0.3rem 0;
-    font-size: 0.68rem;
+    font-size: 0.75rem;
     letter-spacing: -0.01em;
     white-space: nowrap;
   }
@@ -3950,4 +3947,20 @@ a.book-card__cover:hover {
   display: flex;
   flex-direction: column;
   min-width: 0;
+}
+
+.skip-link {
+  position: absolute;
+  top: -100px;
+  left: 0;
+  z-index: 100;
+}
+
+.skip-link:focus {
+  top: 0.5rem;
+  left: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--fg);
 }
