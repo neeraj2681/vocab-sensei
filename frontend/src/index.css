@@ -132,7 +132,6 @@ select,
 label,
 legend,
 summary,
-.scorebar,
 .tile dt,
 .muted,
 .option__key {
@@ -651,17 +650,6 @@ input[type='file'] {
   max-width: 40rem;
 }
 
-.scorebar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 1.25rem;
-  padding: 0.75rem 1rem;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  margin-bottom: 1.5rem;
-}
-
 .scorebar__score {
   position: relative;
   display: flex;
@@ -750,25 +738,6 @@ input[type='file'] {
   .scorebar__total--down {
     animation: none;
   }
-}
-
-.sparkline polyline {
-  stroke: var(--muted);
-}
-
-.sparkline--up polyline {
-  stroke: var(--ok);
-}
-
-.sparkline--down polyline {
-  stroke: var(--bad);
-}
-
-.scorebar__daily {
-  display: flex;
-  gap: 1rem;
-  margin-left: auto;
-  color: var(--muted);
 }
 
 .scorebar__goal--met {
@@ -2108,12 +2077,44 @@ button.raised:disabled {
 
 /* Sessions */
 
-.session-bar {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
+.quiz-header {
+  display: flex;
+  flex-wrap: wrap; /* only when the Shop's 2x pill is showing */
   align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 0.75rem;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.quiz-header .session-bar__progress {
+  flex: 1;
+  min-width: 2rem;
+}
+
+.quiz-header .scorebar__total {
+  font-size: var(--text-l);
+}
+
+.quiz-header .pop {
+  right: 0;
+  font-size: var(--text-m);
+}
+
+.daily-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  margin: var(--space-3) 0 0;
+  color: var(--muted);
+  font-family: var(--sans);
+  font-size: var(--text-s);
+}
+
+.today__goal {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
 }
 
 .session-bar__quit {
@@ -3320,19 +3321,8 @@ a.secondary {
     min-width: 14rem;
   }
 
-  .scorebar {
-    gap: 0.5rem 1rem;
-    padding: 0.5rem 0.75rem;
-  }
-
   .scorebar__total {
     font-size: 1.6rem;
-  }
-
-  .scorebar__daily {
-    margin-left: 0;
-    width: 100%;
-    justify-content: space-between;
   }
 
   .quiz__word {
@@ -3377,10 +3367,9 @@ a.secondary {
 }
 
 .focus-banner {
-  padding: 0.5rem 0.75rem;
-  border-left: 3px solid var(--accent);
-  background: color-mix(in srgb, var(--accent) 8%, transparent);
-  border-radius: 6px;
+  margin: 0 0 var(--space-3);
+  color: var(--muted);
+  font-size: var(--text-s);
 }
 
 /* Settings */

@@ -67,8 +67,11 @@ describe('quiz', () => {
 
     expect(await screen.findByRole('heading', { name: 'drizzly' })).toBeInTheDocument()
     expect(await screen.findByTestId('score')).toHaveTextContent('120')
-    expect(screen.getByText('4-day streak')).toBeInTheDocument()
-    expect(screen.getByText('Today 3/10')).toBeInTheDocument()
+    // One header row: end session, progress and coins; goal and streak wait for the feedback card.
+    expect(screen.getByRole('button', { name: 'End session' })).toBeInTheDocument()
+    expect(screen.getByRole('progressbar', { name: 'Session progress' })).toBeInTheDocument()
+    expect(screen.queryByText('4-day streak')).not.toBeInTheDocument()
+    expect(screen.queryByText('Today 3/10')).not.toBeInTheDocument()
     expect(
       screen.getAllByRole('button', { name: /wet with light rain|mournful|bag|optimistic/ }),
     ).toHaveLength(4)
@@ -200,20 +203,19 @@ describe('quiz', () => {
     expect(await screen.findByRole('heading', { name: 'word11' })).toBeInTheDocument()
   })
 
-  it('the sparkline appears once there are answers to draw', async () => {
+  it('shows today and the streak in the feedback card after answering, and no sparkline', async () => {
     quiz({
       'GET /api/quiz/question?include_next=true': questions(question(1, 'drizzly')),
       [ANSWER_URL(1)]: () => json(result({})),
     })
     const user = renderApp('/quiz')
     await screen.findByRole('heading', { name: 'drizzly' })
-    expect(screen.queryByRole('img', { name: /last/ })).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: /wet with light rain/ }))
 
-    expect(
-      await screen.findByRole('img', { name: 'Score over your last 1 answers' }),
-    ).toBeInTheDocument()
+    expect(await screen.findByText('Today 4/10')).toBeInTheDocument()
+    expect(screen.getByText('4-day streak')).toBeInTheDocument()
+    expect(screen.queryByRole('img', { name: /last/ })).not.toBeInTheDocument()
   })
 
   it('says when an early repeat did not score', async () => {
@@ -539,6 +541,7 @@ describe('sessions', () => {
 
     expect(await screen.findByRole('heading', { name: 'Session complete!' })).toBeInTheDocument()
     expect(screen.getByText('Daily goal reached. Your streak is 4 days.')).toBeInTheDocument()
+    expect(screen.queryByText('Today 13/10 ✓')).not.toBeInTheDocument() // the summary's own streak tile says it
     expect(screen.getByText('+75')).toBeInTheDocument() // answers 6-10 in Ninja Mode: 5×5 + 5×10
     expect(screen.getByText('100%')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Done for today' })).toBeInTheDocument()
