@@ -36,7 +36,13 @@ export default defineConfig({
   ],
   server: {
     // Forward API calls to the FastAPI dev server, so the app always calls relative /api URLs.
-    proxy: { '/api': 'http://localhost:8000' },
+    // The API, and the server-rendered public pages (classics word lists, sitemap, robots.txt).
+    proxy: {
+      '/api': 'http://localhost:8000',
+      '/classics': 'http://localhost:8000',
+      '/sitemap.xml': 'http://localhost:8000',
+      '/robots.txt': 'http://localhost:8000',
+    },
   },
   test: {
     environment: 'jsdom',

@@ -12,10 +12,10 @@ const home = {
 }
 
 describe('login', () => {
-  it('sends logged-out visitors to the login page', async () => {
+  it('sends logged-out visitors from a private page to the login page', async () => {
     fakeApi(loggedOut)
 
-    renderApp('/')
+    renderApp('/books')
 
     expect(await screen.findByRole('heading', { name: 'Log in' })).toBeInTheDocument()
   })
@@ -36,7 +36,7 @@ describe('login', () => {
 
   it('logs in and shows the home page', async () => {
     const api = fakeApi({ ...loggedOut, ...home, 'POST /api/auth/login': () => json(USER) })
-    const user = renderApp('/')
+    const user = renderApp('/login')
 
     await user.type(await screen.findByLabelText('Email'), 'reader@example.com')
     await user.type(screen.getByLabelText('Password'), 'correct horse battery')
