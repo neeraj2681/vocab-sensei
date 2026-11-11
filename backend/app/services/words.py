@@ -1,10 +1,13 @@
 """Stores a book's words: one shared `words` row per lemma, plus where each book uses it."""
 
+from collections.abc import Callable
+
 from sqlalchemy.orm import Session
 
 from app.core.enums import PartOfSpeech
 from app.db.models import ChapterWord, Definition, Document, DocumentWord, Word
-from app.dictionary.types import Dictionary
+from app.dictionary.senses import best_sense
+from app.dictionary.types import Dictionary, Sense
 from app.extraction.words import Appearance, ExtractedWord
 from app.repositories.words import WordRepository
 
@@ -20,7 +23,15 @@ class WordService:
 
         Words the dictionary doesn't know are left out: without a definition they can't be quizzed,
         and they're mostly names, archaic spellings and leftovers of bad lemmatisation.
+        Each lemma is looked up in the dictionary at most once per call.
         """
+        senses_of: dict[str, list[Sense]] = {}
+
+        def senses(lemma: str) -> list[Sense]:
+            if lemma not in senses_of:
+                senses_of[lemma] = dictionary.senses(lemma)
+            return senses_of[lemma]
+
         known = self._words.get_by_lemmas([w.lemma for w in extracted])
         new: list[Word] = []
         for item in extracted:
@@ -29,7 +40,7 @@ class WordService:
                 word = known[item.lemma] = Word(lemma=item.lemma, zipf_frequency=item.zipf)
                 new.append(word)
             if not word.definitions:  # a new word, or one stored before it could be looked up
-                word.definitions = _definitions(word.lemma, dictionary)
+                word.definitions = _definitions(senses(word.lemma), dictionary.source)
         self._words.add_all(w for w in new if w.definitions)
         defined = [item for item in extracted if known[item.lemma].definitions]
 
@@ -46,11 +57,12 @@ class WordService:
                     context_sentence=w.context_sentence,
                     context_form=w.context_form,
                     pos=w.pos,
+                    meaning_rank=_meaning_rank(w.lemma, w.pos, w.context_sentence, senses(w.lemma)),
                 )
                 for w in defined
             ),
         )
-        self.save_chapter_words(document, [(known[w.lemma].id, w) for w in defined])
+        self.save_chapter_words(document, [(known[w.lemma].id, w) for w in defined], senses)
 
     def reindex_chapters(self, document: Document, extracted: list[ExtractedWord]) -> None:
         """Records every chapter the book's existing words appear in; adds no new words."""
@@ -58,9 +70,16 @@ class WordService:
         self.save_chapter_words(document, [(ids[w.lemma], w) for w in extracted if w.lemma in ids])
 
     def save_chapter_words(
-        self, document: Document, words: list[tuple[int, ExtractedWord]]
+        self,
+        document: Document,
+        words: list[tuple[int, ExtractedWord]],
+        senses: Callable[[str], list[Sense]] | None = None,
     ) -> None:
-        """Replaces where each (word id, extracted word) appears chapter by chapter."""
+        """Replaces where each (word id, extracted word) appears chapter by chapter.
+
+        With `senses` (the dictionary's senses for a lemma), each appearance also records the
+        meaning its sentence uses; without it, no meaning is recorded.
+        """
         chapter_ids = {chapter.index: chapter.id for chapter in document.chapters}
 
         def row(word_id: int, item: ExtractedWord, appearance: Appearance) -> ChapterWord:
@@ -72,6 +91,13 @@ class WordService:
                 context_sentence=appearance.context_sentence,
                 context_form=appearance.context_form,
                 pos=item.pos,
+                meaning_rank=(
+                    None
+                    if senses is None
+                    else _meaning_rank(
+                        item.lemma, item.pos, appearance.context_sentence, senses(item.lemma)
+                    )
+                ),
             )
 
         self._words.replace_chapter_words(
@@ -81,32 +107,51 @@ class WordService:
 
     def words_for_document(
         self, document: Document, chapter_index: int | None = None
-    ) -> list[tuple[DocumentWord, Word, int, str | None]]:
-        """(book row, word, chapter index, sentence) in reading order.
+    ) -> list[tuple[DocumentWord, Word, int, str | None, int | None]]:
+        """(book row, word, chapter index, sentence, meaning rank) in reading order.
 
         For one chapter: every word it uses, even ones first seen earlier, with this chapter's
-        sentence. For the whole book: each word once, where it first appears.
+        sentence and the meaning rank of that sentence (from the chapter's row). For the whole
+        book: each word once, where it first appears, with that sentence and its meaning rank.
         """
         if chapter_index is None:
             return [
-                (dw, w, chapter.index, dw.context_sentence)
+                (dw, w, chapter.index, dw.context_sentence, dw.meaning_rank)
                 for dw, w, chapter in self._words.document_words(document.id)
             ]
         return [
-            (dw, w, chapter_index, cw.context_sentence)
+            (dw, w, chapter_index, cw.context_sentence, cw.meaning_rank)
             for dw, cw, w in self._words.chapter_words(document.id, chapter_index)
         ]
 
 
-def definitions_in_context(word: Word, pos: PartOfSpeech | None) -> list[Definition]:
-    """The word's definitions, those for the part of speech the book uses first."""
-    return sorted(word.definitions, key=lambda d: (d.pos != pos, d.sense_rank))
+def definitions_in_context(
+    word: Word, pos: PartOfSpeech | None, meaning_rank: int | None = None
+) -> list[Definition]:
+    """The word's definitions: the meaning the sentence uses first (`meaning_rank`, if known),
+    then those for the part of speech the book uses."""
+    return sorted(
+        word.definitions,
+        key=lambda d: (d.sense_rank != meaning_rank, d.pos != pos, d.sense_rank),
+    )
 
 
-def _definitions(lemma: str, dictionary: Dictionary) -> list[Definition]:
+def _meaning_rank(
+    lemma: str, pos: PartOfSpeech | None, sentence: str | None, senses: list[Sense]
+) -> int | None:
+    """The sense_rank best_sense picks for this sentence, if it isn't the first for `pos`."""
+    if pos is None or not sentence:
+        return None
+    same_pos = [s for s in senses if s.pos == pos.value]
+    if not same_pos:
+        return None
+    chosen = best_sense(sentence, lemma, same_pos)
+    return chosen if chosen != same_pos[0].rank else None
+
+
+def _definitions(senses: list[Sense], source: str) -> list[Definition]:
     return [
-        Definition(pos=s.pos, text=s.definition, source=dictionary.source, sense_rank=s.rank)
-        for s in dictionary.senses(lemma)
+        Definition(pos=s.pos, text=s.definition, source=source, sense_rank=s.rank) for s in senses
     ]
 
 

@@ -128,6 +128,9 @@ class DocumentWord(Base):
     context_sentence: Mapped[str | None] = mapped_column(Text)
     context_form: Mapped[str | None] = mapped_column(String(100))  # the word as written there
     pos: Mapped[PartOfSpeech | None] = mapped_column(str_enum(PartOfSpeech))  # most common use
+    # The sense_rank of the meaning this sentence uses, when best_sense picked one other than the
+    # first for the part of speech; None: no clear winner, so the usual order applies.
+    meaning_rank: Mapped[int | None]
 
 
 class ChapterWord(Base):
@@ -152,3 +155,6 @@ class ChapterWord(Base):
     context_sentence: Mapped[str | None] = mapped_column(Text)
     context_form: Mapped[str | None] = mapped_column(String(100))  # the word as written there
     pos: Mapped[PartOfSpeech | None] = mapped_column(str_enum(PartOfSpeech))  # the book's, as above
+    # The sense_rank of the meaning this sentence uses, when best_sense picked one other than the
+    # first for the part of speech; None: no clear winner, so the usual order applies.
+    meaning_rank: Mapped[int | None]

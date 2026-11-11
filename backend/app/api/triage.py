@@ -65,7 +65,9 @@ def next_to_sort(
     batch = triage.next_batch(user.id, document, reading, limit)
     words = []
     for item in batch.words:
-        meanings = definitions_in_context(item.word, item.occurrence.pos)
+        meanings = definitions_in_context(
+            item.word, item.occurrence.pos, item.occurrence.meaning_rank
+        )
         words.append(
             UnsortedWordResponse(
                 word_id=item.word.id,
