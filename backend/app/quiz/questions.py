@@ -5,6 +5,7 @@ A `QuestionGenerator` turns a target word and a pool of other words into a quest
 - **meaning** (`definition_mcq`): the word; pick its definition from four.
 - **reverse**: a definition; pick the word it belongs to.
 - **fill in the blank**: the book's own sentence with the word blanked out; pick the word.
+- **which meaning**: the book's sentence; pick which of the word's own meanings it uses.
 
 Wrong options come from other words of the same part of speech and similar difficulty (supplied by
 the caller), never from the target's synonyms, so exactly one option is right; among those, options
@@ -38,6 +39,7 @@ class Target:
     synonyms: frozenset[str]  # words that share a meaning with the target; never used as options
     context_sentence: str | None = None
     context_form: str | None = None  # the word as written in the sentence ("regulating")
+    other_meanings: tuple[str, ...] = ()  # the word's other definitions (texts), not `definition`
 
 
 @dataclass(frozen=True)
@@ -170,6 +172,38 @@ class FillInBlankQuestionGenerator:
         )
         kind = QuestionType.FILL_IN_BLANK
         return _draft(kind, prompt, target.lemma, wrong, self.name, target, rng)
+
+
+class WhichMeaningQuestionGenerator:
+    """The book's sentence; pick which of the word's own meanings it uses.
+
+    Wrong options are the word's other meanings only (never another word's), so the question
+    needs a sentence and at least one other meaning.
+    """
+
+    name = "book-meaning"
+
+    def __init__(self, options: int = 4) -> None:
+        self._options = options
+
+    def generate(
+        self, target: Target, candidates: Sequence[Candidate], rng: Random
+    ) -> QuestionDraft:
+        if not target.context_sentence:
+            raise QuestionNotPossibleError(target.lemma)
+        seen = {_normalized(target.definition)}
+        wrong: list[str] = []
+        for meaning in target.other_meanings:
+            if _normalized(meaning) not in seen:
+                seen.add(_normalized(meaning))
+                wrong.append(meaning)
+        if not wrong:
+            raise QuestionNotPossibleError(target.lemma)
+        kind = QuestionType.WHICH_MEANING
+        wrong = wrong[: self._options - 1]
+        return _draft(
+            kind, target.context_sentence, target.definition, wrong, self.name, target, rng
+        )
 
 
 def blank_out(sentence: str | None, form: str | None) -> str | None:

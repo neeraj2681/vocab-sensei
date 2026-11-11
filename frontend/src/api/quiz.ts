@@ -1,13 +1,14 @@
 import { quizSpeaking } from '../components/recorder'
 import { apiGet, apiPost, apiPut } from './client'
 
-export type QuestionType = 'definition_mcq' | 'reverse' | 'fill_in_blank' | 'say_word'
+export type QuestionType =
+  'definition_mcq' | 'reverse' | 'fill_in_blank' | 'which_meaning' | 'say_word'
 
 export interface QuizQuestion {
   id: number
   type: QuestionType
   // The word (definition_mcq), a meaning (reverse) or the book's sentence with a blank
-  // (fill_in_blank). The word itself is only revealed in the answer for the last two.
+  // (fill_in_blank) or the book's sentence (which_meaning). The word itself is only revealed in the answer for the last two.
   prompt: string
   options: string[]
   correct_index: number // sent with the question so right or wrong shows at once

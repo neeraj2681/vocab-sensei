@@ -38,6 +38,7 @@ from app.quiz.questions import (
     QuestionNotPossibleError,
     ReverseQuestionGenerator,
     Target,
+    WhichMeaningQuestionGenerator,
     blank_out,
 )
 from app.quiz.selection import (
@@ -251,6 +252,7 @@ class QuizService:
             QuestionType.DEFINITION_MCQ: DefinitionQuestionGenerator(options),
             QuestionType.REVERSE: ReverseQuestionGenerator(options),
             QuestionType.FILL_IN_BLANK: FillInBlankQuestionGenerator(options),
+            QuestionType.WHICH_MEANING: WhichMeaningQuestionGenerator(options),
         }
         self._repo = QuizRepository(session)
         self._learning = LearningService(session)
@@ -453,6 +455,7 @@ class QuizService:
             synonyms=self._dictionary().synonyms(word.lemma),
             context_sentence=occurrence.context_sentence if occurrence else None,
             context_form=occurrence.context_form if occurrence else None,
+            other_meanings=tuple(d.text for d in definitions[1:]),
         )
         progress = self._repo.user_word(user_id, word_id)
         kind = choose_question_type(
@@ -461,6 +464,12 @@ class QuizService:
             self._rng,
             reverse_from=self._quiz.reverse_from_score,
             fill_from=self._quiz.fill_from_score,
+            can_ask_meaning=(
+                occurrence is not None
+                and occurrence.meaning_rank is not None
+                and len(definitions) >= 2
+            ),
+            meaning_from=self._quiz.meaning_from_score,
         )
         score = progress.score if progress else 0
         speech = self._settings.speech
