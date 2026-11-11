@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Hard words in classic books</h1>
+<p>The hardest words of each chapter, with meanings and the sentence from the book.</p>
+<ul class="plain">
+{% for b in books %}<li><a href="/books/{{ b.slug }}">{{ b.title }}</a>{% if b.author %} <span class="muted">by {{ b.author }}</span>{% endif %}</li>
+{% else %}<li>No books yet.</li>
+{% endfor %}</ul>
+{% endblock %}

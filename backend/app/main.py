@@ -16,6 +16,7 @@ from app.api import (
     learning,
     placement,
     pronunciation,
+    public_pages,
     quests,
     quiz,
     readings,
@@ -80,6 +81,7 @@ def create_app() -> FastAPI:
     app.include_router(backup.router, prefix="/api")
     app.include_router(reminders.router, prefix="/api")
     app.include_router(placement.router, prefix="/api")
+    app.include_router(public_pages.router)  # server-rendered pages, no /api prefix
     return app
 
 
