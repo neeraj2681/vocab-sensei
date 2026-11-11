@@ -7,6 +7,7 @@ import {
   precacheAndRoute,
 } from 'workbox-precaching'
 import { NavigationRoute, registerRoute } from 'workbox-routing'
+import { SERVER_PAGES } from './serverPages'
 
 declare const self: ServiceWorkerGlobalScope
 
@@ -16,7 +17,9 @@ cleanupOutdatedCaches()
 precacheAndRoute(self.__WB_MANIFEST)
 // Pages like /quiz load the app; /api is never cached, so scores and questions are always live.
 registerRoute(
-  new NavigationRoute(createHandlerBoundToURL('index.html'), { denylist: [/^\/api\//] }),
+  // Pages the server renders itself must reach the network: answering them with the app would
+  // show the app instead (see serverPages.ts).
+  new NavigationRoute(createHandlerBoundToURL('index.html'), { denylist: SERVER_PAGES }),
 )
 
 interface ReminderPayload {
