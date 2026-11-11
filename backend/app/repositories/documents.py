@@ -1,10 +1,10 @@
-from collections.abc import Sequence
+from collections.abc import Collection, Sequence
 
 from sqlalchemy import ColumnElement, func, or_, select
 from sqlalchemy.orm import Session
 
 from app.core.enums import DocumentStatus
-from app.db.models import Document, DocumentWord
+from app.db.models import Document, DocumentWord, ShelfBook
 
 
 class DocumentRepository:
@@ -25,10 +25,24 @@ class DocumentRepository:
             return document
         return None
 
-    def list_classics(self) -> list[Document]:
+    def list_classics(self, gutenberg_ids: Collection[int]) -> list[Document]:
+        """The built-in classics: ownerless books with one of these Gutenberg numbers."""
         return list(
             self._session.scalars(
-                select(Document).where(Document.owner_user_id.is_(None)).order_by(Document.id)
+                select(Document)
+                .where(Document.owner_user_id.is_(None), Document.gutenberg_id.in_(gutenberg_ids))
+                .order_by(Document.id)
+            )
+        )
+
+    def list_shelf(self, user_id: int) -> list[Document]:
+        """The Gutenberg books a user added, newest first."""
+        return list(
+            self._session.scalars(
+                select(Document)
+                .join(ShelfBook, ShelfBook.document_id == Document.id)
+                .where(ShelfBook.user_id == user_id)
+                .order_by(ShelfBook.added_at.desc(), Document.id.desc())
             )
         )
 

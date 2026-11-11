@@ -9,6 +9,7 @@ from app.dictionary.types import Dictionary
 from app.dictionary.wordnet import WordNetDictionary
 from app.jobs.celery_app import celery_app
 from app.services.documents import DocumentService
+from app.services.gutenberg import fetch_and_process
 
 
 @lru_cache
@@ -27,3 +28,10 @@ def process_document(document_id: int) -> None:
     """Extracts a book's words (see DocumentService.process); failures are stored on it."""
     with SessionLocal() as session:
         DocumentService(session, get_settings(), _dictionary).process(document_id)
+
+
+@celery_app.task(name="documents.fetch_gutenberg")  # type: ignore[untyped-decorator]
+def fetch_gutenberg_book(document_id: int) -> None:
+    """Downloads a Project Gutenberg book if needed, then processes it like an upload."""
+    with SessionLocal() as session:
+        fetch_and_process(session, get_settings(), _dictionary, document_id)

@@ -28,6 +28,7 @@ def add_classic(
         file_path=f"library/{filename}",
         format=DocumentFormat.EPUB,
         status=DocumentStatus.READY,
+        gutenberg_id=int(filename.removeprefix("gutenberg-").removesuffix(".epub")),
         chapters=[Chapter(index=0, title="Chapter 1")],
     )
     session.add(document)

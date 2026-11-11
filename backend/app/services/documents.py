@@ -23,6 +23,7 @@ from app.extraction.registry import get_parser
 from app.extraction.types import ParsedDocument, ParseError
 from app.extraction.words import WordExtractor
 from app.repositories.documents import DocumentRepository
+from app.services.library import CLASSICS
 from app.services.words import WordService
 
 logger = logging.getLogger(__name__)
@@ -154,7 +155,11 @@ class DocumentService:
         return self._documents.get_owned(document_id, user_id)
 
     def list_classics(self) -> list[Document]:
-        return self._documents.list_classics()
+        """The built-in classics only (not Gutenberg books readers added)."""
+        return self._documents.list_classics({c.gutenberg_id for c in CLASSICS})
+
+    def list_shelf(self, user_id: int) -> list[Document]:
+        return self._documents.list_shelf(user_id)
 
     def word_counts(self, documents: list[Document]) -> dict[int, int]:
         counts = self._documents.word_counts([d.id for d in documents])
