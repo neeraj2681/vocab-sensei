@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-<p><a href="/books/{{ book.slug }}">{{ book.title }}</a></p>
+<p><a href="/classics/{{ book.slug }}">{{ book.title }}</a></p>
 <h1>Hard words in {{ book.title }}, chapter {{ chapter.number }}</h1>
 {% if chapter.title %}<p class="muted">{{ chapter.title }}</p>{% endif %}
 <a class="button" href="/register">Learn these words with Vocab Sensei</a>
@@ -13,8 +13,8 @@
 </section>
 {% endfor %}
 <nav class="pager">
-<span>{% if previous %}<a href="/books/{{ book.slug }}/chapter-{{ previous }}">&larr; Chapter {{ previous }}</a>{% endif %}</span>
-<span>{% if next %}<a href="/books/{{ book.slug }}/chapter-{{ next }}">Chapter {{ next }} &rarr;</a>{% endif %}</span>
+<span>{% if previous %}<a href="/classics/{{ book.slug }}/chapter-{{ previous }}">&larr; Chapter {{ previous }}</a>{% endif %}</span>
+<span>{% if next %}<a href="/classics/{{ book.slug }}/chapter-{{ next }}">Chapter {{ next }} &rarr;</a>{% endif %}</span>
 </nav>
 <a class="button" href="/register">Learn these words with Vocab Sensei</a>
 {% endblock %}

@@ -36,7 +36,7 @@ def _not_found(base: str) -> Response:
         404,
         title="Book not found · Vocab Sensei",
         description="This book or chapter does not exist.",
-        canonical=f"{base}/books",
+        canonical=f"{base}/classics",
     )
 
 
@@ -54,7 +54,7 @@ def _marked(sentence: str | None, form: str | None) -> tuple[str, str, str] | No
     return sentence[:at], sentence[at : at + len(form)], sentence[at + len(form) :]
 
 
-@router.get("/books")
+@router.get("/classics")
 def books_page(service: ServiceDep, settings: SettingsDep) -> Response:
     base = _base(settings)
     return _render(
@@ -62,11 +62,11 @@ def books_page(service: ServiceDep, settings: SettingsDep) -> Response:
         books=service.books(),
         title="Hard words in classic books · Vocab Sensei",
         description="The hardest words of public-domain books, chapter by chapter, with meanings.",
-        canonical=f"{base}/books",
+        canonical=f"{base}/classics",
     )
 
 
-@router.get("/books/{slug}")
+@router.get("/classics/{slug}")
 def book_page(slug: str, service: ServiceDep, settings: SettingsDep) -> Response:
     base = _base(settings)
     book = service.book(slug)
@@ -77,11 +77,11 @@ def book_page(slug: str, service: ServiceDep, settings: SettingsDep) -> Response
         book=book,
         title=f"Hard words in {book.title}, chapter by chapter · Vocab Sensei",
         description=f"The hardest words of every chapter of {book.title}, with meanings.",
-        canonical=f"{base}/books/{book.slug}",
+        canonical=f"{base}/classics/{book.slug}",
     )
 
 
-@router.get("/books/{slug}/chapter-{number}")
+@router.get("/classics/{slug}/chapter-{number}")
 def chapter_page(slug: str, number: int, service: ServiceDep, settings: SettingsDep) -> Response:
     base = _base(settings)
     chapter = service.chapter(slug, number)
@@ -102,20 +102,20 @@ def chapter_page(slug: str, number: int, service: ServiceDep, settings: Settings
             f"The {len(words)} hardest words in chapter {number} of {book.title}, "
             "with meanings and the sentence from the book."
         ),
-        canonical=f"{base}/books/{book.slug}/chapter-{number}",
+        canonical=f"{base}/classics/{book.slug}/chapter-{number}",
     )
 
 
 @router.get("/sitemap.xml")
 def sitemap(service: ServiceDep, settings: SettingsDep) -> Response:
     base = _base(settings)
-    urls = [f"{base}/books"]
+    urls = [f"{base}/classics"]
     for summary in service.books():
         book = service.book(summary.slug)
         if book is None:
             continue
-        urls.append(f"{base}/books/{book.slug}")
-        urls += [f"{base}/books/{book.slug}/chapter-{c.number}" for c in book.chapters]
+        urls.append(f"{base}/classics/{book.slug}")
+        urls += [f"{base}/classics/{book.slug}/chapter-{c.number}" for c in book.chapters]
     xml = _env.get_template("sitemap.xml").render(urls=urls)
     return Response(xml, media_type="application/xml", headers=_CACHE)
 

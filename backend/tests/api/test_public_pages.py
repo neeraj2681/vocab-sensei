@@ -60,9 +60,9 @@ def add_chapter_word(
 def test_books_lists_public_books(client: TestClient, session: Session) -> None:
     add_book(session)
     session.commit()
-    response = client.get("/books")
+    response = client.get("/classics")
     assert response.status_code == 200
-    assert 'href="/books/dracula"' in response.text
+    assert 'href="/classics/dracula"' in response.text
     assert "Cache-Control" in response.headers
     assert response.headers["cache-control"] == "public, max-age=3600"
 
@@ -72,12 +72,12 @@ def test_book_page_lists_chapters_with_word_counts(client: TestClient, session: 
     add_chapter_word(session, document, chapters[0], "aaa", 2.0)
     add_chapter_word(session, document, chapters[0], "bbb", 3.0)
     add_chapter_word(session, document, chapters[1], "ccc", 3.0)
-    text = client.get("/books/dracula").text
+    text = client.get("/classics/dracula").text
     assert "Chapter 1: Jonathan Harker&#39;s Journal" in text
     assert "· 2 words" in text
     assert "Chapter 2: Two" in text
-    assert "· 1 words" in text
-    assert 'href="/books/dracula/chapter-2"' in text
+    assert "· 1 word<" in text
+    assert 'href="/classics/dracula/chapter-2"' in text
 
 
 def test_chapter_page_shows_the_twenty_hardest_words_first(
@@ -87,7 +87,7 @@ def test_chapter_page_shows_the_twenty_hardest_words_first(
     for i in range(25):
         add_chapter_word(session, document, chapters[0], f"w{i:02d}", 5.0 - i * 0.1)
     add_chapter_word(session, document, chapters[0], "unknown", None)
-    text = client.get("/books/dracula/chapter-1").text
+    text = client.get("/classics/dracula/chapter-1").text
     assert text.count('class="word"') == 20
     assert text.index(">w24<") < text.index(">w23<")  # rarest first
     assert ">w04<" not in text  # the 6 most common words are left out
@@ -104,7 +104,7 @@ def test_sentences_are_escaped_and_only_the_form_is_marked(
     add_chapter_word(
         session, document, chapters[0], "gloom", 2.0, "<script>x</script> Gloomy gloomy", "Gloomy"
     )
-    text = client.get("/books/dracula/chapter-1").text
+    text = client.get("/classics/dracula/chapter-1").text
     assert "<script>x" not in text
     assert "&lt;script&gt;x&lt;/script&gt; <mark>Gloomy</mark> gloomy" in text
 
@@ -115,10 +115,10 @@ def test_missing_pages_are_404(client: TestClient, session: Session) -> None:
     add_book(session, slug="private", owner_id=owner.id)
     session.commit()
     for path in (
-        "/books/nope",
-        "/books/dracula/chapter-99",
-        "/books/private",
-        "/books/private/chapter-1",
+        "/classics/nope",
+        "/classics/dracula/chapter-99",
+        "/classics/private",
+        "/classics/private/chapter-1",
     ):
         response = client.get(path)
         assert response.status_code == 404, path
@@ -132,10 +132,10 @@ def test_sitemap_and_robots(client: TestClient, session: Session, settings: Sett
     sitemap = client.get("/sitemap.xml")
     assert sitemap.headers["content-type"].startswith("application/xml")
     for path in (
-        "/books",
-        "/books/dracula",
-        "/books/dracula/chapter-1",
-        "/books/dracula/chapter-2",
+        "/classics",
+        "/classics/dracula",
+        "/classics/dracula/chapter-1",
+        "/classics/dracula/chapter-2",
     ):
         assert f"<loc>{base}{path}</loc>" in sitemap.text
     robots = client.get("/robots.txt")
@@ -148,10 +148,10 @@ def test_chapter_page_metadata(client: TestClient, session: Session, settings: S
     document, chapters = add_book(session)
     add_chapter_word(session, document, chapters[0], "aaa", 2.0)
     base = settings.email.app_base_url.rstrip("/")
-    response = client.get("/books/dracula/chapter-1")
+    response = client.get("/classics/dracula/chapter-1")
     text = response.text
     assert "<title>Hard words in Dracula, chapter 1 · Vocab Sensei</title>" in text
-    assert f'<link rel="canonical" href="{base}/books/dracula/chapter-1">' in text
+    assert f'<link rel="canonical" href="{base}/classics/dracula/chapter-1">' in text
     assert 'href="/register"' in text
     assert 'property="og:title"' in text
     assert response.headers["cache-control"] == "public, max-age=3600"

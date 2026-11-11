@@ -4,6 +4,13 @@
 {$SITE_DOMAIN} {
 	encode zstd gzip
 
+	# Public word-list pages for search engines (server-rendered by the API), and the files
+	# crawlers look for. The app itself never uses these paths.
+	@public path /classics /classics/* /sitemap.xml /robots.txt
+	handle @public {
+		reverse_proxy api:8000
+	}
+
 	handle /api/* {
 		reverse_proxy api:8000 {
 			# Nothing sits in front of Caddy here, so a visitor could send this header to dodge
