@@ -254,6 +254,15 @@ describe('me page', () => {
 
     expect(await screen.findByRole('heading', { name: 'Log in' })).toBeInTheDocument()
   })
+
+  it('no longer has the backup or delete-account controls (they are in Settings)', async () => {
+    account()
+    renderApp('/me')
+
+    await screen.findByRole('link', { name: /Settings/ })
+    expect(screen.queryByRole('link', { name: 'Download a backup' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Delete my account…' })).not.toBeInTheDocument()
+  })
 })
 
 describe('vibration', () => {

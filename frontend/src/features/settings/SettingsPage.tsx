@@ -15,6 +15,8 @@ import {
 import { GoalPanel } from './GoalPanel'
 import { pushSupported, subscribeThisDevice, thisDeviceSubscribed } from './push'
 import { LevelPanel } from '../placement/LevelPanel'
+import { BackupPanel } from '../progress/BackupPanel'
+import { DeleteAccountPanel } from '../progress/DeleteAccountPanel'
 import { usePageTitle } from '../../components/usePageTitle'
 
 export function SettingsPage() {
@@ -100,96 +102,110 @@ export function SettingsPage() {
   return (
     <section className="settings">
       <h1>Settings</h1>
-      <ProfilePanel />
-      <ThemePanel />
-      <SoundPanel />
-      <VibrationPanel />
-      <GoalPanel />
-      <LevelPanel />
-      <section aria-labelledby="reminder-heading" className="panel">
-        <h3 id="reminder-heading">Daily reminder</h3>
-        <p className="muted">
-          A nudge at your chosen time, only on days you haven’t reached your goal yet.
-        </p>
-        <label className="check">
-          <input
-            type="checkbox"
-            checked={settings.enabled}
-            disabled={busy}
-            onChange={(event) => {
-              save({ enabled: event.target.checked })
-            }}
-          />{' '}
-          Remind me every day
-        </label>
-        <div className="field settings__time">
-          <label htmlFor="reminder-time">Time ({timeZone()})</label>
-          <input
-            id="reminder-time"
-            type="time"
-            value={settings.time}
-            disabled={busy || !settings.enabled}
-            onChange={(event) => {
-              if (event.target.value) save({ time: event.target.value })
-            }}
-          />
-        </div>
-        <fieldset className="settings__channel" disabled={busy || !settings.enabled}>
-          <legend>How (one or both)</legend>
-          <label className="check">
-            <input
-              type="checkbox"
-              checked={settings.push}
-              // The last way left can't be unticked: turn the reminder off instead.
-              disabled={settings.push && !settings.email}
-              onChange={(event) => {
-                save({ push: event.target.checked })
-              }}
-            />{' '}
-            Notification
-          </label>
-          <label className="check">
-            <input
-              type="checkbox"
-              checked={settings.email}
-              disabled={settings.email && !settings.push}
-              onChange={(event) => {
-                save({ email: event.target.checked })
-              }}
-            />{' '}
-            Email
-          </label>
-        </fieldset>
-        {settings.push && (
-          <p>
-            {deviceOn ? (
-              <span className="muted">✓ Notifications are on for this device.</span>
-            ) : pushSupported() ? (
-              <button type="button" disabled={busy} onClick={turnOnThisDevice}>
-                Turn on notifications on this device
-              </button>
-            ) : (
-              <span className="muted">
-                This browser can’t show notifications. On iPhone, add the app to the Home Screen
-                first.
-              </span>
-            )}{' '}
-            <span className="muted">
-              ({settings.devices} {settings.devices === 1 ? 'device' : 'devices'})
-            </span>
-          </p>
-        )}
-        {settings.enabled && (
-          <button type="button" className="link-button" disabled={busy} onClick={sendTest}>
-            Send a test reminder
-          </button>
-        )}
-        <FormError message={error} />
-        {notice && <p role="status">{notice}</p>}
+      <section aria-labelledby="settings-appearance" className="settings__group">
+        <h2 id="settings-appearance">Appearance</h2>
+        <ThemePanel />
+        <SoundPanel />
+        <VibrationPanel />
       </section>
-      <NewsletterPanel />
-      <EmailPanel />
-      <PasswordPanel />
+      <section aria-labelledby="settings-learning" className="settings__group">
+        <h2 id="settings-learning">Learning</h2>
+        <GoalPanel />
+        <LevelPanel />
+      </section>
+      <section aria-labelledby="settings-reminders" className="settings__group">
+        <h2 id="settings-reminders">Reminders</h2>
+        <section aria-labelledby="reminder-heading" className="panel">
+          <h3 id="reminder-heading">Daily reminder</h3>
+          <p className="muted">
+            A nudge at your chosen time, only on days you haven’t reached your goal yet.
+          </p>
+          <label className="check">
+            <input
+              type="checkbox"
+              checked={settings.enabled}
+              disabled={busy}
+              onChange={(event) => {
+                save({ enabled: event.target.checked })
+              }}
+            />{' '}
+            Remind me every day
+          </label>
+          <div className="field settings__time">
+            <label htmlFor="reminder-time">Time ({timeZone()})</label>
+            <input
+              id="reminder-time"
+              type="time"
+              value={settings.time}
+              disabled={busy || !settings.enabled}
+              onChange={(event) => {
+                if (event.target.value) save({ time: event.target.value })
+              }}
+            />
+          </div>
+          <fieldset className="settings__channel" disabled={busy || !settings.enabled}>
+            <legend>How (one or both)</legend>
+            <label className="check">
+              <input
+                type="checkbox"
+                checked={settings.push}
+                // The last way left can't be unticked: turn the reminder off instead.
+                disabled={settings.push && !settings.email}
+                onChange={(event) => {
+                  save({ push: event.target.checked })
+                }}
+              />{' '}
+              Notification
+            </label>
+            <label className="check">
+              <input
+                type="checkbox"
+                checked={settings.email}
+                disabled={settings.email && !settings.push}
+                onChange={(event) => {
+                  save({ email: event.target.checked })
+                }}
+              />{' '}
+              Email
+            </label>
+          </fieldset>
+          {settings.push && (
+            <p>
+              {deviceOn ? (
+                <span className="muted">✓ Notifications are on for this device.</span>
+              ) : pushSupported() ? (
+                <button type="button" disabled={busy} onClick={turnOnThisDevice}>
+                  Turn on notifications on this device
+                </button>
+              ) : (
+                <span className="muted">
+                  This browser can’t show notifications. On iPhone, add the app to the Home Screen
+                  first.
+                </span>
+              )}{' '}
+              <span className="muted">
+                ({settings.devices} {settings.devices === 1 ? 'device' : 'devices'})
+              </span>
+            </p>
+          )}
+          {settings.enabled && (
+            <button type="button" className="link-button" disabled={busy} onClick={sendTest}>
+              Send a test reminder
+            </button>
+          )}
+          <FormError message={error} />
+          {notice && <p role="status">{notice}</p>}
+        </section>
+      </section>
+      <section aria-labelledby="settings-account" className="settings__group">
+        <h2 id="settings-account">Account</h2>
+        <ProfilePanel />
+        <NewsletterPanel />
+        <EmailPanel />
+        <PasswordPanel />
+        <BackupPanel />
+        <DeleteAccountPanel />
+      </section>
     </section>
   )
 }

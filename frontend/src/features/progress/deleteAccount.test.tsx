@@ -8,6 +8,15 @@ const USER = { id: 1, email: 'reader@example.com', display_name: 'Reader', email
 function progressPage(extra: Routes = {}) {
   return fakeApi({
     'GET /api/auth/me': () => json(USER),
+    'GET /api/reminders': () =>
+      json({
+        enabled: false,
+        time: '20:00',
+        timezone: 'UTC',
+        push: true,
+        email: false,
+        devices: 0,
+      }),
     'GET /api/quiz/stats?tz=UTC': () => json({ total: 0, today: 0, daily_goal: 10, streak: 0 }),
     'GET /api/quiz/history': () => json([]),
     'GET /api/profiles/1?tz=UTC': () =>
@@ -34,7 +43,7 @@ function progressPage(extra: Routes = {}) {
 describe('deleting the account', () => {
   it('asks for the password, deletes and logs out', async () => {
     const api = progressPage({ 'DELETE /api/auth/me': () => noContent() })
-    const user = renderApp('/me')
+    const user = renderApp('/settings')
 
     await user.click(await screen.findByRole('button', { name: 'Delete my account…' }))
     expect(screen.getByRole('link', { name: 'download a backup' })).toHaveAttribute(
@@ -50,19 +59,19 @@ describe('deleting the account', () => {
 
   it('says so when the password is wrong', async () => {
     progressPage({ 'DELETE /api/auth/me': () => fail(403, 'Wrong password') })
-    const user = renderApp('/me')
+    const user = renderApp('/settings')
 
     await user.click(await screen.findByRole('button', { name: 'Delete my account…' }))
     await user.type(screen.getByLabelText('Your password'), 'nope nope nope')
     await user.click(screen.getByRole('button', { name: 'Delete everything' }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent('That password isn’t right.')
-    expect(screen.getByRole('heading', { name: 'Reader' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Settings' })).toBeInTheDocument() // still signed in
   })
 
   it('can be cancelled', async () => {
     progressPage()
-    const user = renderApp('/me')
+    const user = renderApp('/settings')
 
     await user.click(await screen.findByRole('button', { name: 'Delete my account…' }))
     await user.click(screen.getByRole('button', { name: 'Cancel' }))
