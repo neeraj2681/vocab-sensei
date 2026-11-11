@@ -153,6 +153,7 @@ body {
   border-bottom: 1px solid var(--border);
   margin-bottom: 1.5rem;
   padding-bottom: 0.75rem;
+  position: relative; /* Profile menu */
 }
 
 .app__brand {
@@ -234,7 +235,7 @@ a {
 .magic-book__back {
   position: absolute;
   inset: -0.35rem -0.35rem -0.45rem;
-  border-radius: 12px;
+  border-radius: var(--radius-m);
   background: var(--accent-deep);
   box-shadow: 0 10px 18px rgb(0 0 0 / 18%);
 }
@@ -296,7 +297,7 @@ a {
 .magic-book__title {
   padding: 0.4rem 0.6rem;
   border: 2px solid rgb(255 255 255 / 70%);
-  border-radius: 8px;
+  border-radius: var(--radius-s);
   color: #fff;
   font-family: var(--display);
   font-size: 0.95rem;
@@ -422,7 +423,7 @@ a {
 .intro {
   padding: 1rem 1.25rem;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-m);
   background: var(--surface);
 }
 
@@ -456,7 +457,7 @@ a {
   font: inherit;
   padding: 0.5rem;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius-s);
   background: var(--surface);
   color: var(--fg);
 }
@@ -465,7 +466,7 @@ a {
 button:not([class]):not([type='submit']) {
   padding: 0.35rem 0.85rem;
   border: 2px solid var(--border);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--surface);
   color: var(--fg);
   font-weight: 600;
@@ -490,7 +491,7 @@ button.primary {
   letter-spacing: 0.02em;
   padding: 0.6rem 1.25rem;
   border: 0;
-  border-radius: 14px;
+  border-radius: var(--radius-m);
   background: var(--accent);
   color: var(--on-accent);
   box-shadow: 0 4px 0 var(--accent-deep);
@@ -520,6 +521,7 @@ button.primary:disabled {
   color: var(--accent);
   text-decoration: underline;
   cursor: pointer;
+  font-family: var(--sans); /* links styled as buttons stay in the body font */
 }
 
 .form-error {
@@ -545,6 +547,8 @@ button {
 .readings {
   padding-left: 0;
   list-style-position: inside;
+  max-height: calc(5 * 7.25rem); /* five books, then it scrolls */
+  overflow-y: auto;
 }
 
 .row {
@@ -579,7 +583,7 @@ input[type='file'] {
   margin-right: 0.75rem;
   padding: 0.4rem 0.9rem;
   border: 2px solid var(--accent);
-  border-radius: 12px;
+  border-radius: var(--radius-m);
   background: var(--accent-soft);
   color: var(--accent);
   font: inherit;
@@ -792,7 +796,7 @@ input[type='file'] {
   -webkit-appearance: none;
   appearance: none;
   border: 2px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--radius-m);
   background: var(--surface);
   box-shadow: 0 3px 0 var(--border);
   color: var(--accent);
@@ -851,7 +855,7 @@ input[type='file'] {
   text-align: left;
   padding: 0.85rem 1rem;
   border: 2px solid var(--border);
-  border-radius: 16px;
+  border-radius: var(--radius-l);
   background: var(--surface);
   color: var(--fg);
   box-shadow: 0 3px 0 var(--border);
@@ -909,8 +913,15 @@ input[type='file'] {
   opacity: 0.55;
 }
 
+/* The feedback panel slides up from the bottom and stays in reach of the thumb. */
 .feedback {
+  position: sticky;
+  bottom: env(safe-area-inset-bottom);
+  z-index: 5;
   margin-top: 1rem;
+  padding: 1rem;
+  border-radius: var(--radius-l);
+  animation: rise 0.25s ease-out;
 }
 
 .feedback--right .feedback__verdict {
@@ -933,12 +944,6 @@ input[type='file'] {
   font-style: italic;
 }
 
-/* Profile menu */
-
-.app__header {
-  position: relative;
-}
-
 /* Progress */
 
 .tiles {
@@ -951,7 +956,7 @@ input[type='file'] {
 .tile {
   padding: 0.75rem 1rem;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-m);
 }
 
 .tile dt {
@@ -975,7 +980,7 @@ input[type='file'] {
   text-align: left;
   padding: 0.75rem 1rem;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-m);
   background: var(--surface);
   color: var(--fg);
   cursor: pointer;
@@ -995,7 +1000,7 @@ input[type='file'] {
   gap: 0.15rem;
   padding: 0.5rem 0.75rem;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius-s);
   background: var(--surface);
   color: var(--fg);
   font-size: 0.9em;
@@ -1014,7 +1019,7 @@ input[type='file'] {
   min-width: 0;
   padding: 0.45rem 0.75rem;
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--surface);
   color: var(--fg);
   font: inherit;
@@ -1035,7 +1040,7 @@ input[type='file'] {
   font-weight: 600; /* like the other pill buttons */
   padding: 0.4rem 0.6rem;
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--surface);
   color: var(--fg);
   cursor: pointer;
@@ -1109,7 +1114,7 @@ input[type='file'] {
 .word-row__more {
   margin-left: 0.3em;
   padding: 0 0.35em;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--accent-soft);
   color: var(--accent);
   font-size: 0.85em;
@@ -1164,7 +1169,7 @@ input[type='file'] {
 .sort__card {
   padding: 1rem 1.25rem;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-m);
 }
 
 .sort__choices {
@@ -1180,7 +1185,7 @@ input[type='file'] {
   gap: 0.15rem;
   padding: 0.75rem;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-s);
   background: var(--surface);
   color: var(--fg);
   cursor: pointer;
@@ -1203,7 +1208,7 @@ input[type='file'] {
 .danger {
   padding: 0.75rem 1rem;
   border: 1px solid var(--bad);
-  border-radius: 10px;
+  border-radius: var(--radius-m);
 }
 
 .danger h3 {
@@ -1242,7 +1247,7 @@ button[type='submit'].danger__confirm {
   align-items: center;
   gap: 0.4rem;
   padding: 0.35rem 0.75rem;
-  border-radius: 12px;
+  border-radius: var(--radius-m);
   color: var(--muted);
   font-weight: 600;
   text-decoration: none;
@@ -1268,7 +1273,7 @@ button[type='submit'].danger__confirm {
   display: block;
   padding: 1rem;
   border: 1px solid var(--border);
-  border-radius: 20px;
+  border-radius: var(--radius-l);
   background: var(--surface);
   color: inherit;
   text-decoration: none;
@@ -1283,7 +1288,7 @@ button[type='submit'].danger__confirm {
 
 a.primary {
   padding: 0.75rem 1.25rem;
-  border-radius: 14px;
+  border-radius: var(--radius-m);
   background: var(--accent);
   color: var(--on-accent);
   box-shadow: 0 4px 0 var(--accent-deep);
@@ -1304,7 +1309,7 @@ a.primary:active {
   gap: 0.35rem;
   padding: 0.25rem 0.75rem 0.25rem 0.4rem;
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--surface);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
@@ -1314,7 +1319,7 @@ a.primary:active {
   display: block;
   height: 10px;
   margin-top: 0.5rem;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--surface-2);
   overflow: hidden;
 }
@@ -1411,7 +1416,7 @@ a.primary:active {
   gap: 0.75rem;
   padding: 0.55rem 0.7rem;
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: var(--radius-m);
 }
 
 .quest--done {
@@ -1455,9 +1460,9 @@ a.primary:active {
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 0.8rem;
-  border-radius: 14px;
-  background: linear-gradient(#fff4cc, #ffe08a);
-  color: #4a2e00;
+  border-radius: var(--radius-m);
+  background: linear-gradient(var(--gold-soft), var(--gold));
+  color: var(--on-gold);
   font-weight: 700;
   text-decoration: none;
 }
@@ -1470,10 +1475,10 @@ a.primary:active {
   gap: 0.3rem;
   padding: 0.45rem 0.8rem;
   border: 0;
-  border-radius: 12px;
+  border-radius: var(--radius-m);
   background: linear-gradient(#ffd34d, #f5a623);
-  box-shadow: 0 4px 0 #c47f0a;
-  color: #4a2e00;
+  box-shadow: 0 4px 0 var(--gold-deep);
+  color: var(--on-gold);
   font: inherit;
   font-family: var(--display);
   font-weight: 600;
@@ -1483,7 +1488,7 @@ a.primary:active {
 
 .quest__claim:active:not(:disabled) {
   transform: translateY(4px);
-  box-shadow: 0 0 0 #c47f0a;
+  box-shadow: 0 0 0 var(--gold-deep);
 }
 
 @keyframes quest-shine {
@@ -1638,7 +1643,7 @@ a.primary:active {
 .settings__themes button {
   padding: 0.6rem 0.25rem;
   border: 2px solid var(--border);
-  border-radius: 14px;
+  border-radius: var(--radius-m);
   background: var(--surface);
   box-shadow: 0 3px 0 var(--border);
   color: var(--fg);
@@ -1737,7 +1742,7 @@ a.primary:active {
   min-width: 0;
   padding: 0.5rem 0.75rem;
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--surface);
   color: var(--fg);
   font: inherit;
@@ -1786,7 +1791,7 @@ a.primary:active {
   margin-left: auto;
   min-width: 1.5rem;
   padding: 0.1rem 0.45rem;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--bad);
   color: #fff;
   font-weight: 700;
@@ -1819,7 +1824,7 @@ a.primary:active {
 
 .recap__numbers div {
   padding: 0.5rem 0.75rem;
-  border-radius: 12px;
+  border-radius: var(--radius-m);
   background: var(--surface-2);
 }
 
@@ -1976,10 +1981,10 @@ a.primary:active {
   margin-top: 1.25rem;
   padding: 0.7rem 1.6rem;
   border: none;
-  border-radius: 16px;
+  border-radius: var(--radius-l);
   background: linear-gradient(#ef5a50, #d9473f);
   box-shadow:
-    0 5px 0 #a3302a,
+    0 5px 0 var(--bad-deep),
     0 8px 14px rgb(163 48 42 / 30%);
   color: #fff;
   font: inherit;
@@ -1995,7 +2000,7 @@ a.primary:active {
 .logout-button:active {
   transform: translateY(4px);
   box-shadow:
-    0 1px 0 #a3302a,
+    0 1px 0 var(--bad-deep),
     0 2px 6px rgb(163 48 42 / 30%);
 }
 
@@ -2030,7 +2035,7 @@ button.raised {
   font-weight: 600;
   padding: 0.6rem 1.25rem;
   border: 2px solid var(--border);
-  border-radius: 14px;
+  border-radius: var(--radius-m);
   background: var(--surface);
   color: var(--fg);
   box-shadow: 0 4px 0 var(--border);
@@ -2067,7 +2072,7 @@ button.raised:disabled {
 .notice {
   margin-top: 1rem;
   padding: 0.6rem 0.8rem;
-  border-radius: 12px;
+  border-radius: var(--radius-m);
   background: var(--accent-soft);
 }
 
@@ -2124,7 +2129,7 @@ button.raised:disabled {
   height: 2.25rem;
   padding: 0;
   border: 0;
-  border-radius: 12px;
+  border-radius: var(--radius-m);
   background: none;
   color: var(--muted);
   font-size: 1.3rem;
@@ -2153,7 +2158,7 @@ button.raised:disabled {
 }
 
 .ninja-meter__segments > span.ninja-meter__on {
-  background: #50557a;
+  background: var(--ninja);
   box-shadow: none;
   animation: ninja-in 0.25s ease-out;
 }
@@ -2198,7 +2203,7 @@ button.raised:disabled {
   min-height: 3.2rem;
   padding: 0.8rem 1.6rem;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--accent);
   box-shadow: 0 5px 0 var(--accent-deep);
   color: var(--on-accent);
@@ -2215,7 +2220,7 @@ button.raised:disabled {
 
 .voice__mic--on {
   background: var(--bad);
-  box-shadow: 0 5px 0 #a3302a;
+  box-shadow: 0 5px 0 var(--bad-deep);
 }
 
 /* The wave: five bars that follow the voice's loudness */
@@ -2256,7 +2261,7 @@ button.raised:disabled {
   min-width: 0;
   padding: 0.55rem 0.75rem;
   border: 2px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--radius-m);
   background: var(--surface-2);
   color: var(--fg);
   font: inherit;
@@ -2266,7 +2271,7 @@ button.raised:disabled {
 /* Ninja Mode: five right in a row double the coins until a miss */
 .stat-pill--ninja {
   border-color: #3b3f58;
-  background: linear-gradient(135deg, #2d3047, #50557a);
+  background: linear-gradient(135deg, var(--ninja-deep), var(--ninja));
   color: #fff;
   box-shadow: 0 0 0 3px rgb(80 85 122 / 25%);
   animation: ninja-glow 1.6s ease-in-out infinite alternate;
@@ -2288,8 +2293,8 @@ button.raised:disabled {
 
 .ninja-note--start {
   padding: 0.6rem 0.8rem;
-  border-radius: 14px;
-  background: linear-gradient(135deg, #2d3047, #50557a);
+  border-radius: var(--radius-m);
+  background: linear-gradient(135deg, var(--ninja-deep), var(--ninja));
   color: #fff;
   animation: ninja-in 0.35s ease-out;
 }
@@ -2326,7 +2331,7 @@ button.raised:disabled {
   align-items: center;
   gap: 0.4rem;
   padding: 0.5rem 0.75rem;
-  border-radius: 12px;
+  border-radius: var(--radius-m);
   background: var(--surface-2);
   font-weight: 600;
 }
@@ -2344,7 +2349,7 @@ button.raised.ninja-warning__stop {
 
 .session-bar__progress {
   height: 16px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--surface-2);
   overflow: hidden;
 }
@@ -2369,20 +2374,9 @@ button.raised.ninja-warning__stop {
   gap: 0.5rem;
   margin-bottom: 0.75rem;
   padding: 0.6rem 0.9rem;
-  border-radius: 14px;
+  border-radius: var(--radius-m);
   background: var(--bad-soft);
   color: var(--bad);
-}
-
-/* The feedback panel slides up from the bottom and stays in reach of the thumb. */
-.feedback {
-  position: sticky;
-  bottom: env(safe-area-inset-bottom);
-  z-index: 5;
-  margin-top: 1rem;
-  padding: 1rem;
-  border-radius: 20px;
-  animation: rise 0.25s ease-out;
 }
 
 .feedback--right {
@@ -2419,7 +2413,7 @@ button.primary--wrong {
 a.secondary {
   padding: 0.7rem 1.25rem;
   border: 2px solid var(--border);
-  border-radius: 14px;
+  border-radius: var(--radius-m);
   background: var(--surface);
   box-shadow: 0 4px 0 var(--border);
   color: var(--accent);
@@ -2461,7 +2455,7 @@ a.secondary {
 .summary__stats div {
   padding: 0.6rem;
   border: 2px solid var(--border);
-  border-radius: 16px;
+  border-radius: var(--radius-l);
   background: var(--surface);
 }
 
@@ -2625,7 +2619,7 @@ a.secondary {
   margin-top: 0.75rem;
   padding: 0.9rem 1rem 1rem;
   border: 2px solid var(--border);
-  border-radius: 18px;
+  border-radius: var(--radius-l);
   background: var(--surface);
   box-shadow: 0 4px 0 var(--border);
   text-align: center;
@@ -2686,7 +2680,7 @@ a.secondary {
   width: min(26rem, 100%);
   box-sizing: border-box;
   padding: 1.25rem;
-  border-radius: 24px;
+  border-radius: var(--radius-xl);
   background: var(--surface);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
 }
@@ -2721,7 +2715,7 @@ a.secondary {
 .tour-dots li {
   width: 0.5rem;
   height: 0.5rem;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--border);
 }
 
@@ -2761,7 +2755,7 @@ a.secondary {
   align-items: center;
   padding: 0.75rem;
   border: 2px solid var(--border);
-  border-radius: 16px;
+  border-radius: var(--radius-l);
   background: var(--surface);
   box-shadow: 0 3px 0 var(--border);
   color: var(--fg);
@@ -2815,7 +2809,7 @@ a.secondary {
   position: relative;
   height: 20rem;
   overflow: hidden;
-  border-radius: 24px;
+  border-radius: var(--radius-xl);
   background: linear-gradient(var(--sky-top), var(--sky-bottom) 70%);
   box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.05);
 }
@@ -2950,7 +2944,7 @@ a.secondary {
   transform: translateX(-50%) rotate(-4deg);
   padding: 0.15rem 0.55rem;
   border: 2px solid #6b4426;
-  border-radius: 6px;
+  border-radius: var(--radius-s);
   background: #fff3d6;
   color: #6b4426;
   font-family: var(--display);
@@ -3058,9 +3052,9 @@ a.secondary {
   align-items: center;
   gap: 0.3rem;
   padding: 0.1rem 0.5rem;
-  border-radius: 999px;
-  background: linear-gradient(#fff4cc, #ffe08a);
-  color: #4a2e00;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(var(--gold-soft), var(--gold));
+  color: var(--on-gold);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
@@ -3122,7 +3116,7 @@ a.secondary {
     margin: 1.25rem 0;
     padding: 1.25rem 1.5rem;
     border: 1px solid var(--border);
-    border-radius: 18px;
+    border-radius: var(--radius-l);
     background: var(--surface);
   }
 
@@ -3388,7 +3382,7 @@ a.secondary {
   gap: 0.1rem;
   padding: 0.5rem 0.25rem;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-m);
   background: var(--surface);
   color: var(--fg);
   cursor: pointer;
@@ -3438,17 +3432,12 @@ a.secondary {
   color: var(--muted);
 }
 
-/* Links styled as buttons stay in the body font. */
-.link-button {
-  font-family: var(--sans);
-}
-
 /* Small cover thumbnails beside a book in a list */
 .thumb {
   display: block;
   flex: none;
   width: 3.5rem;
-  border-radius: 6px;
+  border-radius: var(--radius-s);
   overflow: hidden;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
@@ -3463,11 +3452,6 @@ a.secondary {
 
 .thumb .cover__author {
   display: none;
-}
-
-.readings {
-  max-height: calc(5 * 7.25rem); /* five books, then it scrolls */
-  overflow-y: auto;
 }
 
 .reading-row {
@@ -3539,7 +3523,7 @@ a.secondary {
 .book-card__cover {
   display: block;
   flex: none; /* a long title never squeezes the cover */
-  border-radius: 8px;
+  border-radius: var(--radius-s);
   box-shadow:
     0 1px 2px rgba(0, 0, 0, 0.12),
     0 6px 16px rgba(0, 0, 0, 0.12);
@@ -3620,7 +3604,7 @@ a.book-card__cover:hover {
 .book-card button {
   padding: 0.35rem 0.8rem;
   border: 2px solid var(--border);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--surface);
   color: var(--fg);
   font-weight: 600;
@@ -3716,7 +3700,7 @@ a.book-card__cover:hover {
 .reading-toggle {
   padding: 0.35rem 0.85rem;
   border: 2px solid var(--border);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--surface);
   color: var(--fg);
   font: inherit;
@@ -3803,7 +3787,7 @@ a.book-card__cover:hover {
 .photo-menu__remove {
   padding: 0.7rem 1rem;
   border: 2px solid var(--border);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--surface);
   color: var(--bad);
   font-weight: 600;
@@ -3949,7 +3933,7 @@ a.book-card__cover:hover {
   top: 0.5rem;
   left: 0.5rem;
   padding: 0.5rem 0.75rem;
-  border-radius: 8px;
+  border-radius: var(--radius-s);
   background: var(--surface);
   color: var(--fg);
 }
