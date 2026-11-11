@@ -123,3 +123,28 @@ backfill data, debugging integration or flaky failures, database session handlin
 About half the tasks suit Haiku (tests, migrations, config, wiring), a third Sonnet (new modules), the rest Opus
 (specs, decisions, reviews: nearly all the judgement). Parallel worktrees are the real speed-up; the manager reviews
 one PR at a time.
+
+## UI review (11 Nov 2026, Fable)
+
+Findings: one consistent token set and a strong quiz screen; but ~80 px of brand header on every phone page,
+six tiny tabs (0.68rem), the week shown twice on Today, three bars above the quiz word, one 3,880-line CSS file
+(28 font sizes, 23 radii, ~35 raw colours), no landing page for visitors, one 747 KB bundle.
+
+**Chosen to build (11 Nov 2026), in this order:**
+1. Design tokens in `:root` (space, radius, text, gold/ninja/bad-deep/cream) — manager, no visual change.
+2. Wave 1: **page headings + titles** (brand header hidden on phones only; each page's heading is its `h1`;
+   `document.title` per route) · **load screens on demand** (`React.lazy` per route, skip link, tab labels
+   ≥ 0.75rem, no grey filter on inactive tab icons).
+3. Wave 2: **one compact quiz header** (close · session progress · Ninja meter · coins; today's goal and streak
+   move to the feedback card and session summary; the sparkline moves to Me) and **one week view on Today** ·
+   **Settings in four headed sections** (Appearance, Learning, Reminders, Account) · **public landing page** for
+   visitors at `/` (a live sample question built from the quiz components, the classics' covers linking to
+   `/classics`, sign up / log in, Open Graph tags).
+4. Wave 3: **cleanup checklist** (mechanical, Haiku): merge duplicate rules (`.feedback`, `.link-button`,
+   `.readings`, `.app__header`, `a.primary`/`button.primary`, `a.secondary`/`button.raised`); raw colours →
+   tokens (illustrations like `.market`/`.stall` keep local values); radii → `--radius-*` (6–8 → s, 10–14 → m,
+   16–20 → l, 24 → xl, 999 → pill); content widths → `--measure-*`; `.panel` always a card; shared
+   `PageTitle`, `EmptyState`, `Toast`, `SegmentedControl` components; split `index.css` by feature.
+
+Not chosen yet: five tabs (Compete tab, Shop in Today), bigger quiz word / two-column options, "I know this"
+in a menu with Undo, streak-at-risk nudge, Words filter chips, shared chapter word-list component.

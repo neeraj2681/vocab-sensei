@@ -25,6 +25,34 @@
   --display: 'Fredoka', ui-rounded, 'Segoe UI', system-ui, sans-serif;
   --sans: 'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --serif: var(--display); /* headings and words; kept as a name for older rules */
+
+  /* Shared design values (Fable UI review, 11 Nov 2026). New rules use these instead of raw
+     numbers and colours; the same in every theme unless a theme overrides one. */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --radius-s: 8px; /* chips, small buttons (was 6-8px) */
+  --radius-m: 12px; /* buttons, options, inputs (was 10-14px) */
+  --radius-l: 16px; /* cards and panels (was 16-20px) */
+  --radius-xl: 24px; /* sheets and dialogs */
+  --radius-pill: 999px;
+  --text-xs: 0.75rem;
+  --text-s: 0.875rem;
+  --text-m: 1rem;
+  --text-l: 1.25rem;
+  --text-xl: 1.5rem;
+  --text-2xl: 2rem;
+  --gold-soft: #fff4cc; /* coins, Shop, rewards */
+  --gold: #ffe08a;
+  --gold-deep: #c47f0a;
+  --on-gold: #4a2e00;
+  --ninja: #50557a; /* Ninja Mode */
+  --ninja-deep: #2d3047;
+  --bad-deep: #a3302a; /* the pressable edge under red buttons */
+  --cream: #fbf6e8;
   color-scheme: light;
   font-family: var(--sans);
   line-height: 1.55;
