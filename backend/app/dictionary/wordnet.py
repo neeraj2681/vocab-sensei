@@ -79,7 +79,14 @@ class WordNetDictionary:
                     continue
                 seen.add(definition)
                 per_pos[pos] = per_pos.get(pos, 0) + 1
-                found.append(Sense(pos=pos.value, definition=definition, rank=len(found)))
+                found.append(
+                    Sense(
+                        pos=pos.value,
+                        definition=definition,
+                        rank=len(found),
+                        examples=tuple(sense.synset().examples()),
+                    )
+                )
         return found
 
     def synonyms(self, lemma: str) -> frozenset[str]:
