@@ -153,6 +153,7 @@ body {
   border-bottom: 1px solid var(--border);
   margin-bottom: 1.5rem;
   padding-bottom: 0.75rem;
+  position: relative; /* Profile menu */
 }
 
 .app__brand {
@@ -520,6 +521,7 @@ button.primary:disabled {
   color: var(--accent);
   text-decoration: underline;
   cursor: pointer;
+  font-family: var(--sans); /* links styled as buttons stay in the body font */
 }
 
 .form-error {
@@ -545,6 +547,8 @@ button {
 .readings {
   padding-left: 0;
   list-style-position: inside;
+  max-height: calc(5 * 7.25rem); /* five books, then it scrolls */
+  overflow-y: auto;
 }
 
 .row {
@@ -909,8 +913,15 @@ input[type='file'] {
   opacity: 0.55;
 }
 
+/* The feedback panel slides up from the bottom and stays in reach of the thumb. */
 .feedback {
+  position: sticky;
+  bottom: env(safe-area-inset-bottom);
+  z-index: 5;
   margin-top: 1rem;
+  padding: 1rem;
+  border-radius: var(--radius-l);
+  animation: rise 0.25s ease-out;
 }
 
 .feedback--right .feedback__verdict {
@@ -931,12 +942,6 @@ input[type='file'] {
   border-left: 3px solid var(--border);
   color: var(--muted);
   font-style: italic;
-}
-
-/* Profile menu */
-
-.app__header {
-  position: relative;
 }
 
 /* Progress */
@@ -2374,17 +2379,6 @@ button.raised.ninja-warning__stop {
   color: var(--bad);
 }
 
-/* The feedback panel slides up from the bottom and stays in reach of the thumb. */
-.feedback {
-  position: sticky;
-  bottom: env(safe-area-inset-bottom);
-  z-index: 5;
-  margin-top: 1rem;
-  padding: 1rem;
-  border-radius: var(--radius-l);
-  animation: rise 0.25s ease-out;
-}
-
 .feedback--right {
   background: var(--accent-soft);
 }
@@ -3438,11 +3432,6 @@ a.secondary {
   color: var(--muted);
 }
 
-/* Links styled as buttons stay in the body font. */
-.link-button {
-  font-family: var(--sans);
-}
-
 /* Small cover thumbnails beside a book in a list */
 .thumb {
   display: block;
@@ -3463,11 +3452,6 @@ a.secondary {
 
 .thumb .cover__author {
   display: none;
-}
-
-.readings {
-  max-height: calc(5 * 7.25rem); /* five books, then it scrolls */
-  overflow-y: auto;
 }
 
 .reading-row {
