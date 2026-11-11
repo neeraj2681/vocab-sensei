@@ -764,6 +764,74 @@ class TestQuestionTypes:
         assert kinds == {"definition_mcq", "reverse", "fill_in_blank"}
 
 
+class TestWhichMeaning:
+    @pytest.fixture
+    def settled(self, user_client: TestClient, session: Session, clock: Clock) -> Document:
+        """Every word has a second meaning and a sentence that picks it; all scored 80."""
+        book = add_book(session, reader(session), LEMMAS)
+        user = reader(session)
+        for word in session.scalars(select(Word)):
+            word.definitions.append(
+                Definition(
+                    pos="noun", text=f"other sense of {word.lemma}", source="test", sense_rank=1
+                )
+            )
+            session.add(UserWord(user_id=user.id, word_id=word.id, score=80, status="learning"))
+        session.commit()
+        return book
+
+    def pick_meaning(self, session: Session, rank: int | None) -> None:
+        for row in (*session.scalars(select(ChapterWord)), *session.scalars(select(DocumentWord))):
+            row.meaning_rank = rank
+        session.commit()
+
+    def test_a_word_whose_sentence_picks_a_meaning_gets_it_with_its_own_meanings(
+        self, user_client: TestClient, session: Session, settled: Document
+    ) -> None:
+        self.pick_meaning(session, 1)
+
+        for _ in range(60):
+            asked = question(user_client)
+            if asked["type"] == "which_meaning":
+                lemma = asked["word"]
+                assert set(asked["options"]) == {f"other sense of {lemma}", f"meaning of {lemma}"}
+                # the sentence picks rank 1, so that meaning is the right one
+                assert asked["options"][asked["correct_index"]] == f"other sense of {lemma}"
+                return
+            answer(user_client, session)
+        pytest.fail("no which_meaning question in 60 tries")
+
+    def test_only_meanings_of_the_same_part_of_speech_are_options(
+        self, user_client: TestClient, session: Session, settled: Document
+    ) -> None:
+        self.pick_meaning(session, 1)
+        for word in session.scalars(select(Word)):
+            word.definitions.append(
+                Definition(
+                    pos="verb", text=f"verb sense of {word.lemma}", source="test", sense_rank=2
+                )
+            )
+        session.commit()
+
+        for _ in range(60):
+            asked = question(user_client)
+            if asked["type"] == "which_meaning":
+                lemma = asked["word"]
+                assert set(asked["options"]) == {f"other sense of {lemma}", f"meaning of {lemma}"}
+                return
+            answer(user_client, session)
+        pytest.fail("no which_meaning question in 60 tries")
+
+    def test_without_a_picked_meaning_it_is_never_asked(
+        self, user_client: TestClient, session: Session, settled: Document
+    ) -> None:
+        self.pick_meaning(session, None)
+
+        kinds = {question_type(user_client, session) for _ in range(len(LEMMAS) - 2)}
+
+        assert "which_meaning" not in kinds
+
+
 def question_type(client: TestClient, session: Session) -> str:
     kind: str = question(client)["type"]
     answer(client, session)

@@ -368,6 +368,36 @@ describe('question types', () => {
   })
 })
 
+describe('which meaning', () => {
+  it("shows the book's sentence with the word marked and the word's own meanings", async () => {
+    quiz({
+      'GET /api/quiz/question?include_next=true': () =>
+        json({
+          id: 1,
+          type: 'which_meaning',
+          prompt: 'They sat on the bank of the river.',
+          options: ['a financial institution', 'the land beside a river'],
+          correct_index: 1,
+          word: 'bank',
+          meaning: 'the land beside a river',
+          context_sentence: 'They sat on the bank of the river.',
+          counted: true,
+          if_right: { points: 5, learned: false },
+          if_wrong: { points: -10, learned: false },
+        }),
+      [ANSWER_URL(1)]: () => json(result({})),
+    })
+    const user = renderApp('/quiz')
+
+    expect(await screen.findByText('Which meaning of “bank” is used here?')).toBeInTheDocument()
+    expect(screen.getByText('bank').tagName).toBe('MARK')
+    expect(screen.getByText('a financial institution')).toBeInTheDocument()
+    await user.keyboard('2')
+
+    expect(await screen.findByRole('status')).toHaveTextContent('Right. bank')
+  })
+})
+
 describe('answer errors', () => {
   it('shows a banner when an answer could not be saved, and saves it again on request', async () => {
     let calls = 0

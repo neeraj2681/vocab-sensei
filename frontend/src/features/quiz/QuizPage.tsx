@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { ApiError } from '../../api/client'
 import { documentsApi, type ChapterReadiness } from '../../api/documents'
@@ -575,13 +575,33 @@ const INSTRUCTIONS: Record<QuizQuestion['type'], string> = {
   definition_mcq: 'What does this word mean?',
   reverse: 'Which word has this meaning?',
   fill_in_blank: 'Which word fills the gap in the book’s sentence?',
+  which_meaning: 'Which meaning is used here?',
   say_word: 'Say this word aloud',
+}
+
+/** The sentence with the word (as the lemma, any case) wrapped in <mark>, if it appears. */
+function markWord(sentence: string, word: string): ReactNode {
+  const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const match = new RegExp(`(?<![\\w-])${escaped}(?![\\w-])`, 'i').exec(sentence)
+  if (!match) return sentence
+  const end = match.index + match[0].length
+  return (
+    <>
+      {sentence.slice(0, match.index)}
+      <mark>{match[0]}</mark>
+      {sentence.slice(end)}
+    </>
+  )
 }
 
 function Prompt({ question }: { question: QuizQuestion }) {
   return (
     <>
-      <p className="muted quiz__prompt">{INSTRUCTIONS[question.type]}</p>
+      <p className="muted quiz__prompt">
+        {question.type === 'which_meaning'
+          ? `Which meaning of “${question.word}” is used here?`
+          : INSTRUCTIONS[question.type]}
+      </p>
       {(question.type === 'definition_mcq' || question.type === 'say_word') && (
         <div className="said-word">
           <h2 className="quiz__word">{question.prompt}</h2>
@@ -591,6 +611,11 @@ function Prompt({ question }: { question: QuizQuestion }) {
       {question.type === 'reverse' && <h2 className="quiz__meaning">{question.prompt}</h2>}
       {question.type === 'fill_in_blank' && (
         <blockquote className="quiz__sentence">{question.prompt}</blockquote>
+      )}
+      {question.type === 'which_meaning' && (
+        <blockquote className="quiz__sentence">
+          {markWord(question.prompt, question.word)}
+        </blockquote>
       )}
     </>
   )

@@ -11,6 +11,7 @@ from app.quiz.questions import (
     QuestionNotPossibleError,
     ReverseQuestionGenerator,
     Target,
+    WhichMeaningQuestionGenerator,
     blank_out,
 )
 
@@ -137,3 +138,47 @@ def test_blank_out_replaces_the_whole_word_only(
 def test_fill_in_the_blank_needs_the_word_in_the_sentence() -> None:
     with pytest.raises(QuestionNotPossibleError):
         FillInBlankQuestionGenerator().generate(TARGET, POOL, Random(1))  # form unknown
+
+
+BANK = Target(
+    lemma="bank",
+    definition="the land beside a river",
+    synonyms=frozenset(),
+    context_sentence="They sat on the bank of the river.",
+    other_meanings=("a financial institution", "a row of switches", "to tilt in turning", "a pile"),
+)
+
+
+def test_which_meaning_offers_only_the_words_own_meanings() -> None:
+    draft = WhichMeaningQuestionGenerator().generate(BANK, POOL, Random(1))
+
+    assert draft.type == QuestionType.WHICH_MEANING
+    assert draft.prompt == "They sat on the bank of the river."
+    assert draft.source_sentence == draft.prompt
+    assert draft.options[draft.correct_index] == "the land beside a river"
+    assert len(draft.options) == 4
+    assert set(draft.options) <= {BANK.definition, *BANK.other_meanings}
+    assert not {c.definition for c in POOL} & set(draft.options)
+
+
+def test_which_meaning_drops_duplicates_of_the_right_answer() -> None:
+    target = Target(
+        lemma="bank",
+        definition="The land beside a river",
+        synonyms=frozenset(),
+        context_sentence="On the bank.",
+        other_meanings=("the land  beside a river", "a financial institution"),
+    )
+
+    draft = WhichMeaningQuestionGenerator().generate(target, [], Random(1))
+
+    assert sorted(draft.options) == ["The land beside a river", "a financial institution"]
+
+
+def test_which_meaning_needs_a_sentence_and_another_meaning() -> None:
+    no_sentence = Target("bank", "x", frozenset(), None, None, ("y",))
+    alone = Target("bank", "x", frozenset(), "A bank.", None, ())
+    same = Target("bank", "x", frozenset(), "A bank.", None, ("X",))
+    for target in (no_sentence, alone, same):
+        with pytest.raises(QuestionNotPossibleError):
+            WhichMeaningQuestionGenerator().generate(target, POOL, Random(1))
