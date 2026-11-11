@@ -164,11 +164,13 @@ body {
   letter-spacing: 0.01em;
 }
 
+h1,
 h2,
 h3 {
   font-weight: 600;
 }
 
+h1,
 h2 {
   font-size: 1.75rem;
   line-height: 1.2;
@@ -1563,6 +1565,7 @@ a.primary:active {
   gap: 1rem;
 }
 
+.today__hero h1,
 .today__hero h2 {
   margin: 0 0 0.25rem;
 }
@@ -1636,6 +1639,7 @@ a.primary:active {
   min-width: 0; /* grid items would otherwise grow to their widest content (e.g. a file picker) */
 }
 
+.me > h1,
 .me > h2,
 .me > p {
   margin: 0;
@@ -1700,6 +1704,7 @@ a.primary:active {
   text-align: center;
 }
 
+.profile-view__head h1,
 .profile-view__head h2,
 .profile-view__head p {
   margin: 0;
@@ -1737,11 +1742,13 @@ a.primary:active {
   gap: 1rem;
 }
 
+.friends h1,
 .friends h2,
 .friends > p {
   margin: 0;
 }
 
+.friends h1,
 .friends h2 {
   display: flex;
   align-items: center;
@@ -1906,6 +1913,7 @@ a.primary:active {
 }
 
 /* Leaderboard */
+.leaderboard h1,
 .leaderboard h2 {
   display: flex;
   align-items: center;
@@ -1987,6 +1995,7 @@ a.primary:active {
   margin-bottom: 1rem;
 }
 
+.me__who h1,
 .me__who h2,
 .me__who p {
   margin: 0;
@@ -2429,6 +2438,7 @@ a.secondary {
   text-align: center;
 }
 
+.summary h1,
 .summary h2,
 .summary p {
   margin: 0;
@@ -2729,6 +2739,7 @@ a.secondary {
   text-align: center;
 }
 
+.tour-step h1,
 .tour-step h2,
 .tour-step p {
   margin: 0;
@@ -2793,6 +2804,7 @@ a.secondary {
   gap: 0.75rem;
 }
 
+.shop__head h1,
 .shop__head h2 {
   margin: 0;
 }
@@ -3823,6 +3835,7 @@ a.book-card__cover:hover {
   max-width: 40rem;
 }
 
+.legal h1,
 .legal h2,
 .legal h3,
 .legal p {
@@ -3860,6 +3873,7 @@ a.book-card__cover:hover {
   max-width: 30rem;
 }
 
+.placement h1,
 .placement h2,
 .placement p {
   margin: 0;
