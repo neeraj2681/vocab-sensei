@@ -4009,6 +4009,7 @@ a.book-card__cover:hover {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-4);
+}
 
 .settings__group {
   margin-top: var(--space-6);
