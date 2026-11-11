@@ -165,3 +165,24 @@ def test_wrong_answers_in_a_row_dont_cycle_the_same_few_words() -> None:
 
     assert retry == []
     assert too_soon == {1, 2, 3, 4, 5, 6, 7}  # so the quiz moves on to other words
+
+
+def test_which_meaning_only_for_clear_meanings_from_30() -> None:
+    def kinds(score: int, can_ask_meaning: bool) -> set[QuestionType]:
+        rng = Random(5)
+        return {
+            choose_question_type(
+                score,
+                False,
+                rng,
+                reverse_from=30,
+                fill_from=70,
+                can_ask_meaning=can_ask_meaning,
+                meaning_from=30,
+            )
+            for _ in range(200)
+        }
+
+    assert QuestionType.WHICH_MEANING not in kinds(29, True)
+    assert QuestionType.WHICH_MEANING in kinds(30, True)
+    assert QuestionType.WHICH_MEANING not in kinds(90, False)  # no clear meaning: never asked

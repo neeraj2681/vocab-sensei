@@ -51,6 +51,8 @@ class QuizSettings(BaseModel):
     # fill-in-the-blank with the book's sentence.
     reverse_from_score: int = Field(default=30, ge=0)
     fill_from_score: int = Field(default=70, ge=0)
+    # "Which meaning is used here?", for words whose sentence clearly picks one of several meanings
+    meaning_from_score: int = Field(default=30, ge=0)
 
 
 class AuthSettings(BaseModel):

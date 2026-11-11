@@ -57,6 +57,8 @@ class QuestionType(StrEnum):
     NUANCE = "nuance"
     REVERSE = "reverse"
     SAY_WORD = "say_word"  # say it aloud; checked by speech recognition (well-known words)
+    # The book's sentence, and the word's own meanings as options: which one is used here?
+    WHICH_MEANING = "which_meaning"
 
 
 class ReminderChannel(StrEnum):
