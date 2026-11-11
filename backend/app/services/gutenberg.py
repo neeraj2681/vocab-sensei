@@ -11,6 +11,7 @@ from collections.abc import Callable
 from datetime import datetime, timedelta
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings
@@ -62,7 +63,9 @@ class GutenbergService:
         self._catalogue = catalogue
         self._clock = clock
 
-    def add_to_shelf(self, user_id: int, gutenberg_id: int) -> tuple[Document, bool]:
+    def add_to_shelf(
+        self, user_id: int, gutenberg_id: int, *, retry: bool = True
+    ) -> tuple[Document, bool]:
         """(the book, True if it is new and must be fetched)."""
         book = self._catalogue.get(gutenberg_id)
         if book is None:
@@ -102,7 +105,13 @@ class GutenbergService:
             uploaded_at=self._clock(),
         )
         self._session.add(document)
-        self._session.flush()
+        try:
+            self._session.flush()
+        except IntegrityError:  # someone added the same book (or slug) a moment ago
+            self._session.rollback()
+            if retry:
+                return self.add_to_shelf(user_id, gutenberg_id, retry=False)
+            raise
         self._shelve(user_id, document)
         self._session.commit()
         return document, True

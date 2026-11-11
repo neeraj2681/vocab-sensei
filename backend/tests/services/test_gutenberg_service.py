@@ -159,3 +159,31 @@ def test_removing_keeps_the_shared_book(service: GutenbergService, session: Sess
 )
 def test_author_formatting(authors: str, expected: str | None) -> None:
     assert format_author(authors) == expected
+
+
+def test_two_readers_adding_the_same_new_book_at_once(
+    service: GutenbergService, session: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    first, second = make_user(session), make_user(session, "second@example.com")
+    book, _ = service.add_to_shelf(first.id, 1342)
+    real_scalars = session.scalars
+    calls = {"n": 0}
+
+    def miss_once(*args: object, **kwargs: object) -> object:
+        # The other request's book isn't visible yet when this one looks for it.
+        calls["n"] += 1
+        if calls["n"] == 1:
+
+            class Nothing:
+                def first(self) -> None:
+                    return None
+
+            return Nothing()
+        return real_scalars(*args, **kwargs)  # type: ignore[call-overload]
+
+    monkeypatch.setattr(session, "scalars", miss_once)
+
+    again, fetch = service.add_to_shelf(second.id, 1342)
+
+    assert (again.id, fetch) == (book.id, False)
+    assert session.get(ShelfBook, (second.id, book.id)) is not None
