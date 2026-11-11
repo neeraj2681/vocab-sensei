@@ -14,6 +14,7 @@ import { BookPage } from '../features/library/BookPage'
 import { LibraryPage } from '../features/library/LibraryPage'
 import { QuizPage } from '../features/quiz/QuizPage'
 import { TodayPage } from '../features/today/TodayPage'
+import { LandingPage } from '../features/landing/LandingPage'
 import { WelcomePage } from '../features/welcome/WelcomePage'
 import { CopyrightPage, PrivacyPage, TermsPage } from '../features/legal/LegalPages'
 import { TabBar } from './TabBar'
@@ -45,6 +46,18 @@ const WordsPage = lazy(() =>
   import('../features/progress/WordsPage').then((m) => ({ default: m.WordsPage })),
 )
 
+/** "/": Today for a logged-in user, the landing page for a visitor. */
+function Home() {
+  const { user, loading } = useAuth()
+  if (loading) return <p role="status">Loading…</p>
+  if (!user) return <LandingPage />
+  return (
+    <RequireAuth>
+      <TodayPage />
+    </RequireAuth>
+  )
+}
+
 function AppRoutes() {
   return (
     <Suspense
@@ -55,14 +68,7 @@ function AppRoutes() {
       }
     >
       <Routes>
-        <Route
-          path="/"
-          element={
-            <RequireAuth>
-              <TodayPage />
-            </RequireAuth>
-          }
-        />
+        <Route path="/" element={<Home />} />
         <Route
           path="/books"
           element={
