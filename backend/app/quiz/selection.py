@@ -75,15 +75,29 @@ def streak(
 
 
 def choose_question_type(
-    score: int, can_fill: bool, rng: Random, *, reverse_from: int, fill_from: int
+    score: int,
+    can_fill: bool,
+    rng: Random,
+    *,
+    reverse_from: int,
+    fill_from: int,
+    can_ask_meaning: bool = False,
+    meaning_from: int = 30,
 ) -> QuestionType:
     """Harder formats as a word gets learned: meaning only at first, then also reverse, then
-    also fill-in-the-blank (only when the book's sentence for the word is known)."""
+    also fill-in-the-blank (only when the book's sentence for the word is known).
+
+    "Which meaning is used here?" joins from `meaning_from`, but only when `can_ask_meaning`: the
+    sentence clearly picks one of the word's several meanings (a stored meaning_rank). A wrong pick
+    would teach a wrong answer, so unsure words never get this question.
+    """
     kinds = [QuestionType.DEFINITION_MCQ]
     if score >= reverse_from:
         kinds.append(QuestionType.REVERSE)
     if score >= fill_from and can_fill:
         kinds.append(QuestionType.FILL_IN_BLANK)
+    if score >= meaning_from and can_ask_meaning:
+        kinds.append(QuestionType.WHICH_MEANING)
     return rng.choice(kinds)
 
 
