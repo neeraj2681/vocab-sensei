@@ -124,6 +124,28 @@ class WordService:
             for dw, cw, w in self._words.chapter_words(document.id, chapter_index)
         ]
 
+    def reindex_meanings(self, document_id: int, dictionary: Dictionary) -> int:
+        """Sets meaning_rank on the book's DocumentWord and ChapterWord rows from their sentences
+        (same rule as when a book is processed); returns how many rows changed. Does not commit."""
+        senses_of: dict[str, list[Sense]] = {}
+
+        def senses(lemma: str) -> list[Sense]:
+            if lemma not in senses_of:
+                senses_of[lemma] = dictionary.senses(lemma)
+            return senses_of[lemma]
+
+        rows: list[tuple[DocumentWord | ChapterWord, Word]] = [
+            *self._words.document_word_rows(document_id),
+            *self._words.chapter_word_rows(document_id),
+        ]
+        changed = 0
+        for row, word in rows:
+            new = _meaning_rank(word.lemma, row.pos, row.context_sentence, senses(word.lemma))
+            if new != row.meaning_rank:
+                row.meaning_rank = new
+                changed += 1
+        return changed
+
 
 def definitions_in_context(
     word: Word, pos: PartOfSpeech | None, meaning_rank: int | None = None
