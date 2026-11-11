@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom/vitest'
-import { cleanup } from '@testing-library/react'
+import { cleanup, configure } from '@testing-library/react'
 import { afterEach } from 'vitest'
 
 afterEach(cleanup)
@@ -11,3 +11,6 @@ class ResizeObserverStub {
   disconnect() {}
 }
 globalThis.ResizeObserver = ResizeObserverStub
+
+// Lazy-loaded screens take over 1 s to load in jsdom, and parallel runs on a busy machine are slower.
+configure({ asyncUtilTimeout: 5000 })
