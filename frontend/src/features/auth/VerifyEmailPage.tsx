@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { usePageTitle } from '../../components/usePageTitle'
 import { Link, useSearchParams } from 'react-router'
 import { authApi } from '../../api/auth'
 import { AuthCard } from '../../components/Form'
@@ -6,6 +7,7 @@ import { AuthCard } from '../../components/Form'
 type State = 'verifying' | 'verified' | 'failed'
 
 export function VerifyEmailPage() {
+  usePageTitle('Confirm your email')
   const [params] = useSearchParams()
   const token = params.get('token')
   const [state, setState] = useState<State>(token ? 'verifying' : 'failed')

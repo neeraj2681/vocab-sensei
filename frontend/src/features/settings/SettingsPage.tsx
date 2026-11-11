@@ -15,8 +15,10 @@ import {
 import { GoalPanel } from './GoalPanel'
 import { pushSupported, subscribeThisDevice, thisDeviceSubscribed } from './push'
 import { LevelPanel } from '../placement/LevelPanel'
+import { usePageTitle } from '../../components/usePageTitle'
 
 export function SettingsPage() {
+  usePageTitle('Settings')
   const [settings, setSettings] = useState<ReminderSettings | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [deviceOn, setDeviceOn] = useState(false)
@@ -97,7 +99,7 @@ export function SettingsPage() {
 
   return (
     <section className="settings">
-      <h2>Settings</h2>
+      <h1>Settings</h1>
       <ProfilePanel />
       <ThemePanel />
       <SoundPanel />

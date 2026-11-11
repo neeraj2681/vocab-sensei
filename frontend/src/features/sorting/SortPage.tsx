@@ -5,6 +5,7 @@ import { documentsApi } from '../../api/documents'
 import { sortingApi, type SortChoice, type UnsortedWord } from '../../api/sorting'
 import { chapterLabel } from '../library/labels'
 import { SpeakButton } from '../../components/SpeakButton'
+import { usePageTitle } from '../../components/usePageTitle'
 
 const REFILL_BELOW = 3 // fetch more cards when this few are left
 
@@ -22,6 +23,7 @@ interface Deck {
 
 /** Sort a book's words one card at a time: Known / Unsure / New. Optional; stop any time. */
 export function SortPage() {
+  usePageTitle('Sort words')
   const documentId = Number(useParams().id)
   const [deck, setDeck] = useState<Deck | null>(null)
   const [done, setDone] = useState<{ word: UnsortedWord; choice: SortChoice }[]>([])
@@ -112,7 +114,7 @@ export function SortPage() {
       <p>
         <Link to={back}>← {deck.title}</Link>
       </p>
-      <h2>Sort the words you already know</h2>
+      <h1>Sort the words you already know</h1>
       <p className="muted">
         {done.length} sorted · {deck.remaining.toLocaleString()} left
       </p>

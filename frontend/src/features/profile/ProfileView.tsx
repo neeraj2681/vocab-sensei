@@ -29,7 +29,7 @@ export function ProfileView({ profile }: { profile: Profile }) {
             size={112}
           />
         )}
-        <h2>{profile.display_name}</h2>
+        <h1>{profile.display_name}</h1>
         {own && user && <p className="muted">{user.email}</p>}
       </div>
 

@@ -69,7 +69,7 @@ export function PlacementCheck({
   if (result) {
     return (
       <section className="placement" aria-labelledby="placement-title">
-        <h2 id="placement-title">Your level: {result.name}</h2>
+        <h1 id="placement-title">Your level: {result.name}</h1>
         <p>
           Words much easier than your level are kept aside as <strong>Probably known</strong>, so
           your quizzes focus on the ones worth learning. You’ll find them on the Words page, one tap
@@ -97,7 +97,7 @@ export function PlacementCheck({
 
   return (
     <section className="placement" aria-labelledby="placement-title">
-      <h2 id="placement-title">Let’s find your level</h2>
+      <h1 id="placement-title">Let’s find your level</h1>
       <p className="muted">
         About two minutes. Some words are made up, so only say “I know it” when you could explain
         the word.

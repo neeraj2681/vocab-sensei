@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { usePageTitle } from '../../components/usePageTitle'
 import { Link } from 'react-router'
 import { authApi } from '../../api/auth'
 import { AuthCard, Field, FormError } from '../../components/Form'
@@ -6,6 +7,7 @@ import { formValues } from '../../components/formValues'
 import { useSubmit } from '../../components/useSubmit'
 
 export function ForgotPasswordPage() {
+  usePageTitle('Reset your password')
   const { busy, error, run } = useSubmit()
   const [sent, setSent] = useState(false)
 

@@ -4,11 +4,13 @@ import { leaderboardApi, type LeaderboardRow } from '../../api/leaderboard'
 import { Avatar } from '../../components/Avatar'
 import { Icon } from '../../components/Icon'
 import { useAuth } from '../auth/AuthContext'
+import { usePageTitle } from '../../components/usePageTitle'
 
 const MEDALS = ['🥇', '🥈', '🥉']
 
 /** Everyone's coins today, most first; tap a name to open their profile. */
 export function LeaderboardPage() {
+  usePageTitle('Leaderboard')
   const { user } = useAuth()
   const [scope, setScope] = useState<'everyone' | 'friends'>('everyone')
   const [rows, setRows] = useState<LeaderboardRow[] | null>(null)
@@ -31,9 +33,9 @@ export function LeaderboardPage() {
 
   return (
     <section className="leaderboard">
-      <h2>
+      <h1>
         <Icon name="trophy" size={36} /> Leaderboard
-      </h2>
+      </h1>
       <p className="muted">Coins earned today. It starts again at midnight.</p>
       {user && !user.show_on_leaderboard && (
         <p className="muted">

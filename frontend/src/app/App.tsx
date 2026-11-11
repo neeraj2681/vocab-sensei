@@ -170,9 +170,9 @@ function Header() {
 
   return (
     <header className="app__header">
-      <h1>
+      <p className="app__brand">
         <Link to="/">Vocab Sensei</Link>
-      </h1>
+      </p>
       <p className="app__tagline">Learn the words of your next read before you read them.</p>
       {showsNav && <TabBar />}
     </header>

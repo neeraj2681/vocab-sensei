@@ -6,9 +6,11 @@ import { Avatar } from '../../components/Avatar'
 import { FormError } from '../../components/Form'
 import { Icon } from '../../components/Icon'
 import { useSubmit } from '../../components/useSubmit'
+import { usePageTitle } from '../../components/usePageTitle'
 
 /** Find people by their exact username or email, send requests, and see your friends. */
 export function FriendsPage() {
+  usePageTitle('Friends')
   const [friends, setFriends] = useState<Friends | null>(null)
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<Person[] | null>(null)
@@ -52,9 +54,9 @@ export function FriendsPage() {
       <p>
         <Link to="/me">← Me</Link>
       </p>
-      <h2>
+      <h1>
         <Icon name="people_hugging" size={36} /> Friends
-      </h2>
+      </h1>
 
       <form className="card friends__search" onSubmit={search} role="search">
         <label htmlFor="friend-search">Find a friend by their exact username or email</label>

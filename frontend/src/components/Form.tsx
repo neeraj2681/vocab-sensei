@@ -26,7 +26,7 @@ export function FormError({ message }: { message: string | null }) {
 export function AuthCard({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="auth-card">
-      <h2>{title}</h2>
+      <h1>{title}</h1>
       {children}
     </section>
   )

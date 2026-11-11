@@ -1,4 +1,5 @@
 import { Link, Navigate, useParams } from 'react-router'
+import { usePageTitle } from '../../components/usePageTitle'
 import { useAuth } from '../auth/AuthContext'
 import { ProfileView } from './ProfileView'
 import { useProfile } from './useProfile'
@@ -9,6 +10,7 @@ export function UserProfilePage() {
   const { user } = useAuth()
   const userId = Number(id)
   const { profile, error } = useProfile(Number.isInteger(userId) ? userId : undefined)
+  usePageTitle(profile?.display_name ?? null)
 
   if (user && userId === user.id) return <Navigate to="/me" replace />
   return (

@@ -1,17 +1,27 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router'
+import { usePageTitle } from '../../components/usePageTitle'
 
 const CONTACT = 'sensei@vocabsensei.win'
 const UPDATED = '9 November 2026'
 
 /** Terms of use, privacy policy and copyright pages: readable without an account. */
-function LegalPage({ title, children }: { title: string; children: ReactNode }) {
+function LegalPage({
+  title,
+  tabTitle = title,
+  children,
+}: {
+  title: string
+  tabTitle?: string
+  children: ReactNode
+}) {
+  usePageTitle(tabTitle)
   return (
     <article className="legal">
       <p>
         <Link to="/">← Vocab Sensei</Link>
       </p>
-      <h2>{title}</h2>
+      <h1>{title}</h1>
       <p className="muted">Last updated {UPDATED}</p>
       {children}
       <LegalLinks />
@@ -247,7 +257,7 @@ export function PrivacyPage() {
 
 export function CopyrightPage() {
   return (
-    <LegalPage title="Copyright & takedown">
+    <LegalPage title="Copyright & takedown" tabTitle="Copyright and takedown">
       <p>
         We respect authors’ and publishers’ rights. Uploaded books are private to the person who
         uploaded them: the file is deleted once it has been read, and only a word list with one
