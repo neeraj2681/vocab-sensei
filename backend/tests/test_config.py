@@ -21,3 +21,9 @@ def test_settings_overridable_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
 
     assert settings.scoring.correct_delta == 7
     assert settings.quiz.daily_goal == 5
+
+
+def test_an_empty_broker_url_means_no_broker(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("VOCAB_JOBS__BROKER_URL", "")
+
+    assert Settings().jobs.broker_url is None

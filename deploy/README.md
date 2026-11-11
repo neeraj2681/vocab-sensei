@@ -101,7 +101,9 @@ On a small server (1 GB of memory), add swap first (`sudo fallocate -l 4G /swapf
 
 The API runs as several worker processes, one per CPU: 4 with `compose.server.yaml`, 2 otherwise; set
 `API_WORKERS=<n>` in `deploy/.env` to change it (1 on a 1 GB server). The workers share rate-limit counts in
-Valkey (the `valkey` service), and daily reminders run once, in the `reminders` service.
+Valkey (the `valkey` service), and daily reminders run once, in the `reminders` service. Uploaded books are processed
+by the `worker` service (Celery, at most two at once on two CPUs), queued in Valkey, which keeps the queue on disk;
+`docker compose logs worker` shows its progress.
 
 ## Everyday commands
 

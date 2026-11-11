@@ -2,22 +2,24 @@
 
 import logging
 from collections.abc import Callable
-from functools import lru_cache
+from functools import lru_cache, partial
 from pathlib import Path
 from typing import Annotated
 
 from fastapi import BackgroundTasks, Depends, HTTPException, Request, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import Settings, get_settings
 from app.core.email import Email, EmailSender, SmtpEmailSender
 from app.core.newsletter import NewsletterList, newsletter_list
 from app.core.speech import Recognizer, get_recognizer
 from app.db.models import User
-from app.db.session import get_session
+from app.db.session import get_session, get_session_factory
 from app.dictionary.types import Dictionary
 from app.dictionary.wordnet import WordNetDictionary
+from app.jobs.queue import BackgroundJobQueue, CeleryJobQueue, JobQueue
 from app.services.auth import AuthService
+from app.services.documents import DocumentService
 
 logger = logging.getLogger(__name__)
 
@@ -95,6 +97,33 @@ def get_dictionary(settings: SettingsDep) -> DictionaryLoader:
     """Loads the dictionary on first use, so endpoints that don't need it work without it."""
     config = settings.dictionary
     return lambda: _wordnet(settings.dictionary_dir, config.lexicon, config.senses_per_pos)
+
+
+def process_in_background(
+    session_factory: sessionmaker[Session],
+    settings: Settings,
+    dictionary: DictionaryLoader,
+    document_id: int,
+) -> None:
+    with session_factory() as session:
+        DocumentService(session, settings, dictionary).process(document_id)
+
+
+def get_job_queue(
+    settings: SettingsDep,
+    background: BackgroundTasks,
+    session_factory: Annotated[sessionmaker[Session], Depends(get_session_factory)],
+    dictionary: Annotated[DictionaryLoader, Depends(get_dictionary)],
+) -> JobQueue:
+    """A Celery worker when a broker is configured, else the API process after the response."""
+    if settings.jobs.broker_url:
+        return CeleryJobQueue()
+    return BackgroundJobQueue(
+        background, partial(process_in_background, session_factory, settings, dictionary)
+    )
+
+
+JobQueueDep = Annotated[JobQueue, Depends(get_job_queue)]
 
 
 def get_auth_service(

@@ -18,10 +18,15 @@ services:
       retries: 10
 
   # Rate-limit counts shared by the API's worker processes. Only counts: nothing is saved to disk.
+  # Rate-limit counts (database 0) and the background-job queue (database 1). The queue is kept on
+  # disk (appendonly) so queued jobs survive a restart; only keys with an expiry (the rate-limit
+  # counts) can be evicted when memory is full, never queued jobs.
   valkey:
     image: valkey/valkey:8.1-alpine
     restart: unless-stopped
-    command: valkey-server --save "" --appendonly no --maxmemory 64mb --maxmemory-policy allkeys-lru
+    command: valkey-server --save "" --appendonly yes --appendfsync everysec --maxmemory 256mb --maxmemory-policy volatile-lru
+    volumes:
+      - valkeydata:/data
     healthcheck:
       test: ["CMD", "valkey-cli", "ping"]
       interval: 5s
@@ -50,6 +55,7 @@ services:
       # Valkey, and the reminder checks run once, in the `reminders` service, not in each worker.
       WEB_CONCURRENCY: ${API_WORKERS:-2}
       VOCAB_RATE_LIMIT__STORAGE_URI: valkey://valkey:6379
+      VOCAB_JOBS__BROKER_URL: redis://valkey:6379/1 # uploads are processed by the `worker` service
       VOCAB_REMINDERS__SCHEDULER_ENABLED: "false"
     volumes:
       - appdata:/data # uploads + WordNet
@@ -73,6 +79,26 @@ services:
     volumes:
       - appdata:/data # the push-notification keys
     command: ["python", "-m", "app.commands.run_reminders"]
+
+  # Background jobs (Celery): processing uploaded books, so it doesn't slow the API. At most two
+  # at once and two CPUs, leaving the rest for quizzes.
+  worker:
+    build: ../backend
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy # the API applies database migrations and installs WordNet first
+      valkey:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      VOCAB_DATABASE_URL: postgresql+psycopg://vocab:${POSTGRES_PASSWORD}@db:5432/vocab_sensei
+      VOCAB_DATA_DIR: /data
+      VOCAB_JOBS__BROKER_URL: redis://valkey:6379/1
+    volumes:
+      - appdata:/data # uploaded files and WordNet
+    command: ["celery", "-A", "app.jobs.celery_app", "worker", "--concurrency=2", "--loglevel=INFO"]
+    cpus: 2
 
   web:
     build: ../frontend
@@ -135,3 +161,4 @@ services:
 volumes:
   pgdata:
   appdata:
+  valkeydata:
