@@ -11,6 +11,8 @@ dist/
 
 # Local data (uploads, sqlite db)
 data/
+# ...but test fixtures in a data/ folder are part of the repo
+!backend/tests/**/data/
 *.db
 *.sqlite3
 
