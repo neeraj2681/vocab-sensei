@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import DictionaryLoader, get_dictionary
 from app.core.config import Settings, get_settings
 from app.core.enums import DocumentFormat, DocumentStatus
+from app.core.slugs import slugify
 from app.db.models import Document
 from app.db.session import SessionLocal
 from app.repositories.documents import DocumentRepository
@@ -90,6 +91,8 @@ def _seed_one(
                 file_path=relative.as_posix(),
                 format=DocumentFormat.EPUB,
                 status=DocumentStatus.UPLOADED,
+                gutenberg_id=classic.gutenberg_id,
+                slug=slugify(classic.title),
             )
         )
         session.commit()

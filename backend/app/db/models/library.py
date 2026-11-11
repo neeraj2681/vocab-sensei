@@ -13,8 +13,10 @@ from app.db.types import UTCDateTime, str_enum, utcnow
 
 
 class Document(Base):
-    """A book: one uploaded by a user (private to them), or a built-in classic (no owner) that
-    everyone can read and nobody can delete."""
+    """A book: one uploaded by a user (private to them), or a public-domain book without an owner
+    (a built-in classic, or one added from Project Gutenberg) that anyone can read and nobody can
+    delete. A Gutenberg book is extracted once and shared; each reader's shelf lists the ones they
+    added (`ShelfBook`)."""
 
     __tablename__ = "documents"
 
@@ -33,6 +35,13 @@ class Document(Base):
     )
     error: Mapped[str | None] = mapped_column(Text)
     uploaded_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+    gutenberg_id: Mapped[int | None] = mapped_column(unique=True)  # Project Gutenberg's number
+    # The public pages' address (/books/<slug>); only for books without an owner.
+    slug: Mapped[str | None] = mapped_column(String(120), unique=True)
+    # Who asked for a Gutenberg book first (for the daily limit on new books); None for the rest.
+    added_by_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), index=True
+    )
 
     @property
     def is_classic(self) -> bool:
@@ -44,6 +53,20 @@ class Document(Base):
         passive_deletes=True,
         order_by="Chapter.index",
     )
+
+
+class ShelfBook(Base):
+    """A Gutenberg book a user added: it shows on their Books shelf with the built-in classics."""
+
+    __tablename__ = "shelf_books"
+
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    document_id: Mapped[int] = mapped_column(
+        ForeignKey("documents.id", ondelete="CASCADE"), primary_key=True
+    )
+    added_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
 
 
 class Chapter(Base):
