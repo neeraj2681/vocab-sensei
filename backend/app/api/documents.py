@@ -44,6 +44,7 @@ class DocumentResponse(BaseModel):
     chapter_count: int
     word_count: int
     classic: bool = False  # a built-in book everyone can read
+    gutenberg: bool = False  # a Project Gutenberg book on this reader's shelf
     has_cover: bool = False  # GET /documents/{id}/cover has a picture; otherwise draw one
 
     @classmethod
@@ -144,10 +145,14 @@ def list_documents(user: CurrentUser, documents: DocumentServiceDep) -> list[Doc
 
 @router.get("/classics")
 def list_classics(user: CurrentUser, documents: DocumentServiceDep) -> list[DocumentResponse]:
-    """Built-in public-domain books anyone can read, ready to start."""
+    """Built-in public-domain books that are ready, then the Gutenberg books on the reader's shelf
+    (in any status, so a book still processing shows up)."""
     classics = [d for d in documents.list_classics() if d.status == DocumentStatus.READY]
-    counts = documents.word_counts(classics)
-    return [DocumentResponse.of(d, counts[d.id]) for d in classics]
+    shelf = documents.list_shelf(user.id)
+    counts = documents.word_counts([*classics, *shelf])
+    return [DocumentResponse.of(d, counts[d.id]) for d in classics] + [
+        DocumentResponse.of(d, counts[d.id]).model_copy(update={"gutenberg": True}) for d in shelf
+    ]
 
 
 @router.get("/{document_id}")

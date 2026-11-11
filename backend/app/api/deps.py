@@ -20,6 +20,7 @@ from app.dictionary.wordnet import WordNetDictionary
 from app.jobs.queue import BackgroundJobQueue, CeleryJobQueue, JobQueue
 from app.services.auth import AuthService
 from app.services.documents import DocumentService
+from app.services.gutenberg import fetch_and_process
 
 logger = logging.getLogger(__name__)
 
@@ -109,6 +110,16 @@ def process_in_background(
         DocumentService(session, settings, dictionary).process(document_id)
 
 
+def fetch_gutenberg_in_background(
+    session_factory: sessionmaker[Session],
+    settings: Settings,
+    dictionary: DictionaryLoader,
+    document_id: int,
+) -> None:
+    with session_factory() as session:
+        fetch_and_process(session, settings, dictionary, document_id)
+
+
 def get_job_queue(
     settings: SettingsDep,
     background: BackgroundTasks,
@@ -119,7 +130,9 @@ def get_job_queue(
     if settings.jobs.broker_url:
         return CeleryJobQueue()
     return BackgroundJobQueue(
-        background, partial(process_in_background, session_factory, settings, dictionary)
+        background,
+        partial(process_in_background, session_factory, settings, dictionary),
+        partial(fetch_gutenberg_in_background, session_factory, settings, dictionary),
     )
 
 
