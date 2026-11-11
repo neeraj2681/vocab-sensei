@@ -801,12 +801,33 @@ class TestWhichMeaning:
             answer(user_client, session)
         pytest.fail("no which_meaning question in 60 tries")
 
+    def test_only_meanings_of_the_same_part_of_speech_are_options(
+        self, user_client: TestClient, session: Session, settled: Document
+    ) -> None:
+        self.pick_meaning(session, 1)
+        for word in session.scalars(select(Word)):
+            word.definitions.append(
+                Definition(
+                    pos="verb", text=f"verb sense of {word.lemma}", source="test", sense_rank=2
+                )
+            )
+        session.commit()
+
+        for _ in range(60):
+            asked = question(user_client)
+            if asked["type"] == "which_meaning":
+                lemma = asked["word"]
+                assert set(asked["options"]) == {f"other sense of {lemma}", f"meaning of {lemma}"}
+                return
+            answer(user_client, session)
+        pytest.fail("no which_meaning question in 60 tries")
+
     def test_without_a_picked_meaning_it_is_never_asked(
         self, user_client: TestClient, session: Session, settled: Document
     ) -> None:
         self.pick_meaning(session, None)
 
-        kinds = {question_type(user_client, session) for _ in range(50)}
+        kinds = {question_type(user_client, session) for _ in range(len(LEMMAS) - 2)}
 
         assert "which_meaning" not in kinds
 

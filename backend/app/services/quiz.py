@@ -455,7 +455,7 @@ class QuizService:
             synonyms=self._dictionary().synonyms(word.lemma),
             context_sentence=occurrence.context_sentence if occurrence else None,
             context_form=occurrence.context_form if occurrence else None,
-            other_meanings=tuple(d.text for d in definitions[1:]),
+            other_meanings=tuple(d.text for d in definitions[1:] if d.pos == correct.pos),
         )
         progress = self._repo.user_word(user_id, word_id)
         kind = choose_question_type(

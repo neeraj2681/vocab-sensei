@@ -597,7 +597,11 @@ function markWord(sentence: string, word: string): ReactNode {
 function Prompt({ question }: { question: QuizQuestion }) {
   return (
     <>
-      <p className="muted quiz__prompt">{INSTRUCTIONS[question.type]}</p>
+      <p className="muted quiz__prompt">
+        {question.type === 'which_meaning'
+          ? `Which meaning of “${question.word}” is used here?`
+          : INSTRUCTIONS[question.type]}
+      </p>
       {(question.type === 'definition_mcq' || question.type === 'say_word') && (
         <div className="said-word">
           <h2 className="quiz__word">{question.prompt}</h2>

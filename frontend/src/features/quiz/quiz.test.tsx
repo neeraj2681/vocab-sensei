@@ -389,7 +389,7 @@ describe('which meaning', () => {
     })
     const user = renderApp('/quiz')
 
-    expect(await screen.findByText('Which meaning is used here?')).toBeInTheDocument()
+    expect(await screen.findByText('Which meaning of “bank” is used here?')).toBeInTheDocument()
     expect(screen.getByText('bank').tagName).toBe('MARK')
     expect(screen.getByText('a financial institution')).toBeInTheDocument()
     await user.keyboard('2')
