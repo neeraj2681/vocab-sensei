@@ -75,3 +75,21 @@ class WordRepository:
             .options(selectinload(Word.definitions))
         )
         return [(dw, cw, w) for dw, cw, w in self._session.execute(query)]
+
+    def document_word_rows(self, document_id: int) -> list[tuple[DocumentWord, Word]]:
+        """Every book row of the book, with its word."""
+        query = (
+            select(DocumentWord, Word)
+            .join(Word, Word.id == DocumentWord.word_id)
+            .where(DocumentWord.document_id == document_id)
+        )
+        return [(dw, w) for dw, w in self._session.execute(query)]
+
+    def chapter_word_rows(self, document_id: int) -> list[tuple[ChapterWord, Word]]:
+        """Every chapter row of the book, with its word."""
+        query = (
+            select(ChapterWord, Word)
+            .join(Word, Word.id == ChapterWord.word_id)
+            .where(ChapterWord.document_id == document_id)
+        )
+        return [(cw, w) for cw, w in self._session.execute(query)]
