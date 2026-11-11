@@ -18,6 +18,8 @@ import { SpeakButton } from '../../components/SpeakButton'
 import { usePageTitle } from '../../components/usePageTitle'
 
 const STREAK_MILESTONES = [7, 30, 100, 365]
+// Options this short or shorter can sit two to a row on wider screens.
+const SHORT_OPTION = 18
 
 interface Session {
   answered: number
@@ -525,7 +527,13 @@ function QuestionCard({
           </VoiceInput>
         )
       ) : (
-        <ol className="options">
+        <ol
+          className={
+            question.options.every((o) => o.length <= SHORT_OPTION)
+              ? 'options options--short'
+              : 'options'
+          }
+        >
           {question.options.map((option, index) => (
             <li key={option}>
               <button

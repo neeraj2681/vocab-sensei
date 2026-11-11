@@ -693,3 +693,32 @@ describe('ninja mode', () => {
     expect(screen.queryByRole('progressbar', { name: 'Session progress' })).not.toBeInTheDocument()
   })
 })
+
+describe('option layout', () => {
+  const optionList = () => document.querySelector('ol.options')
+
+  it('shows short options (18 characters or fewer) in two columns', async () => {
+    quiz({
+      'GET /api/quiz/question?include_next=true': questions(
+        question(1, 'drizzly', { options: ['wet rain', 'mournful', 'a small bag', 'optimistic'] }),
+      ),
+    })
+
+    renderApp('/quiz')
+    await screen.findByRole('heading', { name: 'drizzly' })
+
+    expect(optionList()).toHaveClass('options--short')
+  })
+
+  it('keeps one column when any option is longer than 18 characters', async () => {
+    quiz({
+      'GET /api/quiz/question?include_next=true': questions(question(1, 'drizzly')),
+    })
+
+    renderApp('/quiz')
+    await screen.findByRole('heading', { name: 'drizzly' })
+
+    expect(optionList()).toHaveClass('options')
+    expect(optionList()).not.toHaveClass('options--short')
+  })
+})

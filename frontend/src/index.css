@@ -754,7 +754,7 @@ input[type='file'] {
 }
 
 .quiz__word {
-  font-size: 2.25rem;
+  font-size: clamp(2.2rem, 8vw, 3rem);
   margin: 0.25rem 0 1rem;
 }
 
@@ -3319,10 +3319,6 @@ a.secondary {
     font-size: 1.6rem;
   }
 
-  .quiz__word {
-    font-size: 1.9rem;
-  }
-
   .tiles {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -3990,4 +3986,11 @@ a.book-card__cover:hover {
 .settings__group > h2 {
   font-size: var(--text-l);
   margin-bottom: var(--space-3);
+}
+
+/* Short options (18 characters or fewer) sit in two columns on wider screens */
+@media (min-width: 480px) {
+  .options--short {
+    grid-template-columns: 1fr 1fr;
+  }
 }
