@@ -2,16 +2,21 @@ from dataclasses import asdict
 from datetime import datetime
 from typing import Annotated, Self
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import Session
 
-from app.api.deps import CurrentUser, DictionaryLoader, SettingsDep, get_dictionary
-from app.core.config import Settings
+from app.api.deps import (
+    CurrentUser,
+    DictionaryLoader,
+    JobQueueDep,
+    SettingsDep,
+    get_dictionary,
+)
 from app.core.enums import DocumentFormat, DocumentStatus, PartOfSpeech
 from app.db.models import Document
-from app.db.session import get_session, get_session_factory
+from app.db.session import get_session
 from app.db.types import utcnow
 from app.services.documents import DocumentService, FileTooLargeError, UploadError
 from app.services.readiness import ReadinessService
@@ -100,16 +105,6 @@ def get_document_service(
 DocumentServiceDep = Annotated[DocumentService, Depends(get_document_service)]
 
 
-def process_in_background(
-    session_factory: sessionmaker[Session],
-    settings: Settings,
-    dictionary: DictionaryLoader,
-    document_id: int,
-) -> None:
-    with session_factory() as session:
-        DocumentService(session, settings, dictionary).process(document_id)
-
-
 def readable_document(
     user: CurrentUser, documents: DocumentServiceDep, document_id: int
 ) -> Document:
@@ -128,10 +123,7 @@ def upload(
     file: UploadFile,
     user: CurrentUser,
     documents: DocumentServiceDep,
-    settings: SettingsDep,
-    dictionary: DictionaryDep,
-    session_factory: Annotated[sessionmaker[Session], Depends(get_session_factory)],
-    background: BackgroundTasks,
+    jobs: JobQueueDep,
 ) -> DocumentResponse:
     try:
         document = documents.create(user.id, file.filename or "upload", file.file)
@@ -139,7 +131,7 @@ def upload(
         raise HTTPException(status.HTTP_413_CONTENT_TOO_LARGE, str(exc)) from None
     except UploadError as exc:
         raise HTTPException(status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, str(exc)) from None
-    background.add_task(process_in_background, session_factory, settings, dictionary, document.id)
+    jobs.process_document(document.id)
     return DocumentResponse.of(document, word_count=0)
 
 

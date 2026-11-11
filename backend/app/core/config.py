@@ -147,6 +147,17 @@ class NewsletterSettings(BaseModel):
         return None if value == "" else value  # `VOCAB_NEWSLETTER__BREVO_LIST_ID=` in .env
 
 
+class JobSettings(BaseModel):
+    """Background jobs (Celery). Without a broker, jobs run in the API process afterwards."""
+
+    broker_url: str | None = None  # e.g. "redis://valkey:6379/1"
+
+    @field_validator("broker_url", mode="before")
+    @classmethod
+    def _empty_is_unset(cls, value: object) -> object:
+        return None if value == "" else value  # `VOCAB_JOBS__BROKER_URL=` in .env
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="VOCAB_", env_nested_delimiter="__", env_file=".env", extra="ignore"
@@ -167,6 +178,7 @@ class Settings(BaseSettings):
     library: LibrarySettings = LibrarySettings()
     speech: SpeechSettings = SpeechSettings()
     newsletter: NewsletterSettings = NewsletterSettings()
+    jobs: JobSettings = JobSettings()
 
     @property
     def dictionary_dir(self) -> Path:
