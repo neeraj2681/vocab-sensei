@@ -92,6 +92,7 @@ def _load(path: Path) -> list[_Entry]:
     except OSError as error:
         raise CatalogueUnavailableError(str(path)) from error
     if key not in _cache:
+        _cache.clear()  # keep only the newest file's books in memory
         entries: list[_Entry] = []
         with path.open(encoding="utf-8", newline="") as file:
             for row in csv.DictReader(file):
