@@ -8,7 +8,15 @@ from app.db.models.learning import (
     ShopPurchase,
     UserWord,
 )
-from app.db.models.library import Chapter, ChapterWord, Definition, Document, DocumentWord, Word
+from app.db.models.library import (
+    Chapter,
+    ChapterWord,
+    Definition,
+    Document,
+    DocumentWord,
+    ShelfBook,
+    Word,
+)
 from app.db.models.reminders import PushSubscription, Reminder
 from app.db.models.users import AuthSession, EmailToken, Friendship, GoalChange, User
 
@@ -28,6 +36,7 @@ __all__ = [
     "Question",
     "QuizAnswer",
     "Reminder",
+    "ShelfBook",
     "ShopPurchase",
     "User",
     "UserWord",
