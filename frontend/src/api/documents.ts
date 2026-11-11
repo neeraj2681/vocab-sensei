@@ -1,4 +1,4 @@
-import { apiDelete, apiGet, apiUpload } from './client'
+import { apiDelete, apiGet, apiPost, apiUpload } from './client'
 
 export type DocumentStatus = 'uploaded' | 'processing' | 'ready' | 'failed'
 
@@ -15,6 +15,13 @@ export interface BookDocument {
   word_count: number
   classic?: boolean // a built-in book everyone can read
   has_cover?: boolean // a cover picture at coverUrl(id); otherwise one is drawn
+  gutenberg?: boolean // added by this reader from Project Gutenberg
+}
+
+export interface GutenbergBook {
+  gutenberg_id: number
+  title: string
+  authors: string
 }
 
 export interface Chapter {
@@ -65,4 +72,8 @@ export const documentsApi = {
   readiness: (id: number) => apiGet<ChapterReadiness[]>(`/documents/${String(id)}/readiness`),
   upload: (file: File) => apiUpload<BookDocument>('/documents', file),
   remove: (id: number) => apiDelete(`/documents/${String(id)}`),
+  searchGutenberg: (q: string) =>
+    apiGet<GutenbergBook[]>(`/library/gutenberg?q=${encodeURIComponent(q)}`),
+  addGutenberg: (id: number) => apiPost<BookDocument>(`/library/gutenberg/${String(id)}`),
+  removeFromShelf: (id: number) => apiDelete(`/library/gutenberg/${String(id)}/shelf`),
 }

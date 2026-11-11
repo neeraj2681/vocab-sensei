@@ -50,7 +50,7 @@ describe('classics shelf', () => {
     renderApp('/books')
 
     const shelf = await screen.findByRole('region', { name: 'Classics' })
-    expect(within(shelf).getByRole('link', { name: 'Pride and Prejudice' })).toHaveAttribute(
+    expect(await within(shelf).findByRole('link', { name: 'Pride and Prejudice' })).toHaveAttribute(
       'href',
       '/books/3',
     )
@@ -77,19 +77,20 @@ describe('classics shelf', () => {
     renderApp('/books')
 
     const shelf = await screen.findByRole('region', { name: 'Classics' })
+    expect(await within(shelf).findByText('Reading')).toBeInTheDocument()
     expect(
       within(shelf).queryByRole('button', { name: 'Start reading Pride and Prejudice' }),
     ).not.toBeInTheDocument()
-    expect(within(shelf).getByText('Reading')).toBeInTheDocument()
   })
 
-  it('is hidden when there are no classics', async () => {
+  it('keeps the heading and the Gutenberg search when there are no classics', async () => {
     home([], { 'GET /api/documents/classics': () => json([]) })
 
     renderApp('/books')
 
-    expect(await screen.findByRole('region', { name: 'My books' })).toBeInTheDocument()
-    expect(screen.queryByRole('region', { name: 'Classics' })).not.toBeInTheDocument()
+    const shelf = await screen.findByRole('region', { name: 'Classics' })
+    expect(within(shelf).getByLabelText('Find any book on Project Gutenberg')).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'My books' })).toBeInTheDocument()
   })
 
   it("shows each book's cover, or draws one when it has none", async () => {
