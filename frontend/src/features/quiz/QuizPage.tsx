@@ -5,7 +5,8 @@ import { documentsApi, type ChapterReadiness } from '../../api/documents'
 import { questsApi } from '../../api/quests'
 import { quizApi, type QuizQuestion, type QuizStats } from '../../api/quiz'
 import { chapterLabel } from '../library/labels'
-import { type Pop, ScoreBar } from './ScoreBar'
+import { DailyLine, QuizHeader, type Pop } from './QuizHeader'
+import { NINJA, SESSION_LENGTH, ninja, type Combo } from './combo'
 import { Burst } from '../../components/Burst'
 import { resumingQuiz } from './visit'
 import { buzz } from '../../components/haptics'
@@ -16,19 +17,7 @@ import { Icon } from '../../components/Icon'
 import { SpeakButton } from '../../components/SpeakButton'
 import { usePageTitle } from '../../components/usePageTitle'
 
-const RECENT_ANSWERS = 20 // how many answers the sparkline shows
-export const SESSION_LENGTH = 10 // answers in a session, then a summary
 const STREAK_MILESTONES = [7, 30, 100, 365]
-export const NINJA = 'Ninja Mode' // the combo: right answers in a row multiply the coins
-
-/** The run of right answers and when it turns into Ninja Mode (the server's rules). */
-interface Combo {
-  run: number // right answers in a row, kept between sessions
-  after: number // Ninja Mode from this many in a row...
-  multiplier: number // ...multiplying right answers' coins by this
-}
-
-const ninja = (combo: Combo) => combo.run >= combo.after
 
 interface Session {
   answered: number
@@ -110,7 +99,6 @@ export function QuizPage() {
   usePageTitle('Quiz')
   const [phase, setPhase] = useState<Phase>({ kind: 'loading' })
   const [stats, setStats] = useState<QuizStats | null>(null)
-  const [recent, setRecent] = useState<number[]>([])
   const [pop, setPop] = useState<Pop | null>(null)
   const [busy, setBusy] = useState(false)
   const [answerError, setAnswerError] = useState<string | null>(null) // saving failed; can retry
@@ -153,7 +141,6 @@ export function QuizPage() {
       .then((loaded) => {
         if (!current) return
         setStats(loaded)
-        setRecent([loaded.total])
         // A new visit starts the run (and Ninja Mode) from scratch; only a reload continues it.
         const carried = loaded.combo ?? 0
         if (carried > 0 && !resumingQuiz()) void quizApi.endCombo().catch(() => undefined)
@@ -259,7 +246,6 @@ export function QuizPage() {
       points: s.points + points,
     }))
     setStats((s) => s && { ...s, total: s.total + points, today: s.today + 1 })
-    setRecent((values) => [...values, (values.at(-1) ?? 0) + points].slice(-(RECENT_ANSWERS + 1)))
     setPop((previous) => ({ id: (previous?.id ?? 0) + 1, delta: points, correct }))
   }
 
@@ -401,14 +387,18 @@ export function QuizPage() {
 
   return (
     <section className="quiz">
-      <SessionBar
-        session={session}
+      <QuizHeader
+        answered={session.answered}
         combo={combo}
+        stats={stats}
+        pop={pop}
         onLeave={() => {
           leave()
         }}
       />
-      {stats && <ScoreBar stats={stats} pop={pop} recent={recent} />}
+      {focused && (
+        <FocusBanner documentId={focusBook} chapter={focusChapter} refresh={pop?.id ?? 0} />
+      )}
       {phase.kind === 'summary' && stats && (
         <SessionSummary
           session={session}
@@ -437,9 +427,6 @@ export function QuizPage() {
             leave(true)
           }}
         />
-      )}
-      {focused && (
-        <FocusBanner documentId={focusBook} chapter={focusChapter} refresh={pop?.id ?? 0} />
       )}
       {phase.kind === 'loading' && <p className="muted">Loading the next word…</p>}
       {phase.kind === 'error' && (
@@ -473,6 +460,7 @@ export function QuizPage() {
           phase={phase}
           busy={busy}
           continueQueued={continueQueued}
+          stats={stats}
           onChoose={(index) => {
             choose(phase.question, index)
           }}
@@ -496,6 +484,7 @@ interface CardProps {
   phase: Extract<Phase, { kind: 'asking' | 'answered' }>
   busy: boolean // a save is running ("I know this" waits for it)
   continueQueued: boolean
+  stats: QuizStats | null
   onChoose: (index: number) => void
   onKnow: () => void
   onSpeak: (heard: string) => void
@@ -507,6 +496,7 @@ function QuestionCard({
   phase,
   busy,
   continueQueued,
+  stats,
   onChoose,
   onKnow,
   onSpeak,
@@ -560,6 +550,7 @@ function QuestionCard({
           question={question}
           answered={answered}
           continueQueued={continueQueued}
+          stats={stats}
           onNext={onNext}
         />
       ) : (
@@ -627,11 +618,13 @@ function Feedback({
   question,
   answered,
   continueQueued,
+  stats,
   onNext,
 }: {
   question: QuizQuestion
   answered: Extract<Phase, { kind: 'answered' }>
   continueQueued: boolean
+  stats: QuizStats | null
   onNext: () => void
 }) {
   // All of this came with the question, so it shows the moment an option is tapped.
@@ -707,73 +700,7 @@ function Feedback({
       >
         Continue
       </button>
-    </div>
-  )
-}
-
-/** ✕ to leave, how far into the session you are, and your run of right answers. */
-function SessionBar({
-  session,
-  combo,
-  onLeave,
-}: {
-  session: Session
-  combo: Combo
-  onLeave: () => void
-}) {
-  const done = Math.min(session.answered, SESSION_LENGTH)
-  return (
-    <div className="session-bar">
-      <button
-        type="button"
-        className="session-bar__quit"
-        aria-label="End session"
-        onClick={onLeave}
-      >
-        ✕
-      </button>
-      <div
-        className="session-bar__progress"
-        role="progressbar"
-        aria-label="Session progress"
-        aria-valuemin={0}
-        aria-valuemax={SESSION_LENGTH}
-        aria-valuenow={done}
-      >
-        <span style={{ width: `${String((done / SESSION_LENGTH) * 100)}%` }} />
-      </div>
-      {ninja(combo) ? (
-        <span
-          className="stat-pill stat-pill--ninja"
-          title={`${String(combo.run)} right in a row: double coins until a miss`}
-        >
-          <Icon name="ninja" size={22} /> ×{combo.multiplier}
-          <span className="sr-only">
-            {' '}
-            {NINJA}, {combo.run} in a row
-          </span>
-        </span>
-      ) : (
-        <span
-          className="stat-pill ninja-meter"
-          role="meter"
-          aria-label={`Right answers in a row towards ${NINJA}`}
-          aria-valuemin={0}
-          aria-valuemax={combo.after}
-          aria-valuenow={combo.run}
-          title={`${String(combo.after)} right in a row start ${NINJA} (double coins)`}
-        >
-          <Icon name="ninja" size={20} />
-          <span className="ninja-meter__segments" aria-hidden="true">
-            {Array.from({ length: combo.after }, (_, i) => (
-              <span key={i} className={i < combo.run ? 'ninja-meter__on' : undefined} />
-            ))}
-          </span>
-          <span className="sr-only">
-            {combo.run} of {combo.after} right in a row
-          </span>
-        </span>
-      )}
+      {stats && <DailyLine stats={stats} />}
     </div>
   )
 }
@@ -804,6 +731,7 @@ function SessionSummary({
       <Burst />
       <Icon name="trophy" size={112} />
       <h1>Session complete!</h1>
+      <DailyLine stats={stats} />
       <p className="muted">
         {milestone
           ? `${String(stats.streak)}-day streak! Keep it burning.`

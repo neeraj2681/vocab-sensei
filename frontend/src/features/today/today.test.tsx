@@ -133,25 +133,22 @@ describe('this week', () => {
     expect(screen.getAllByLabelText(/goal not met/)).toHaveLength(6)
   })
 
-  it('graphs the score earned on each of the last seven days', async () => {
-    const points = [0, 15, -10, 40, 0, 25, 10]
-    const week = points.map((p, i) => ({
-      date: `2026-10-${String(26 + i)}`,
-      answers: Math.abs(p) / 5,
-      met: false,
-      points: p,
-    }))
+  it('shows the week once: dots inside the hero card, and no score chart', async () => {
+    const week = ['2026-10-26', '2026-10-27', '2026-10-28', '2026-10-29', '2026-10-30'].map(
+      (date, i) => ({ date, answers: 0, met: i === 4, points: 5 }),
+    )
     today([READING], {
       'GET /api/quiz/stats?tz=UTC': () =>
         json({ total: 270, today: 2, daily_goal: 10, streak: 0, week }),
     })
     renderApp('/')
 
-    expect(await screen.findByRole('heading', { name: 'Score this week' })).toBeInTheDocument()
-    expect(await screen.findByText('+80 points · best: Thursday +40')).toBeInTheDocument()
-    const table = screen.getByRole('table', { name: 'Points per day' })
-    expect(within(table).getByRole('row', { name: 'Wednesday -10' })).toBeInTheDocument()
-    expect(within(table).getByRole('row', { name: 'Today +10' })).toBeInTheDocument()
+    const hero = (await screen.findByRole('heading', { name: 'Hi, Reader' })).closest(
+      '.today__hero',
+    ) as HTMLElement
+    expect(within(hero).getAllByLabelText(/goal (not )?met/)).toHaveLength(5)
+    expect(screen.queryByRole('heading', { name: 'Score this week' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('table', { name: 'Points per day' })).not.toBeInTheDocument()
   })
 })
 
