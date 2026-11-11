@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { useAuth } from '../auth/AuthContext'
 import { HealthStatus } from '../health/HealthStatus'
 import { UpNext } from '../learning/UpNext'
 import { Classics } from './Classics'
@@ -7,9 +6,10 @@ import { CurrentReadings } from './CurrentReadings'
 import { MyBooks } from './MyBooks'
 import { TwoBooksDialog } from './TwoBooksDialog'
 import { useLibrary } from './useLibrary'
+import { usePageTitle } from '../../components/usePageTitle'
 
 export function LibraryPage() {
-  const { user } = useAuth()
+  usePageTitle('Books')
   const { library, error, refresh } = useLibrary()
   const [full, setFull] = useState(false) // "Start reading" with two books read already
 
@@ -37,7 +37,7 @@ export function LibraryPage() {
 
   return (
     <section>
-      <h2>Welcome, {user?.display_name}</h2>
+      <h1>Books</h1>
       {error && (
         <p role="alert" className="form-error">
           {error}

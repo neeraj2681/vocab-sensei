@@ -6,12 +6,14 @@ import { Icon } from '../../components/Icon'
 import { useAuth } from '../auth/AuthContext'
 import { PlacementCheck } from '../placement/PlacementCheck'
 import { GOALS } from '../settings/goals'
+import { usePageTitle } from '../../components/usePageTitle'
 
 type Start = 'reading' | 'upload'
 const STEPS = 4
 
 /** The first-run tour for new accounts: what the app does, a book, a daily goal, go. */
 export function WelcomePage() {
+  usePageTitle('Welcome')
   const { user, finishOnboarding } = useAuth()
   // First, the placement check (skippable) for anyone without a level yet.
   const [placed, setPlaced] = useState(() => user?.vocab_level != null)
@@ -95,7 +97,7 @@ export function WelcomePage() {
       {step === 0 && (
         <div className="tour-step">
           <Icon name="books" size={112} />
-          <h2 id="tour-title">Learn the words of your next read, before you read them</h2>
+          <h1 id="tour-title">Learn the words of your next read, before you read them</h1>
           <p className="muted">
             Pick a book. We find its harder words, chapter by chapter, and teach them in a few
             minutes a day.
@@ -105,7 +107,7 @@ export function WelcomePage() {
 
       {step === 1 && (
         <div className="tour-step">
-          <h2 id="tour-title">What will you read?</h2>
+          <h1 id="tour-title">What will you read?</h1>
           <div className="tour-choices" role="group" aria-label="What will you read?">
             {reading && (
               <button
@@ -144,7 +146,7 @@ export function WelcomePage() {
       {step === 2 && (
         <div className="tour-step">
           <Icon name="direct_hit" size={96} />
-          <h2 id="tour-title">How many answers a day?</h2>
+          <h1 id="tour-title">How many answers a day?</h1>
           <p className="muted">You can change this any time in Me → Settings.</p>
           <div className="goal-choices" role="group" aria-label="Answers a day">
             {GOALS.map(({ answers, minutes }) => (
@@ -167,7 +169,7 @@ export function WelcomePage() {
       {step === 3 && (
         <div className="tour-step">
           <Icon name="party_popper" size={112} />
-          <h2 id="tour-title">You’re all set</h2>
+          <h1 id="tour-title">You’re all set</h1>
           <p className="muted">
             {start === 'reading' && reading
               ? 'First a quick sort: tap Known, Unsure or New on a few words, then your first session starts.'

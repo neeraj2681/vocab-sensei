@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { usePageTitle } from '../../components/usePageTitle'
 import { Link, useSearchParams } from 'react-router'
 import { authApi } from '../../api/auth'
 import { AuthCard } from '../../components/Form'
@@ -8,6 +9,7 @@ type State = 'confirming' | 'confirmed' | 'failed'
 
 /** The link sent to a new address: opening it moves the account over to that address. */
 export function ConfirmEmailPage() {
+  usePageTitle('Confirm your email')
   const [params] = useSearchParams()
   const token = params.get('token')
   const { user, updateUser } = useAuth()

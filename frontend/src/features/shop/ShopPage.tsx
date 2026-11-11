@@ -7,6 +7,7 @@ import { Icon, type IconName } from '../../components/Icon'
 import { sounds } from '../../components/sounds'
 import { formatCountdown, useCountdown } from '../../components/useCountdown'
 import { useSubmit } from '../../components/useSubmit'
+import { usePageTitle } from '../../components/usePageTitle'
 
 const ITEMS: Record<ShopItem, { name: string; icon: IconName; about: string }> = {
   streak_freeze: {
@@ -32,6 +33,7 @@ const ITEMS: Record<ShopItem, { name: string; icon: IconName; about: string }> =
 /** The desert market: open all of Sunday with streak freezes and double coins; the rest of the
 week a countdown. The inventory (and using double coins) is there every day. */
 export function ShopPage() {
+  usePageTitle('Shop')
   const [shop, setShop] = useState<Shop | null>(null)
   const [error, setError] = useState(false)
   const [bought, setBought] = useState<ShopItem | null>(null)
@@ -83,7 +85,7 @@ export function ShopPage() {
   return (
     <section className="shop">
       <div className="shop__head">
-        <h2>Shop</h2>
+        <h1>Shop</h1>
         {shop && (
           <span className="stat-pill" title="Your coins">
             <Icon name="coin" size={22} /> {shop.coins.toLocaleString()} coins

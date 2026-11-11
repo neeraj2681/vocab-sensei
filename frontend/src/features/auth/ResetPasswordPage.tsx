@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { usePageTitle } from '../../components/usePageTitle'
 import { Link, useSearchParams } from 'react-router'
 import { authApi } from '../../api/auth'
 import { AuthCard, Field, FormError } from '../../components/Form'
@@ -7,6 +8,7 @@ import { MIN_PASSWORD_LENGTH } from './RegisterPage'
 import { useSubmit } from '../../components/useSubmit'
 
 export function ResetPasswordPage() {
+  usePageTitle('Reset your password')
   const [params] = useSearchParams()
   const token = params.get('token')
   const { busy, error, setError, run } = useSubmit()

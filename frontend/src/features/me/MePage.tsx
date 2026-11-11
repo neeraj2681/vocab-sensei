@@ -9,10 +9,12 @@ import { RecapsPanel } from '../recaps/RecapsPanel'
 import { useProfile } from '../profile/useProfile'
 import { BackupPanel } from '../progress/BackupPanel'
 import { DeleteAccountPanel } from '../progress/DeleteAccountPanel'
+import { usePageTitle } from '../../components/usePageTitle'
 
 /** Your profile (as others see it on the leaderboard, plus your email), then your account:
 settings, backup, deleting it, and logging out. */
 export function MePage() {
+  usePageTitle('Me')
   const { user, logout } = useAuth()
   const { profile, error } = useProfile(user?.id)
   const [asking, setAsking] = useState(0) // friend requests waiting for you

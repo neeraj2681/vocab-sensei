@@ -14,6 +14,7 @@ import { VoiceInput } from '../../components/VoiceInput'
 import { sounds } from '../../components/sounds'
 import { Icon } from '../../components/Icon'
 import { SpeakButton } from '../../components/SpeakButton'
+import { usePageTitle } from '../../components/usePageTitle'
 
 const RECENT_ANSWERS = 20 // how many answers the sparkline shows
 export const SESSION_LENGTH = 10 // answers in a session, then a summary
@@ -106,6 +107,7 @@ function errorPhase(err: unknown): Phase {
 /** Practice in sessions of ten: answer, see why, continue; a summary after each session. The
 quiz itself never runs out, so "Keep going" simply starts the next session. */
 export function QuizPage() {
+  usePageTitle('Quiz')
   const [phase, setPhase] = useState<Phase>({ kind: 'loading' })
   const [stats, setStats] = useState<QuizStats | null>(null)
   const [recent, setRecent] = useState<number[]>([])
@@ -604,11 +606,11 @@ function Prompt({ question }: { question: QuizQuestion }) {
       </p>
       {(question.type === 'definition_mcq' || question.type === 'say_word') && (
         <div className="said-word">
-          <h2 className="quiz__word">{question.prompt}</h2>
+          <h1 className="quiz__word">{question.prompt}</h1>
           <SpeakButton word={question.prompt} />
         </div>
       )}
-      {question.type === 'reverse' && <h2 className="quiz__meaning">{question.prompt}</h2>}
+      {question.type === 'reverse' && <h1 className="quiz__meaning">{question.prompt}</h1>}
       {question.type === 'fill_in_blank' && (
         <blockquote className="quiz__sentence">{question.prompt}</blockquote>
       )}
@@ -801,7 +803,7 @@ function SessionSummary({
     <div className="summary">
       <Burst />
       <Icon name="trophy" size={112} />
-      <h2>Session complete!</h2>
+      <h1>Session complete!</h1>
       <p className="muted">
         {milestone
           ? `${String(stats.streak)}-day streak! Keep it burning.`

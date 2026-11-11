@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { usePageTitle } from '../../components/usePageTitle'
 import { LegalLinks } from '../legal/LegalPages'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router'
 import { authApi } from '../../api/auth'
@@ -11,6 +12,7 @@ import { useAuth } from './AuthContext'
 import { useSubmit } from '../../components/useSubmit'
 
 export function LoginPage() {
+  usePageTitle('Log in')
   const { user, login } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()

@@ -11,6 +11,7 @@ import { chapterLabel } from '../library/labels'
 import { QuestsPanel } from './QuestsPanel'
 import { RecapToday } from './RecapToday'
 import { WeekChart } from './WeekChart'
+import { usePageTitle } from '../../components/usePageTitle'
 
 const SECONDS_PER_ANSWER = 15 // measured from real sessions
 const DAY_NAMES = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
@@ -22,6 +23,7 @@ interface Today {
 
 /** The first screen: today's goal, one button to continue, and what you're reading. */
 export function TodayPage() {
+  usePageTitle('Today')
   const { user } = useAuth()
   const [today, setToday] = useState<Today | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -69,7 +71,7 @@ export function TodayPage() {
         <div className="card today__hero">
           <GoalRing done={stats.today} goal={stats.daily_goal} />
           <div>
-            <h2>Hi, {user?.display_name}</h2>
+            <h1>Hi, {user?.display_name}</h1>
             <p className="muted">
               {left > 0
                 ? `${String(left)} more answers reach today's goal.`

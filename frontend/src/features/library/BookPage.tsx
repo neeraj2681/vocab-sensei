@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { usePageTitle } from '../../components/usePageTitle'
 import { Link, useParams } from 'react-router'
 import { ApiError } from '../../api/client'
 import {
@@ -54,6 +55,7 @@ export function BookPage() {
   // Until the user picks a chapter, show the one they're reading (or the first).
   const chapter = chosenChapter ?? book?.reading?.current_chapter_index ?? 0
   const ready = book?.detail.status === 'ready'
+  usePageTitle(book?.detail.title ?? null)
 
   useEffect(() => {
     if (!ready) return

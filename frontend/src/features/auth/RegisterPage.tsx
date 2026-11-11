@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { usePageTitle } from '../../components/usePageTitle'
 import { Link } from 'react-router'
 import { LegalLinks } from '../legal/LegalPages'
 import { authApi } from '../../api/auth'
@@ -10,6 +11,7 @@ import { useSubmit } from '../../components/useSubmit'
 export const MIN_PASSWORD_LENGTH = 8
 
 export function RegisterPage() {
+  usePageTitle('Create an account')
   const { busy, error, setError, run } = useSubmit()
   const [sentTo, setSentTo] = useState<string | null>(null)
 
