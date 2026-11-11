@@ -13,6 +13,7 @@ class Sense:
     pos: str  # noun, verb, adjective or adverb
     definition: str
     rank: int  # 0 = the dictionary's first (usually most common) sense of the lemma
+    examples: tuple[str, ...] = ()  # usage examples for this sense
 
 
 class Dictionary(Protocol):
