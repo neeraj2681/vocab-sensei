@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.core.enums import DocumentFormat, PartOfSpeech
 from app.db.models import Chapter, Document, Word
+from app.dictionary.types import Sense
 from app.extraction.words import ExtractedWord
 from app.services.words import WordService
 from tests.conftest import FakeDictionary, make_user
@@ -35,16 +36,20 @@ def extracted(lemma: str) -> ExtractedWord:
     )
 
 
-def test_known_words_are_not_looked_up_again(session: Session) -> None:
+def test_known_words_keep_their_definitions(session: Session) -> None:
     dictionary = FakeDictionary()
     service = WordService(session)
     service.save_for_document(make_document(session), [extracted("spleen")], dictionary)
+    word = session.scalars(select(Word).where(Word.lemma == "spleen")).one()
+    assert [d.text for d in word.definitions] == ["meaning of spleen"]
     dictionary.lookups.clear()
+    dictionary.entries["spleen"] = [Sense(pos="noun", definition="changed later", rank=0)]
 
     second = make_document(session, "second@example.com")
     service.save_for_document(second, [extracted("spleen")], dictionary)
 
-    assert dictionary.lookups == []
+    assert dictionary.lookups == ["spleen"]  # looked up once per save, for its meaning in context
+    assert [d.text for d in word.definitions] == ["meaning of spleen"]  # not stored again
 
 
 def test_words_stored_without_definitions_are_looked_up(session: Session) -> None:

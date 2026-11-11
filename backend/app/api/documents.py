@@ -174,12 +174,12 @@ def list_words(
             pos=occurrence.pos,
             definitions=[
                 DefinitionResponse.model_validate(d)
-                for d in definitions_in_context(word, occurrence.pos)
+                for d in definitions_in_context(word, occurrence.pos, meaning_rank)
             ],
         )
-        for occurrence, word, chapter_index, sentence in WordService(session).words_for_document(
-            document, chapter
-        )
+        for occurrence, word, chapter_index, sentence, meaning_rank in WordService(
+            session
+        ).words_for_document(document, chapter)
     ]
 
 

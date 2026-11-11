@@ -39,7 +39,9 @@ def next_words(
             pos=item.occurrence.pos,
             definitions=[
                 DefinitionResponse.model_validate(d)
-                for d in definitions_in_context(item.word, item.occurrence.pos)
+                for d in definitions_in_context(
+                    item.word, item.occurrence.pos, item.occurrence.meaning_rank
+                )
             ],
             context_sentence=item.occurrence.context_sentence,
             document_id=item.document.id,

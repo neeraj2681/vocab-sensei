@@ -438,7 +438,11 @@ class QuizService:
             return None
         found = self._repo.occurrence(user_id, word_id)
         occurrence, document = found if found else (None, None)
-        definitions = definitions_in_context(word, occurrence.pos if occurrence else None)
+        definitions = definitions_in_context(
+            word,
+            occurrence.pos if occurrence else None,
+            occurrence.meaning_rank if occurrence else None,
+        )
         if not definitions:
             return None
 
@@ -609,7 +613,11 @@ class QuizService:
 
     def _in_book(self, user_id: int, word: Word) -> _InBook:
         found = self._repo.occurrence(user_id, word.id)
-        definitions = definitions_in_context(word, found[0].pos if found else None)
+        definitions = definitions_in_context(
+            word,
+            found[0].pos if found else None,
+            found[0].meaning_rank if found else None,
+        )
         return _InBook(
             meaning=definitions[0].text if definitions else None,
             book=found[1].title if found else None,
