@@ -108,3 +108,30 @@ def test_records_the_first_use_in_every_chapter_the_word_appears_in() -> None:
         (2, "A lugubrious wind howled."),
     ]
     assert lugubrious.appearances[1].first_position == 1
+
+
+RARE_TEXT = "The sennight was orgulous and xqzt while the lugubrious house stood."
+
+
+def extract_known(text: str, known: set[str]) -> list[ExtractedWord]:
+    chapters = [ParsedChapter(title=None, text=text)]
+    return WordExtractor(ExtractionSettings(), known=lambda w: w in known).extract(chapters)
+
+
+def test_keeps_words_wordfreq_has_never_seen_when_the_dictionary_knows_them() -> None:
+    words = extract_known(RARE_TEXT, {"sennight", "orgulous"})
+
+    assert {"sennight", "orgulous", "lugubrious"} <= set(lemmas(words))
+    assert "xqzt" not in lemmas(words)
+    assert {w.lemma: w.zipf for w in words}["sennight"] == 1.0
+    assert {w.lemma: w.zipf for w in words}["orgulous"] == 1.0
+
+
+def test_without_a_dictionary_check_unseen_words_are_dropped() -> None:
+    assert not {"sennight", "orgulous", "xqzt"} & set(lemmas(extract(RARE_TEXT)))
+
+
+def test_the_dictionary_never_rescues_common_words_or_stopwords() -> None:
+    words = extract_known("The house was there with the friend.", {"house", "was", "the", "friend"})
+
+    assert lemmas(words) == []
