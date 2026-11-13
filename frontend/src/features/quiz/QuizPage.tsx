@@ -26,17 +26,34 @@ interface Session {
   right: number
   points: number
   todayAtStart: number | null // answers already given today when the session began
+  missed: Missed[] // words answered wrong this session, each once, in order (at most five)
 }
+
+interface Missed {
+  word: string
+  meaning: string | null
+}
+
+const MAX_MISSED = 5
 
 const newSession = (todayAtStart: number | null): Session => ({
   answered: 0,
   right: 0,
   points: 0,
   todayAtStart,
+  missed: [],
 })
 
 function focusOf(book: number | null, chapter: number | null) {
   return book !== null && chapter !== null ? { documentId: book, chapter } : undefined
+}
+
+/** The words missed so far, plus this one unless it is already there or the list is full. */
+function addMissed(missed: Missed[], question: QuizQuestion): Missed[] {
+  if (missed.length >= MAX_MISSED || missed.some((m) => m.word === question.word)) return missed
+  const meaning =
+    question.type === 'definition_mcq' ? question.options[question.correct_index] : question.meaning
+  return [...missed, { word: question.word, meaning: meaning ?? null }]
 }
 
 /** Whether a time the server sent (like double coins' end) is still to come. */
@@ -80,6 +97,7 @@ type Phase =
       doubled: boolean // Ninja Mode multiplied them
       ninja?: 'started' | 'ended' // this answer started or ended Ninja Mode
       heard?: string | null // "say this word": what the speech recogniser heard
+      picked?: string | null // wrong meaning pick: the word that meaning belongs to
     }
   | { kind: 'error'; message: string; noWords: boolean }
   | { kind: 'summary' }
@@ -246,6 +264,7 @@ export function QuizPage() {
       answered: s.answered + 1,
       right: s.right + (correct ? 1 : 0),
       points: s.points + points,
+      missed: correct ? s.missed : addMissed(s.missed, question),
     }))
     setStats((s) => s && { ...s, total: s.total + points, today: s.today + 1 })
     setPop((previous) => ({ id: (previous?.id ?? 0) + 1, delta: points, correct }))
@@ -271,6 +290,12 @@ export function QuizPage() {
     try {
       const result = await quizApi.answer(question.id, index, focusOf(focusBook, focusChapter))
       setStats(result.stats) // the server's numbers win (streak, week)
+      if (result.picked_word) {
+        const picked = result.picked_word
+        setPhase((p) =>
+          p.kind === 'answered' && p.question.id === question.id ? { ...p, picked } : p,
+        )
+      }
       keep(result.next, result.after_next)
     } catch (err) {
       // What's on screen stays; a banner offers to save again.
@@ -657,6 +682,14 @@ function Feedback({
           !correct && (
             <>
               It means: <strong>{question.options[question.correct_index]}</strong>
+              {answered.picked && (
+                <>
+                  <br />
+                  <span className="muted">
+                    You picked the meaning of <em>{answered.picked}</em>.
+                  </span>
+                </>
+              )}
             </>
           )
         ) : (
@@ -762,6 +795,20 @@ function SessionSummary({
           </dd>
         </div>
       </dl>
+      {session.missed.length > 0 && (
+        <section className="summary__missed">
+          <h2>Words to look at again</h2>
+          <ul>
+            {session.missed.map((m) => (
+              <li key={m.word}>
+                <strong>{m.word}</strong>
+                <SpeakButton word={m.word} />
+                {m.meaning && <span className="muted"> · {m.meaning}</span>}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       <QuestsReady />
       {ninja(combo) && (
         <p className="ninja-note ninja-note--start">

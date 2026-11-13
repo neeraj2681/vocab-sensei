@@ -722,3 +722,50 @@ describe('option layout', () => {
     expect(optionList()).not.toHaveClass('options--short')
   })
 })
+
+describe('teaching moments', () => {
+  it('names the word whose meaning a wrong pick belongs to', async () => {
+    quiz({
+      'GET /api/quiz/question?include_next=true': questions(question(1, 'drizzly')),
+      [ANSWER_URL(1)]: () => json(result({ correct: false, points: -10, picked_word: 'illicit' })),
+    })
+    const user = renderApp('/quiz')
+
+    await user.click(await screen.findByRole('button', { name: /a small bag/ }))
+
+    expect(await screen.findByText('illicit')).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('You picked the meaning of illicit.')
+  })
+
+  function session(wrongIds: number[]) {
+    const items = Array.from({ length: 12 }, (_, i) => question(i + 1, `word${String(i + 1)}`))
+    const answers: Routes = {}
+    for (const item of items) answers[ANSWER_URL(item.id)] = () => json(result({}))
+    quiz({ 'GET /api/quiz/question?include_next=true': questions(...items), ...answers })
+    const user = renderApp('/quiz')
+    return async () => {
+      for (let id = 1; id <= 10; id++) {
+        const name = wrongIds.includes(id) ? /a small bag/ : /wet with light rain/
+        await user.click(await screen.findByRole('button', { name }))
+        await user.click(await screen.findByRole('button', { name: 'Continue' }))
+      }
+    }
+  }
+
+  it('lists the words missed in the session summary', async () => {
+    await session([2, 5])()
+
+    expect(await screen.findByRole('heading', { name: 'Words to look at again' })).toBeVisible()
+    const list = screen.getByRole('list')
+    expect(within(list).getByText('word2')).toBeInTheDocument()
+    expect(within(list).getByText('word5')).toBeInTheDocument()
+    expect(within(list).getAllByText(/wet with light rain/)).toHaveLength(2)
+  })
+
+  it('lists nothing in the summary when nothing was missed', async () => {
+    await session([])()
+
+    expect(await screen.findByRole('heading', { name: 'Session complete!' })).toBeInTheDocument()
+    expect(screen.queryByText('Words to look at again')).not.toBeInTheDocument()
+  })
+})

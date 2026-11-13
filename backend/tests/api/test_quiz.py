@@ -279,6 +279,22 @@ class TestAnswering:
 
         assert asked["options"][result["correct_index"]] == "meaning of word00"
 
+    def test_a_wrong_meaning_names_the_word_it_belongs_to(self, user_client: TestClient) -> None:
+        asked = question(user_client)
+        wrong = next(i for i, o in enumerate(asked["options"]) if o != "meaning of word00")
+        picked = asked["options"][wrong].removeprefix("meaning of ")
+
+        response = user_client.post(
+            f"/api/quiz/questions/{asked['id']}/answer", json={"chosen_index": wrong}
+        )
+
+        assert response.json()["picked_word"] == picked
+
+    def test_a_right_answer_names_no_picked_word(
+        self, user_client: TestClient, session: Session
+    ) -> None:
+        assert answer(user_client, session)["picked_word"] is None
+
     def test_lifetime_points_add_up(self, user_client: TestClient, session: Session) -> None:
         for right in (True, True, False, True):
             result = answer(user_client, session, right=right)

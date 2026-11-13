@@ -139,6 +139,7 @@ class AnswerOutcome:
     word: UserWord
     question: Question
     stats: Stats
+    picked_word: str | None = None  # a wrong meaning pick: the word that meaning belongs to
 
 
 @dataclass(frozen=True)
@@ -585,6 +586,11 @@ class QuizService:
         )
         self._session.commit()
         lemma, meaning = self._word_and_meaning(user_id, question.word_id)
+        picked_word = None
+        if not correct and question.type is QuestionType.DEFINITION_MCQ:
+            picked_word = self._repo.word_for_definition(
+                question.options[chosen_index], question.word_id
+            )
         return AnswerOutcome(
             correct=correct,
             correct_index=question.correct_index,
@@ -596,6 +602,7 @@ class QuizService:
             word=word,
             question=question,
             stats=self.stats(user_id, now, tz),
+            picked_word=picked_word,
         )
 
     def preview(self, user_id: int, question: Question, now: datetime) -> Preview:

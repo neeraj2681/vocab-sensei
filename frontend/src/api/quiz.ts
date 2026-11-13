@@ -63,6 +63,7 @@ export interface AnswerResult {
   next?: QuizQuestion | null // the question now on screen, sent with the saved answer
   after_next?: QuizQuestion | null // and the one kept ready after it
   heard?: string | null // "say this word": what the speech recogniser heard
+  picked_word?: string | null // wrong meaning pick: the word that meaning belongs to
 }
 
 export interface HistoryPoint {

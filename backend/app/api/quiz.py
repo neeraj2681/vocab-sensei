@@ -184,6 +184,7 @@ class AnswerResponse(BaseModel):
     next: QuestionResponse | None  # with include_next: the question now on screen
     after_next: QuestionResponse | None = None  # and the one kept ready after it
     heard: str | None = None  # "say this word": what the speech recogniser heard
+    picked_word: str | None = None  # wrong meaning pick: the word that meaning belongs to
 
 
 class PractisedWordResponse(BaseModel):
@@ -311,6 +312,7 @@ def answer(
         word_status=outcome.word.status,
         context_sentence=outcome.question.source_sentence,
         stats=StatsResponse.of(outcome.stats),
+        picked_word=outcome.picked_word,
         **(next_questions(quiz, user.id, now, focus) if include_next else {"next": None}),
     )
 
