@@ -29,6 +29,8 @@ class WordProgressItem(BaseModel):
     status: WordStatus
     score: int = Field(ge=0)
     learned_at: datetime | None = None
+    was_learned: bool = False  # older backups don't have these two: the defaults apply
+    interval_weeks: int = 1
     last_reviewed_at: datetime | None = None
 
 
@@ -95,6 +97,8 @@ class BackupService:
                     status=w.status,
                     score=w.score,
                     learned_at=w.learned_at,
+                    was_learned=w.was_learned,
+                    interval_weeks=w.interval_weeks,
                     last_reviewed_at=w.last_reviewed_at,
                 )
                 for w, lemma in progress
@@ -147,6 +151,8 @@ class BackupService:
                     score=item.score,
                     status=item.status,
                     learned_at=item.learned_at,
+                    was_learned=item.was_learned,
+                    interval_weeks=item.interval_weeks,
                     last_reviewed_at=item.last_reviewed_at,
                 )
             )

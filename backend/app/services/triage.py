@@ -73,6 +73,7 @@ class TriageService:
             word = UserWord(user_id=user_id, word_id=word_id)
             self._repo.add(word)
         word.score, word.status, word.learned_at = progress.score, progress.status, None
+        word.interval_weeks = 1
         word.was_learned = False
         self._session.commit()
         return word

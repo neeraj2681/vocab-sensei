@@ -35,7 +35,12 @@ def word_progress(word: UserWord | None, now: datetime, rules: ScoringSettings) 
         return 0
     if word.status is WordStatus.KNOWN:
         return 100
-    progress = WordProgress(score=word.score, status=word.status, learned_at=word.learned_at)
+    progress = WordProgress(
+        score=word.score,
+        status=word.status,
+        learned_at=word.learned_at,
+        interval_weeks=word.interval_weeks,
+    )
     threshold = max(rules.learned_threshold, 1)
     return min(effective_score(progress, now, rules), threshold) * 100 // threshold
 

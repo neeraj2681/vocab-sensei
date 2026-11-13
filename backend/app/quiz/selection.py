@@ -137,3 +137,9 @@ def closest_or_oldest[T](words: Sequence[T], score: Callable[[T], int], rng: Ran
     if rng.random() < 0.5:
         return max(words, key=score)  # ties: the one waiting longest
     return words[0]
+
+
+def review_weight(due: int, *, base: int, per: int, maximum: int) -> int:
+    """How strongly to pick a review: one step per `per` learned words due, between `base` and
+    `maximum`, so a backlog is caught up instead of fading while new words keep coming."""
+    return max(base, min(maximum, due // per))
