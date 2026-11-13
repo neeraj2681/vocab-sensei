@@ -7,7 +7,8 @@ export interface LeaderboardRow {
   display_name: string
   gender: Gender
   has_avatar: boolean
-  coins_today: number // earned today, wrong answers taken off
+  goal_days: number // days this week (Monday to today) with the daily goal met
+  new_words: number // words learned for the first time this week
   me: boolean
 }
 

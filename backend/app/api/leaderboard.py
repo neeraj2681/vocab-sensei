@@ -29,7 +29,8 @@ class RowResponse(BaseModel):
     display_name: str
     gender: Gender
     has_avatar: bool
-    coins_today: int
+    goal_days: int  # days this week (Monday to today) with the daily goal met
+    new_words: int  # words learned for the first time this week
     me: bool
 
 
@@ -111,14 +112,16 @@ def leaderboard(
     tz: TimeZone,
     scope: Literal["everyone", "friends"] = "everyone",
 ) -> list[RowResponse]:
-    """Everyone on the leaderboard (or you and your friends), by coins earned today."""
+    """Everyone on the leaderboard (or you and your friends) this week: days with the goal met,
+    then new words learned."""
     return [
         RowResponse(
             user_id=r.user_id,
             display_name=r.display_name,
             gender=r.gender,
             has_avatar=r.has_avatar,
-            coins_today=r.coins_today,
+            goal_days=r.goal_days,
+            new_words=r.new_words,
             me=r.me,
         )
         for r in board.today(user.id, now, tz, friends_only=scope == "friends")

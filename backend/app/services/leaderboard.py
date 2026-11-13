@@ -1,7 +1,8 @@
-"""The leaderboard (coins earned today) and the profiles others can open from it."""
+"""The leaderboard (days this week with the goal met) and the profiles others can open from it."""
 
+from collections import Counter
 from dataclasses import dataclass
-from datetime import datetime, time
+from datetime import datetime, time, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -13,7 +14,7 @@ from app.db.models import User
 from app.repositories.friends import FriendRepository
 from app.repositories.leaderboard import LeaderboardRepository
 from app.repositories.quiz import QuizRepository
-from app.services.quiz import Day, HistoryPoint, quiz_stats
+from app.services.quiz import Day, HistoryPoint, daily_goal, quiz_stats
 
 
 class ProfileNotFoundError(Exception):
@@ -26,7 +27,8 @@ class Row:
     display_name: str
     gender: Gender
     has_avatar: bool
-    coins_today: int
+    goal_days: int  # days this week (so far) with the daily goal met
+    new_words: int  # words learned for the first time this week
     me: bool
 
 
@@ -68,25 +70,39 @@ class LeaderboardService:
     def today(
         self, viewer_id: int, now: datetime, tz: ZoneInfo, friends_only: bool = False
     ) -> list[Row]:
-        """Everyone shown on the leaderboard (or just you and your friends), most coins today
-        first (ties by name)."""
-        day = now.astimezone(tz).date()
-        coins = self._repo.coins_since(datetime.combine(day, time.min, tz), day)
+        """Everyone shown on the leaderboard (or just you and your friends) for the week so far
+        (Monday to now, in the viewer's time zone): most days with the daily goal met first, then
+        most words learned for the first time, then name."""
+        today = now.astimezone(tz).date()
+        monday = today - timedelta(days=today.weekday())
+        since = datetime.combine(monday, time.min, tz)
+        answer_times = self._repo.answer_times_since(since)
+        new_words = self._repo.first_learned_since(since)
         friends = FriendRepository(self._session).friend_ids(viewer_id)
-        rows = [
-            Row(
-                user_id=user.id,
-                display_name=user.display_name,
-                gender=user.gender,
-                has_avatar=user.has_avatar,
-                coins_today=coins.get(user.id, 0),
-                me=user.id == viewer_id,
+        rows = []
+        for user in self._repo.users():
+            if not (
+                user.id == viewer_id
+                or (user.id in friends if friends_only else user.show_on_leaderboard)
+            ):
+                continue
+            per_day = Counter(t.astimezone(tz).date() for t in answer_times.get(user.id, []))
+            goal = daily_goal(user, tz)
+            days = (monday + timedelta(days=n) for n in range((today - monday).days + 1))
+            rows.append(
+                Row(
+                    user_id=user.id,
+                    display_name=user.display_name,
+                    gender=user.gender,
+                    has_avatar=user.has_avatar,
+                    goal_days=sum(1 for day in days if per_day[day] >= goal.on(day)),
+                    new_words=new_words.get(user.id, 0),
+                    me=user.id == viewer_id,
+                )
             )
-            for user in self._repo.users()
-            if user.id == viewer_id
-            or (user.id in friends if friends_only else user.show_on_leaderboard)
-        ]
-        return sorted(rows, key=lambda r: (-r.coins_today, r.display_name.lower(), r.user_id))
+        return sorted(
+            rows, key=lambda r: (-r.goal_days, -r.new_words, r.display_name.lower(), r.user_id)
+        )
 
     def profile(self, viewer_id: int, user_id: int, now: datetime, tz: ZoneInfo) -> PublicProfile:
         user = self._visible(viewer_id, user_id)

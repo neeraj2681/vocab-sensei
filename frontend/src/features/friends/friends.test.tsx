@@ -86,7 +86,8 @@ describe('friends', () => {
       display_name,
       gender: 'unspecified',
       has_avatar: false,
-      coins_today: 10,
+      goal_days: 1,
+      new_words: 0,
       me: user_id === 1,
     })
     const api = app({

@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from typing import Any
 
 import pytest
@@ -147,3 +148,23 @@ def test_invalid_backups_are_rejected(user_client: TestClient, backup: dict[str,
 def test_requires_login(client: TestClient) -> None:
     assert client.get("/api/backup").status_code == 401
     assert client.post("/api/backup", json={}).status_code == 401
+
+
+def test_first_learned_at_survives_a_backup(
+    user_client: TestClient, session: Session, played: dict[str, Any]
+) -> None:
+    first = datetime(2026, 9, 1, tzinfo=UTC)
+    played["words"][0]["first_learned_at"] = first.isoformat()
+    other = make_user(session, "new@example.com")
+    add_book(session, other, LEMMAS, reading=False)
+    log_in(user_client, other.email)
+
+    restore(user_client, played)
+
+    lemma = played["words"][0]["lemma"]
+    restored = session.scalars(
+        select(UserWord)
+        .join(Word, Word.id == UserWord.word_id)
+        .where(UserWord.user_id == other.id, Word.lemma == lemma)
+    ).one()
+    assert restored.first_learned_at == first

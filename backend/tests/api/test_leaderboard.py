@@ -1,3 +1,4 @@
+from datetime import timedelta
 from typing import Any
 
 import pytest
@@ -5,7 +6,18 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import CurrentReading, Document, QuestClaim, User
+from app.core.enums import QuestionType, WordStatus
+from app.db.models import (
+    CurrentReading,
+    Document,
+    GoalChange,
+    QuestClaim,
+    Question,
+    QuizAnswer,
+    User,
+    UserWord,
+    Word,
+)
 from tests.api.test_quiz import NOW, answer, book, clock, reader  # noqa: F401 (fixtures)
 from tests.conftest import make_user
 
@@ -31,20 +43,125 @@ def board(client: TestClient) -> list[dict[str, Any]]:
     return rows
 
 
-def test_ranks_everyone_by_coins_earned_today(user_client: TestClient, session: Session) -> None:
-    friend(session, "asha@example.com", "Asha", 40)
-    friend(session, "bo@example.com", "Bo", 0)
+MONDAY = NOW - timedelta(days=4)  # NOW is Friday 30 Oct 2026
+
+
+def answer_on(
+    session: Session, user: User, day: int, count: int, *, chosen: int | None = 0
+) -> None:
+    """`count` real answers by `user` on the `day`th day of the week (0 = Monday)."""
+    word = session.scalars(select(Word)).first()
+    assert word is not None
+    for _ in range(count):
+        question = Question(
+            user_id=user.id,
+            word_id=word.id,
+            type=QuestionType.DEFINITION_MCQ,
+            prompt="?",
+            options=["a", "b"],
+            correct_index=0,
+            generator="test",
+        )
+        session.add(question)
+        session.flush()
+        session.add(
+            QuizAnswer(
+                user_id=user.id,
+                word_id=word.id,
+                question_id=question.id,
+                chosen_index=chosen,
+                correct=True,
+                score_delta=10,
+                points=50,  # lots of coins: they must not matter
+                answered_at=MONDAY + timedelta(days=day),
+            )
+        )
+    session.commit()
+
+
+def learn(session: Session, user: User, lemma: str, when: Any) -> None:
+    word = session.scalars(select(Word).where(Word.lemma == lemma)).one()
+    session.add(
+        UserWord(
+            user_id=user.id,
+            word_id=word.id,
+            score=100,
+            status=WordStatus.LEARNED,
+            learned_at=when,
+            first_learned_at=when,
+        )
+    )
+    session.commit()
+
+
+def test_ranks_by_days_with_the_goal_met_then_new_words_then_name(
+    user_client: TestClient, session: Session
+) -> None:
+    steady = friend(session, "asha@example.com", "Asha", 0, daily_goal=2)
+    bursty = friend(session, "bo@example.com", "Bo", 40, daily_goal=2)
+    tied = friend(session, "cy@example.com", "Cy", 0, daily_goal=2)
+    twin = friend(session, "di@example.com", "Di", 0, daily_goal=2)
+    for day in range(4):  # met the goal on four days
+        answer_on(session, steady, day, 2)
+    for day in range(2):  # twice, with far more coins
+        answer_on(session, bursty, day, 20)
+        answer_on(session, tied, day, 2)
+        answer_on(session, twin, day, 2)
+    answer_on(session, tied, 2, 1)  # one answer short of the goal: no day
+    answer_on(session, tied, 3, 5, chosen=None)  # "I know this" never counts
+    learn(session, tied, "word01", MONDAY)
+    learn(session, tied, "word02", MONDAY + timedelta(days=1))
+    learn(session, twin, "word03", MONDAY - timedelta(days=1))  # last week: not this week's
     for _ in range(3):
-        answer(user_client, session)  # 15 coins
+        answer(user_client, session)  # today, short of the goal of 10
 
     rows = board(user_client)
 
-    assert [(r["display_name"], r["coins_today"], r["me"]) for r in rows] == [
-        ("Asha", 40, False),
-        ("Reader", 15, True),
-        ("Bo", 0, False),
+    assert [(r["display_name"], r["goal_days"], r["new_words"], r["me"]) for r in rows] == [
+        ("Asha", 4, 0, False),
+        ("Cy", 2, 2, False),
+        ("Bo", 2, 0, False),
+        ("Di", 2, 0, False),
+        ("Reader", 0, 0, True),
     ]
+    assert "coins_today" not in rows[0]
     assert "email" not in rows[0]
+
+
+def test_each_day_is_judged_by_the_goal_it_had(user_client: TestClient, session: Session) -> None:
+    other = friend(session, "asha@example.com", "Asha", 0, daily_goal=5)
+    session.add(GoalChange(user_id=other.id, goal=2, since=MONDAY - timedelta(days=30)))
+    session.add(GoalChange(user_id=other.id, goal=5, since=MONDAY + timedelta(days=2)))
+    session.commit()
+    for day in range(4):
+        answer_on(session, other, day, 2)  # enough on Monday and Tuesday only
+
+    rows = {r["display_name"]: r for r in board(user_client)}
+
+    assert rows["Asha"]["goal_days"] == 2
+
+
+def test_a_first_time_learn_counts_but_a_relearned_word_does_not(
+    user_client: TestClient, session: Session
+) -> None:
+    other = friend(session, "asha@example.com", "Asha", 0)
+    learn(session, other, "word01", MONDAY)
+    word = session.scalars(select(Word).where(Word.lemma == "word02")).one()
+    session.add(  # learned long ago, back to 100 today: learned_at is today, first_learned_at isn't
+        UserWord(
+            user_id=other.id,
+            word_id=word.id,
+            score=100,
+            status=WordStatus.LEARNED,
+            learned_at=NOW,
+            first_learned_at=NOW - timedelta(days=60),
+        )
+    )
+    session.commit()
+
+    rows = {r["display_name"]: r for r in board(user_client)}
+
+    assert rows["Asha"]["new_words"] == 1
 
 
 def test_people_can_hide_from_it(user_client: TestClient, session: Session) -> None:

@@ -1,19 +1,25 @@
 import { screen, within } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { LeaderboardRow, Profile } from '../../api/leaderboard'
 import { fail, fakeApi, json, type Routes } from '../../test/fakeApi'
 import { renderApp } from '../../test/renderApp'
 
 const USER = { id: 1, email: 'reader@example.com', display_name: 'Reader', email_verified_at: 'x' }
-const row = (user_id: number, display_name: string, coins_today: number): LeaderboardRow => ({
+const row = (
+  user_id: number,
+  display_name: string,
+  goal_days: number,
+  new_words: number,
+): LeaderboardRow => ({
   user_id,
   display_name,
   gender: 'unspecified',
   has_avatar: false,
-  coins_today,
+  goal_days,
+  new_words,
   me: user_id === 1,
 })
-const ROWS = [row(2, 'Asha', 40), row(1, 'Reader', 15), row(3, 'Bo', 0)]
+const ROWS = [row(2, 'Asha', 4, 9), row(1, 'Reader', 2, 1), row(3, 'Bo', 0, 0)]
 const ASHA: Profile = {
   user_id: 2,
   display_name: 'Asha',
@@ -41,13 +47,21 @@ function app(extra: Routes = {}) {
 }
 
 describe('leaderboard', () => {
-  it('ranks everyone by coins earned today, you highlighted', async () => {
+  it('shows days with the goal met and new words this week, you highlighted', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-10-30T12:00:00Z')) // a Friday: five days so far
     app()
     renderApp('/leaderboard')
 
     const rows = within(await screen.findByRole('list')).getAllByRole('listitem')
+    vi.useRealTimers()
 
-    expect(rows.map((r) => r.textContent)).toEqual(['🥇Asha 40', '🥈Reader (you) 15', '🥉Bo 0'])
+    expect(rows.map((r) => r.textContent)).toEqual([
+      '🥇Asha9 new words✓✓✓✓4 of 5 days',
+      '🥈Reader (you)1 new word✓✓2 of 5 days',
+      '🥉Bo0 new words0 of 5 days',
+    ])
+    expect(screen.getByText(/This week: days with your goal met/)).toBeInTheDocument()
     expect(rows[1]).toHaveClass('leaderboard__row--me')
   })
 

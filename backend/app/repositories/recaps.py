@@ -3,7 +3,6 @@ from datetime import date, datetime
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.core.enums import WordStatus
 from app.db.models import Document, QuestClaim, Question, QuizAnswer, UserWord, Word
 
 
@@ -38,9 +37,8 @@ class RecapRepository:
             .select_from(UserWord)
             .where(
                 UserWord.user_id == user_id,
-                UserWord.status == WordStatus.LEARNED,
-                UserWord.learned_at >= start,
-                UserWord.learned_at < end,
+                UserWord.first_learned_at >= start,
+                UserWord.first_learned_at < end,
             )
         )
         return int(count or 0)
