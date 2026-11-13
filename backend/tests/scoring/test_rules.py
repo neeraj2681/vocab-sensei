@@ -75,8 +75,8 @@ def test_learned_score_decays_five_per_full_week(weeks_ago: float, expected: int
     assert effective_score(learned(weeks_ago=weeks_ago), NOW, RULES) == expected
 
 
-def test_decay_stops_at_floor() -> None:
-    assert effective_score(learned(weeks_ago=100), NOW, RULES) == 0
+def test_a_learned_word_never_decays_below_fifty() -> None:
+    assert effective_score(learned(weeks_ago=100), NOW, RULES) == 50
 
 
 def test_decay_only_applies_to_learned_words() -> None:
@@ -91,8 +91,9 @@ def test_learned_word_returns_to_learning_after_a_week() -> None:
 def test_correct_answer_on_decayed_word_relearns_it_and_restarts_decay() -> None:
     result = apply_answer(learned(weeks_ago=1), correct=True, now=NOW, rules=RULES)
 
+    # 95 + 10 is capped at 100; the review was due, so the gap doubles to two weeks
     assert result == WordProgress(
-        score=105, status=WordStatus.LEARNED, learned_at=NOW, was_learned=True
+        score=100, status=WordStatus.LEARNED, learned_at=NOW, was_learned=True, interval_weeks=2
     )
 
 
@@ -170,7 +171,7 @@ def test_learning_a_word_again_makes_its_misses_cost_ten_again() -> None:
 
     assert (learned.status, learned.was_learned) == (WordStatus.LEARNED, True)
     assert (slipped.score, slipped.status, slipped.was_learned) == (
-        95,
+        90,  # 100 - 10: scores no longer go above 100
         WordStatus.LEARNING,
         True,
     )
@@ -184,3 +185,50 @@ def test_the_miss_penalty_follows_the_word() -> None:
     assert miss_penalty(replace(reviewed, score=50), NOW, RULES) == -5
     assert answer_points(100, correct=False, counted=True, rules=RULES, miss=-10) == -10
     assert answer_points(100, correct=False, counted=True, rules=RULES, miss=-5) == -5
+
+
+def _reviewed(progress: WordProgress, weeks_later: int, correct: bool = True) -> WordProgress:
+    assert progress.learned_at is not None
+    when = progress.learned_at + timedelta(weeks=weeks_later)
+    return apply_answer(progress, correct=correct, now=when, rules=RULES)
+
+
+def test_each_review_that_was_due_doubles_the_gap_up_to_sixteen_weeks() -> None:
+    progress = apply_answer(WordProgress(score=90), correct=True, now=NOW, rules=RULES)
+    gaps = [progress.interval_weeks]
+    for _ in range(6):
+        progress = _reviewed(progress, weeks_later=progress.interval_weeks)  # just due
+        gaps.append(progress.interval_weeks)
+
+    assert gaps == [1, 2, 4, 8, 16, 16, 16]
+    assert progress.score == 100
+
+
+def test_a_word_stays_at_100_until_its_review_is_due() -> None:
+    word = WordProgress(
+        score=100, status=WordStatus.LEARNED, learned_at=NOW, was_learned=True, interval_weeks=4
+    )
+
+    assert effective_score(word, NOW + timedelta(weeks=3, days=6), RULES) == 100
+    assert effective_score(word, NOW + timedelta(weeks=4), RULES) == 95
+    assert effective_score(word, NOW + timedelta(weeks=6), RULES) == 85
+
+
+def test_an_early_review_keeps_the_gap() -> None:
+    word = WordProgress(
+        score=100, status=WordStatus.LEARNED, learned_at=NOW, was_learned=True, interval_weeks=4
+    )
+
+    assert _reviewed(word, weeks_later=1).interval_weeks == 4
+
+
+def test_a_miss_halves_the_gap_instead_of_starting_over() -> None:
+    word = WordProgress(
+        score=100, status=WordStatus.LEARNED, learned_at=NOW, was_learned=True, interval_weeks=8
+    )
+
+    slipped = _reviewed(word, weeks_later=8, correct=False)  # due: 95, then -10
+    relearned = apply_answer(slipped, correct=True, now=NOW, rules=RULES)
+
+    assert (slipped.score, slipped.interval_weeks) == (85, 4)
+    assert (relearned.status, relearned.interval_weeks) == (WordStatus.LEARNING, 4)

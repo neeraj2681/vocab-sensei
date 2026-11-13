@@ -10,6 +10,7 @@ from app.quiz.selection import (
     choose_question_type,
     closest_or_oldest,
     learning_cap,
+    review_weight,
     spacing_rules,
     streak,
 )
@@ -186,3 +187,10 @@ def test_which_meaning_only_for_clear_meanings_from_30() -> None:
     assert QuestionType.WHICH_MEANING not in kinds(29, True)
     assert QuestionType.WHICH_MEANING in kinds(30, True)
     assert QuestionType.WHICH_MEANING not in kinds(90, False)  # no clear meaning: never asked
+
+
+def test_review_gets_more_turns_while_many_words_are_due() -> None:
+    def weight(due: int) -> int:
+        return review_weight(due, base=1, per=5, maximum=6)
+
+    assert [weight(n) for n in (0, 4, 5, 12, 30, 200)] == [1, 1, 1, 2, 6, 6]

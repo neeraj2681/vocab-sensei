@@ -21,7 +21,10 @@ class ScoringSettings(BaseModel):
     review_wrong_delta: int = -10
     review_strict_above: int = 50
     learned_threshold: int = 100
-    weekly_decay: int = 5
+    weekly_decay: int = 5  # a learned word loses this per week once its review is due...
+    # ...but never below `review_strict_above`. Its gap between reviews starts at 1 week, doubles
+    # after each review that was due (up to this), and halves after a miss.
+    max_interval_weeks: int = 16
     unsure_start: int = 50
     floor: int = 0
     # Ninja Mode: after `combo_after` right answers in a row, right answers earn `combo_multiplier`
@@ -45,6 +48,10 @@ class QuizSettings(BaseModel):
     new_weight: int = Field(default=6, ge=0)
     learning_weight: int = Field(default=3, ge=0)
     review_weight: int = Field(default=1, ge=0)
+    # Review gets one more turn per this many words due, up to `max_review_weight`, so a backlog
+    # of learned words is caught up instead of fading.
+    due_per_review_weight: int = Field(default=5, gt=0)
+    max_review_weight: int = Field(default=6, ge=0)
     # "Similar difficulty" for wrong options: Zipf scores within this distance of the word's.
     distractor_zipf_window: float = Field(default=0.75, gt=0)
     # Question formats unlock as a word's score grows: reverse (meaning -> word), then also

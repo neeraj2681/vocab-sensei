@@ -51,6 +51,8 @@ class UserWord(Base):
     learned_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
     # Learned at some point and not dropped to 50 since: misses cost more (see miss_penalty).
     was_learned: Mapped[bool] = mapped_column(default=False, server_default=sa_false())
+    # Weeks between reviews once learned (see app.scoring.rules.WordProgress.interval_weeks).
+    interval_weeks: Mapped[int] = mapped_column(default=1, server_default="1")
     last_reviewed_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
     updated_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, onupdate=utcnow)
 

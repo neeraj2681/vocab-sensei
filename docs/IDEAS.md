@@ -148,3 +148,21 @@ six tiny tabs (0.68rem), the week shown twice on Today, three bars above the qui
 
 Not chosen yet: five tabs (Compete tab, Shop in Today), bigger quiz word / two-column options, "I know this"
 in a menu with Undo, streak-at-risk nudge, Words filter chips, shared chapter word-list component.
+
+## Logic, gamification and UI review (13 Nov 2026, Fable; facts gathered by Haiku)
+
+**Building now (owner: "Fable's top 5"):** (1) keep the rarest words (wordfreq 0.0) when WordNet knows them;
+(2) review spacing: per-word gap 1→2→4→8→16 weeks, a miss halves it, learned words never decay below 50, score
+capped at 100, review gets more turns when many words are due (most faded first); (3) "I know this" ends a Ninja
+run; freezes only cover a whole run of missed days and only streaks of 3+ days; (4) leaderboard by days the goal
+was met (tie-break: first-time learns); quests/Today/recaps count first-time learns only; (5) teaching moments:
+"you picked the meaning of X" after a miss, missed words in the session summary, recall-first (options appear
+after ~2 s or on "Show options", words above 50, not for speech questions).
+
+**Other findings, not chosen yet:** day boundaries follow the client's `?tz=` (store the local answer date);
+words in progress never decay; near-identical glosses can make two right options; dead coin economy after ~2
+months (gift a freeze, cosmetics); double coins is EV-negative (make it "next 60 right × 2" for 400); a once-a-month
+streak repair; coins by question format and none for the retry; "hard" quests that aren't hard with one book;
+UI: goal-met ticks on the leaderboard, chapter tables with progress dots and tap-to-mark-known, a useful closed-Shop
+screen; features: "words at risk" reminder, up to 3 book sentences per word, word families, Anki/CSV export,
+shareable progress card, community difficulty ("tricky" words).

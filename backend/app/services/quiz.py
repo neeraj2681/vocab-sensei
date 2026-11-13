@@ -48,6 +48,7 @@ from app.quiz.selection import (
     choose_question_type,
     closest_or_oldest,
     learning_cap,
+    review_weight,
     spacing_rules,
     streak,
 )
@@ -228,6 +229,7 @@ def _progress(word: UserWord) -> WordProgress:
         status=word.status,
         learned_at=word.learned_at,
         was_learned=word.was_learned,
+        interval_weeks=word.interval_weeks,
     )
 
 
@@ -417,19 +419,27 @@ class QuizService:
         ]
         if learning:
             pools[Pool.LEARNING] = closest_or_oldest(learning, lambda w: w.score, self._rng).word_id
+        rules = self._settings.scoring
         due = [
             w
             for w in self._repo.words_with_status(user_id, WordStatus.LEARNED, exclude)
-            if usable(w.word_id)
-            and current_status(_progress(w), now, self._settings.scoring) is WordStatus.LEARNING
+            if usable(w.word_id) and current_status(_progress(w), now, rules) is WordStatus.LEARNING
         ]
-        if due:
-            pools[Pool.REVIEW] = due[0].word_id
+        if due:  # the most faded first, so a word at risk is saved before it slips further
+            pools[Pool.REVIEW] = min(
+                due, key=lambda w: effective_score(_progress(w), now, rules)
+            ).word_id
 
         weights = {
             Pool.NEW: self._quiz.new_weight,
             Pool.LEARNING: self._quiz.learning_weight,
-            Pool.REVIEW: self._quiz.review_weight,
+            # More turns while many learned words are due, so a backlog is caught up.
+            Pool.REVIEW: review_weight(
+                len(due),
+                base=self._quiz.review_weight,
+                per=self._quiz.due_per_review_weight,
+                maximum=self._quiz.max_review_weight,
+            ),
         }
         pool = choose_pool(list(pools), weights, self._rng)
         return pools[pool] if pool is not None else None
@@ -542,6 +552,7 @@ class QuizService:
             after = apply_answer(_progress(word), correct=correct, now=now, rules=rules)
             word.score, word.status, word.learned_at = after.score, after.status, after.learned_at
             word.was_learned = after.was_learned
+            word.interval_weeks = after.interval_weeks
             delta = after.score - before
         word.last_reviewed_at = now
         points = answer_points(
@@ -672,6 +683,7 @@ class QuizService:
         elif user_word.status not in (WordStatus.KNOWN, WordStatus.NEW):
             raise WordNotKnownError(f"{lemma!r} is already being learned")
         user_word.status, user_word.score, user_word.learned_at = WordStatus.LEARNING, 0, None
+        user_word.interval_weeks = 1
         user_word.was_learned = False
         self._session.commit()
 
