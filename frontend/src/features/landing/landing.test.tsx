@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { fail, fakeApi, json } from '../../test/fakeApi'
 import { renderApp } from '../../test/renderApp'
@@ -30,7 +30,9 @@ describe('landing page', () => {
     expect(screen.getByRole('heading', { name: 'Try one' })).toBeInTheDocument()
     expect(screen.getByText('What does “spleen” mean here?')).toBeInTheDocument()
     expect(screen.getAllByRole('button')).toHaveLength(4)
-    expect(document.title).toBe('Vocab Sensei')
+    await waitFor(() => {
+      expect(document.title).toBe('Vocab Sensei') // set by an effect after the first render
+    })
   })
 
   it('says Right! for the right option', async () => {
