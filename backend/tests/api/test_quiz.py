@@ -506,6 +506,54 @@ def test_a_word_one_right_answer_from_learned_says_so(
     assert asked["if_right"]["learned"] is True
 
 
+def only_word_asked(session: Session, lemma: str, **progress: Any) -> None:
+    """`lemma` is the only word left to ask, with the given progress; the rest are known."""
+    for word in session.scalars(select(Word)):
+        if word.lemma == lemma:
+            session.add(UserWord(user_id=reader(session).id, word_id=word.id, **progress))
+        else:
+            session.add(
+                UserWord(user_id=reader(session).id, word_id=word.id, status=WordStatus.KNOWN)
+            )
+    session.commit()
+
+
+def test_only_a_first_time_learn_counts_as_learned_today(
+    user_client: TestClient, session: Session, book: Document, clock: Clock
+) -> None:
+    only_word_asked(session, "word00", score=95, status=WordStatus.LEARNING)
+
+    assert question(user_client)["if_right"]["learned"] is True
+    result = answer(user_client, session)
+
+    assert result["word_status"] == "learned"
+    assert result["stats"]["learned_today"] == 1
+    word = session.scalars(select(UserWord).where(UserWord.status == WordStatus.LEARNED)).one()
+    assert word.first_learned_at == NOW
+
+
+def test_an_old_word_back_at_100_is_not_learned_again(
+    user_client: TestClient, session: Session, book: Document, clock: Clock
+) -> None:
+    long_ago = NOW - timedelta(days=60)
+    only_word_asked(
+        session,
+        "word00",
+        score=95,
+        status=WordStatus.LEARNING,  # learned long ago, slipped back, up again
+        was_learned=True,
+        first_learned_at=long_ago,
+    )
+
+    assert question(user_client)["if_right"]["learned"] is False
+    result = answer(user_client, session)
+
+    assert result["word_status"] == "learned"  # it is learned again...
+    assert result["stats"]["learned_today"] == 0  # ...but not a new word
+    word = session.scalars(select(UserWord).where(UserWord.status == WordStatus.LEARNED)).one()
+    assert word.first_learned_at == long_ago  # reviews never change it
+
+
 def test_the_next_question_is_kept_ready(
     user_client: TestClient, session: Session, book: Document, clock: Clock
 ) -> None:

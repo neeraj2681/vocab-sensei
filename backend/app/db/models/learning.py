@@ -49,6 +49,8 @@ class UserWord(Base):
     score: Mapped[int] = mapped_column(default=0)
     status: Mapped[WordStatus] = mapped_column(str_enum(WordStatus), default=WordStatus.NEW)
     learned_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
+    # First time the word reached learned; reviews never change it.
+    first_learned_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
     # Learned at some point and not dropped to 50 since: misses cost more (see miss_penalty).
     was_learned: Mapped[bool] = mapped_column(default=False, server_default=sa_false())
     # Weeks between reviews once learned (see app.scoring.rules.WordProgress.interval_weeks).

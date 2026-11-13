@@ -160,8 +160,7 @@ class QuizRepository:
             .select_from(UserWord)
             .where(
                 UserWord.user_id == user_id,
-                UserWord.status == WordStatus.LEARNED,
-                UserWord.learned_at >= since,
+                UserWord.first_learned_at >= since,
             )
         )
         return int(count or 0)

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { leaderboardApi, type LeaderboardRow } from '../../api/leaderboard'
+import { timeZone } from '../../api/quiz'
 import { Avatar } from '../../components/Avatar'
 import { Icon } from '../../components/Icon'
 import { useAuth } from '../auth/AuthContext'
@@ -8,13 +9,24 @@ import { usePageTitle } from '../../components/usePageTitle'
 
 const MEDALS = ['🥇', '🥈', '🥉']
 
-/** Everyone's coins today, most first; tap a name to open their profile. */
+const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+
+/** Days of this week so far, Monday being 1, in the viewer's time zone (the board's own week). */
+function daysSoFar(): number {
+  const day = new Intl.DateTimeFormat('en-GB', { weekday: 'short', timeZone: timeZone() }).format(
+    new Date(),
+  )
+  return Math.max(1, WEEKDAYS.indexOf(day) + 1)
+}
+
+/** Everyone's week so far: days with the goal met, then new words. Tap a name for their profile. */
 export function LeaderboardPage() {
   usePageTitle('Leaderboard')
   const { user } = useAuth()
   const [scope, setScope] = useState<'everyone' | 'friends'>('everyone')
   const [rows, setRows] = useState<LeaderboardRow[] | null>(null)
   const [error, setError] = useState(false)
+  const days = daysSoFar()
 
   useEffect(() => {
     let current = true
@@ -36,7 +48,7 @@ export function LeaderboardPage() {
       <h1>
         <Icon name="trophy" size={36} /> Leaderboard
       </h1>
-      <p className="muted">Coins earned today. It starts again at midnight.</p>
+      <p className="muted">This week: days with your goal met, then new words learned.</p>
       {user && !user.show_on_leaderboard && (
         <p className="muted">
           Others can’t see you here. To join the board, turn on “Show me on the leaderboard” in{' '}
@@ -85,9 +97,13 @@ export function LeaderboardPage() {
                 <span className="leaderboard__name">
                   {row.display_name}
                   {row.me && <span className="muted"> (you)</span>}
+                  <small className="muted" style={{ display: 'block', fontWeight: 400 }}>
+                    {row.new_words.toLocaleString()} new {row.new_words === 1 ? 'word' : 'words'}
+                  </small>
                 </span>
                 <span className="leaderboard__coins">
-                  <Icon name="coin" size={20} /> {row.coins_today.toLocaleString()}
+                  <span aria-hidden="true">{'✓'.repeat(Math.min(row.goal_days, days))}</span>
+                  {row.goal_days} of {days} days
                 </span>
               </Link>
             </li>

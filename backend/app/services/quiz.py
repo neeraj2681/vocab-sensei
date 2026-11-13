@@ -552,6 +552,8 @@ class QuizService:
             after = apply_answer(_progress(word), correct=correct, now=now, rules=rules)
             word.score, word.status, word.learned_at = after.score, after.status, after.learned_at
             word.was_learned = after.was_learned
+            if after.status is WordStatus.LEARNED and word.first_learned_at is None:
+                word.first_learned_at = now
             word.interval_weeks = after.interval_weeks
             delta = after.score - before
         word.last_reviewed_at = now
@@ -622,7 +624,8 @@ class QuizService:
                 rules=rules,
                 miss=miss_penalty(progress, now, rules),
             ),
-            learned_if_right=status_if_right is WordStatus.LEARNED,
+            learned_if_right=status_if_right is WordStatus.LEARNED
+            and (existing is None or existing.first_learned_at is None),
         )
 
     def _word_and_meaning(self, user_id: int, word_id: int) -> tuple[str, str | None]:
