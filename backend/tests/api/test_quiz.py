@@ -966,17 +966,16 @@ class TestNinjaMode:
         assert user_client.get("/api/quiz/stats").json()["combo"] == 0
         assert answer(user_client, session)["points"] == 5
 
-    def test_i_know_this_neither_breaks_nor_extends_it(
-        self, user_client: TestClient, session: Session
-    ) -> None:
+    def test_i_know_this_ends_the_run(self, user_client: TestClient, session: Session) -> None:
         for _ in range(5):
             answer(user_client, session)
 
         asked = question(user_client)
-        user_client.post(f"/api/quiz/questions/{asked['id']}/know")
+        response = user_client.post(f"/api/quiz/questions/{asked['id']}/know")
 
-        assert user_client.get("/api/quiz/stats").json()["combo"] == 5
-        assert answer(user_client, session)["points"] == 10
+        assert response.status_code == 204
+        assert user_client.get("/api/quiz/stats").json()["combo"] == 0
+        assert answer(user_client, session)["points"] == 5
 
 
 def test_words_is_empty_before_any_answer(user_client: TestClient, book: Document) -> None:
