@@ -139,6 +139,10 @@ class AnswerOutcome:
     word: UserWord
     question: Question
     stats: Stats
+    picked_word: str | None = None  # a wrong meaning pick: the word that meaning belongs to
+
+
+RECALL_FIRST_ABOVE = 50  # words scoring above this hide their options for a moment
 
 
 @dataclass(frozen=True)
@@ -153,6 +157,7 @@ class Preview:
     points_if_right: int  # before Ninja Mode: the screen doubles it while its run is long enough
     points_if_wrong: int
     learned_if_right: bool
+    recall_first: bool = False  # the word is well known: try to remember before seeing options
 
 
 @dataclass(frozen=True)
@@ -585,6 +590,11 @@ class QuizService:
         )
         self._session.commit()
         lemma, meaning = self._word_and_meaning(user_id, question.word_id)
+        picked_word = None
+        if not correct and question.type is QuestionType.DEFINITION_MCQ:
+            picked_word = self._repo.word_for_definition(
+                question.options[chosen_index], question.word_id
+            )
         return AnswerOutcome(
             correct=correct,
             correct_index=question.correct_index,
@@ -596,6 +606,7 @@ class QuizService:
             word=word,
             question=question,
             stats=self.stats(user_id, now, tz),
+            picked_word=picked_word,
         )
 
     def preview(self, user_id: int, question: Question, now: datetime) -> Preview:
@@ -623,6 +634,8 @@ class QuizService:
                 miss=miss_penalty(progress, now, rules),
             ),
             learned_if_right=status_if_right is WordStatus.LEARNED,
+            recall_first=question.type is not QuestionType.SAY_WORD
+            and effective_score(progress, now, rules) > RECALL_FIRST_ABOVE,
         )
 
     def _word_and_meaning(self, user_id: int, word_id: int) -> tuple[str, str | None]:

@@ -250,6 +250,16 @@ class QuizRepository:
         ).first()
         return (row[0], row[1]) if row else None
 
+    def word_for_definition(self, text: str, not_word_id: int) -> str | None:
+        """The lemma of another word that has `text` as a definition, if any."""
+        return self._session.scalar(
+            select(Word.lemma)
+            .join(Definition, Definition.word_id == Word.id)
+            .where(Definition.text == text, Word.id != not_word_id)
+            .order_by(Definition.sense_rank, Word.id)
+            .limit(1)
+        )
+
     def distractors(
         self, word_id: int, pos: str | None, zipf: float | None, window: float | None, limit: int
     ) -> list[tuple[str, str]]:

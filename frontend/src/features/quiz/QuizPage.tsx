@@ -26,17 +26,35 @@ interface Session {
   right: number
   points: number
   todayAtStart: number | null // answers already given today when the session began
+  missed: Missed[] // words answered wrong this session, each once, in order (at most five)
 }
+
+interface Missed {
+  word: string
+  meaning: string | null
+}
+
+const MAX_MISSED = 5
+const RECALL_MS = 2000 // how long a well-known word's options stay hidden
 
 const newSession = (todayAtStart: number | null): Session => ({
   answered: 0,
   right: 0,
   points: 0,
   todayAtStart,
+  missed: [],
 })
 
 function focusOf(book: number | null, chapter: number | null) {
   return book !== null && chapter !== null ? { documentId: book, chapter } : undefined
+}
+
+/** The words missed so far, plus this one unless it is already there or the list is full. */
+function addMissed(missed: Missed[], question: QuizQuestion): Missed[] {
+  if (missed.length >= MAX_MISSED || missed.some((m) => m.word === question.word)) return missed
+  const meaning =
+    question.type === 'definition_mcq' ? question.options[question.correct_index] : question.meaning
+  return [...missed, { word: question.word, meaning: meaning ?? null }]
 }
 
 /** Whether a time the server sent (like double coins' end) is still to come. */
@@ -80,6 +98,7 @@ type Phase =
       doubled: boolean // Ninja Mode multiplied them
       ninja?: 'started' | 'ended' // this answer started or ended Ninja Mode
       heard?: string | null // "say this word": what the speech recogniser heard
+      picked?: string | null // wrong meaning pick: the word that meaning belongs to
     }
   | { kind: 'error'; message: string; noWords: boolean }
   | { kind: 'summary' }
@@ -109,6 +128,7 @@ export function QuizPage() {
   const [questionVersion, setQuestionVersion] = useState(0) // bump to fetch the next question
   const [combo, setCombo] = useState<Combo>({ run: 0, after: 5, multiplier: 2 })
   const [leaving, setLeaving] = useState(false) // "stop now?" warning while in Ninja Mode
+  const [shownFor, setShownFor] = useState<number | null>(null) // question whose options show
   const navigate = useNavigate()
   // "Study this chapter": /quiz?book=1&chapter=4 asks only that chapter's words.
   const [params] = useSearchParams()
@@ -246,6 +266,7 @@ export function QuizPage() {
       answered: s.answered + 1,
       right: s.right + (correct ? 1 : 0),
       points: s.points + points,
+      missed: correct ? s.missed : addMissed(s.missed, question),
     }))
     setStats((s) => s && { ...s, total: s.total + points, today: s.today + 1 })
     setPop((previous) => ({ id: (previous?.id ?? 0) + 1, delta: points, correct }))
@@ -271,6 +292,12 @@ export function QuizPage() {
     try {
       const result = await quizApi.answer(question.id, index, focusOf(focusBook, focusChapter))
       setStats(result.stats) // the server's numbers win (streak, week)
+      if (result.picked_word) {
+        const picked = result.picked_word
+        setPhase((p) =>
+          p.kind === 'answered' && p.question.id === question.id ? { ...p, picked } : p,
+        )
+      }
       keep(result.next, result.after_next)
     } catch (err) {
       // What's on screen stays; a banner offers to save again.
@@ -347,6 +374,19 @@ export function QuizPage() {
     }
   }
 
+  // Recall first: a well-known word's options appear after a moment (or on "Show options").
+  const recallId = phase.kind === 'asking' && phase.question.recall_first ? phase.question.id : null
+  useEffect(() => {
+    if (recallId === null) return
+    const timer = setTimeout(() => {
+      setShownFor(recallId)
+    }, RECALL_MS)
+    return () => {
+      clearTimeout(timer)
+    }
+  }, [recallId])
+  const optionsHidden = recallId !== null && shownFor !== recallId
+
   // Keyboard: 1-4 pick an option; ↓ / ↑ move between options and Enter picks the one selected;
   // after answering, Enter (or →) goes to the next question.
   useEffect(() => {
@@ -368,7 +408,7 @@ export function QuizPage() {
           return
         }
       }
-      if (phase.kind === 'asking') {
+      if (phase.kind === 'asking' && !optionsHidden) {
         const index = Number(event.key) - 1
         if (index >= 0 && index < phase.question.options.length) {
           choose(phase.question, index)
@@ -463,6 +503,10 @@ export function QuizPage() {
           busy={busy}
           continueQueued={continueQueued}
           stats={stats}
+          optionsHidden={optionsHidden}
+          onShowOptions={() => {
+            setShownFor(phase.question.id)
+          }}
           onChoose={(index) => {
             choose(phase.question, index)
           }}
@@ -487,6 +531,8 @@ interface CardProps {
   busy: boolean // a save is running ("I know this" waits for it)
   continueQueued: boolean
   stats: QuizStats | null
+  optionsHidden: boolean // recall first: options wait for a moment or "Show options"
+  onShowOptions: () => void
   onChoose: (index: number) => void
   onKnow: () => void
   onSpeak: (heard: string) => void
@@ -499,6 +545,8 @@ function QuestionCard({
   busy,
   continueQueued,
   stats,
+  optionsHidden,
+  onShowOptions,
   onChoose,
   onKnow,
   onSpeak,
@@ -526,13 +574,17 @@ function QuestionCard({
             </button>
           </VoiceInput>
         )
+      ) : optionsHidden ? (
+        <button type="button" className="raised" onClick={onShowOptions}>
+          Show options
+        </button>
       ) : (
         <ol
-          className={
+          className={`${
             question.options.every((o) => o.length <= SHORT_OPTION)
               ? 'options options--short'
               : 'options'
-          }
+          }${question.recall_first ? ' options--reveal' : ''}`}
         >
           {question.options.map((option, index) => (
             <li key={option}>
@@ -657,6 +709,14 @@ function Feedback({
           !correct && (
             <>
               It means: <strong>{question.options[question.correct_index]}</strong>
+              {answered.picked && (
+                <>
+                  <br />
+                  <span className="muted">
+                    You picked the meaning of <em>{answered.picked}</em>.
+                  </span>
+                </>
+              )}
             </>
           )
         ) : (
@@ -762,6 +822,20 @@ function SessionSummary({
           </dd>
         </div>
       </dl>
+      {session.missed.length > 0 && (
+        <section className="summary__missed">
+          <h2>Words to look at again</h2>
+          <ul>
+            {session.missed.map((m) => (
+              <li key={m.word}>
+                <strong>{m.word}</strong>
+                <SpeakButton word={m.word} />
+                {m.meaning && <span className="muted"> · {m.meaning}</span>}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       <QuestsReady />
       {ninja(combo) && (
         <p className="ninja-note ninja-note--start">

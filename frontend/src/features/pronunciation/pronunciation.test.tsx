@@ -37,6 +37,7 @@ const SAY: QuizQuestion = {
   meaning: 'looking sad and dismal',
   context_sentence: 'A lugubrious tune.',
   counted: true,
+  recall_first: false,
   if_right: { points: 5, learned: false },
   if_wrong: { points: -10, learned: false },
 }

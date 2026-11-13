@@ -3994,3 +3994,31 @@ a.book-card__cover:hover {
     grid-template-columns: 1fr 1fr;
   }
 }
+
+.summary__missed {
+  text-align: left;
+  max-width: 32rem;
+  margin: var(--space-3) auto;
+}
+
+.summary__missed ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.options--reveal {
+  animation: options-reveal 0.25s ease-out;
+}
+
+@keyframes options-reveal {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .options--reveal {
+    animation: none;
+  }
+}

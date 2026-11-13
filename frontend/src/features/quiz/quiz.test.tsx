@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react'
+import { act, screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { AnswerResult, QuizQuestion, QuizStats } from '../../api/quiz'
 import { fail, fakeApi, json, type Routes } from '../../test/fakeApi'
@@ -21,6 +21,7 @@ const question = (id: number, word: string, extra: Partial<QuizQuestion> = {}): 
   meaning: 'wet with light rain',
   context_sentence: 'It was a damp, drizzly November in my soul.',
   counted: true,
+  recall_first: false,
   if_right: { points: 5, learned: false },
   if_wrong: { points: -10, learned: false },
   ...extra,
@@ -720,5 +721,116 @@ describe('option layout', () => {
 
     expect(optionList()).toHaveClass('options')
     expect(optionList()).not.toHaveClass('options--short')
+  })
+})
+
+describe('teaching moments', () => {
+  it('names the word whose meaning a wrong pick belongs to', async () => {
+    quiz({
+      'GET /api/quiz/question?include_next=true': questions(question(1, 'drizzly')),
+      [ANSWER_URL(1)]: () => json(result({ correct: false, points: -10, picked_word: 'illicit' })),
+    })
+    const user = renderApp('/quiz')
+
+    await user.click(await screen.findByRole('button', { name: /a small bag/ }))
+
+    expect(await screen.findByText('illicit')).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('You picked the meaning of illicit.')
+  })
+
+  function session(wrongIds: number[]) {
+    const items = Array.from({ length: 12 }, (_, i) => question(i + 1, `word${String(i + 1)}`))
+    const answers: Routes = {}
+    for (const item of items) answers[ANSWER_URL(item.id)] = () => json(result({}))
+    quiz({ 'GET /api/quiz/question?include_next=true': questions(...items), ...answers })
+    const user = renderApp('/quiz')
+    return async () => {
+      for (let id = 1; id <= 10; id++) {
+        const name = wrongIds.includes(id) ? /a small bag/ : /wet with light rain/
+        await user.click(await screen.findByRole('button', { name }))
+        await user.click(await screen.findByRole('button', { name: 'Continue' }))
+      }
+    }
+  }
+
+  it('lists the words missed in the session summary', async () => {
+    await session([2, 5])()
+
+    expect(await screen.findByRole('heading', { name: 'Words to look at again' })).toBeVisible()
+    const list = screen.getByRole('list')
+    expect(within(list).getByText('word2')).toBeInTheDocument()
+    expect(within(list).getByText('word5')).toBeInTheDocument()
+    expect(within(list).getAllByText(/wet with light rain/)).toHaveLength(2)
+  })
+
+  it('lists nothing in the summary when nothing was missed', async () => {
+    await session([])()
+
+    expect(await screen.findByRole('heading', { name: 'Session complete!' })).toBeInTheDocument()
+    expect(screen.queryByText('Words to look at again')).not.toBeInTheDocument()
+  })
+})
+
+describe('recall first', () => {
+  const recall = (extra: Partial<QuizQuestion> = {}) =>
+    quiz({
+      'GET /api/quiz/question?include_next=true': questions(
+        question(1, 'drizzly', { recall_first: true, ...extra }),
+      ),
+    })
+
+  it('holds the options back until "Show options" is tapped', async () => {
+    recall()
+    const user = renderApp('/quiz')
+
+    await screen.findByRole('heading', { name: 'drizzly' })
+    expect(screen.queryByRole('button', { name: /a small bag/ })).not.toBeInTheDocument()
+    await user.keyboard('1') // number keys do nothing yet
+    expect(screen.queryByRole('button', { name: 'Continue' })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Show options' }))
+
+    expect(screen.getByRole('button', { name: /a small bag/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Show options' })).not.toBeInTheDocument()
+    await user.keyboard('1')
+    expect(await screen.findByRole('button', { name: 'Continue' })).toBeInTheDocument()
+  })
+
+  it('shows the options by themselves after 2 seconds', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      recall()
+      renderApp('/quiz')
+      await screen.findByRole('button', { name: 'Show options' })
+      expect(screen.queryByRole('button', { name: /a small bag/ })).not.toBeInTheDocument()
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1900)
+      })
+      expect(screen.queryByRole('button', { name: /a small bag/ })).not.toBeInTheDocument()
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(200)
+      })
+      expect(screen.getByRole('button', { name: /a small bag/ })).toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('shows the options at once when the word is not well known', async () => {
+    quiz({ 'GET /api/quiz/question?include_next=true': questions(question(1, 'drizzly')) })
+    renderApp('/quiz')
+
+    expect(await screen.findByRole('button', { name: /a small bag/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Show options' })).not.toBeInTheDocument()
+  })
+
+  it('never holds back a say-word question', async () => {
+    recall({ type: 'say_word', recall_first: false, options: ['said', 'not said'] })
+    renderApp('/quiz')
+
+    await screen.findByRole('heading', { name: 'drizzly' })
+    expect(screen.queryByRole('button', { name: 'Show options' })).not.toBeInTheDocument()
   })
 })

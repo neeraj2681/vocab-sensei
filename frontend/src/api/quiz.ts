@@ -17,6 +17,7 @@ export interface QuizQuestion {
   meaning: string | null
   context_sentence: string | null
   counted: boolean // false when the word came back too soon to score
+  recall_first: boolean // a well-known word: hold the options back for a moment
   if_right: Outcome
   if_wrong: Outcome
   next?: QuizQuestion | null // the question kept ready after this one
@@ -63,6 +64,7 @@ export interface AnswerResult {
   next?: QuizQuestion | null // the question now on screen, sent with the saved answer
   after_next?: QuizQuestion | null // and the one kept ready after it
   heard?: string | null // "say this word": what the speech recogniser heard
+  picked_word?: string | null // wrong meaning pick: the word that meaning belongs to
 }
 
 export interface HistoryPoint {

@@ -26,6 +26,7 @@ from app.db.models import (
     Word,
 )
 from app.dictionary.types import DictionaryUnavailableError
+from app.services.quiz import QuizService
 from tests.conftest import FakeDictionary, log_in, make_user
 
 NOW = datetime(2026, 10, 30, 12, 0, tzinfo=UTC)
@@ -191,6 +192,63 @@ def test_without_current_reads_there_is_nothing_to_ask(
 
 
 @pytest.mark.usefixtures("book", "clock")
+class TestRecallFirst:
+    def asked_at(
+        self,
+        client: TestClient,
+        session: Session,
+        score: int,
+        kind: QuestionType = QuestionType.DEFINITION_MCQ,
+    ) -> dict[str, Any]:
+        """The question on screen once it's about word00 (at `score`) and of type `kind`. Which
+        word comes next and in which format is random, so other words are answered until word00
+        is asked, and its stored question is then given the type under test."""
+        word = session.scalars(select(Word).where(Word.lemma == "word00")).one()
+        session.add(
+            UserWord(user_id=reader(session).id, word_id=word.id, score=score, status="learning")
+        )
+        session.commit()
+        for _ in range(40):
+            stored = session.get(Question, question(client)["id"])
+            assert stored is not None
+            if stored.word_id == word.id:
+                stored.type = kind
+                session.commit()
+                return question(client)
+            answer(client, session)
+        raise AssertionError("word00 was never asked")
+
+    def test_a_well_known_word_holds_its_options_back(
+        self, user_client: TestClient, session: Session
+    ) -> None:
+        assert self.asked_at(user_client, session, 60)["recall_first"] is True
+
+    def test_a_word_still_being_learned_shows_its_options(
+        self, user_client: TestClient, session: Session
+    ) -> None:
+        assert self.asked_at(user_client, session, 40)["recall_first"] is False
+
+    def test_a_say_word_question_is_never_held_back(
+        self,
+        user_client: TestClient,
+        session: Session,
+        settings: Settings,
+        dictionary: FakeDictionary,
+    ) -> None:
+        # Asked through the service: the API replaces a "say this word" question with another one
+        # when the screen can't record, which would test a different question.
+        asked = self.asked_at(user_client, session, 60)
+        stored = session.get(Question, asked["id"])
+        assert stored is not None
+        service = QuizService(session, settings, lambda: dictionary, speaking=True)
+        now = datetime.now(UTC)
+
+        assert service.preview(reader(session).id, stored, now).recall_first is True
+        stored.type = QuestionType.SAY_WORD
+        assert service.preview(reader(session).id, stored, now).recall_first is False
+
+
+@pytest.mark.usefixtures("book", "clock")
 class TestAnswering:
     def test_a_right_answer_adds_five(self, user_client: TestClient, session: Session) -> None:
         result = answer(user_client, session)
@@ -278,6 +336,22 @@ class TestAnswering:
         result = answer(user_client, session, right=False)
 
         assert asked["options"][result["correct_index"]] == "meaning of word00"
+
+    def test_a_wrong_meaning_names_the_word_it_belongs_to(self, user_client: TestClient) -> None:
+        asked = question(user_client)
+        wrong = next(i for i, o in enumerate(asked["options"]) if o != "meaning of word00")
+        picked = asked["options"][wrong].removeprefix("meaning of ")
+
+        response = user_client.post(
+            f"/api/quiz/questions/{asked['id']}/answer", json={"chosen_index": wrong}
+        )
+
+        assert response.json()["picked_word"] == picked
+
+    def test_a_right_answer_names_no_picked_word(
+        self, user_client: TestClient, session: Session
+    ) -> None:
+        assert answer(user_client, session)["picked_word"] is None
 
     def test_lifetime_points_add_up(self, user_client: TestClient, session: Session) -> None:
         for right in (True, True, False, True):
