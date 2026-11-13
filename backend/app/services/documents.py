@@ -74,6 +74,19 @@ class DocumentService:
         self._session.commit()
         return document
 
+    def _extractor(self) -> WordExtractor:
+        cache: dict[str, bool] = {}  # one book asks about the same rare token many times
+
+        def known(lemma: str) -> bool:
+            if lemma not in cache:
+                try:  # loaded on the first unseen word only
+                    cache[lemma] = bool(self._dictionary().senses(lemma))
+                except DictionaryUnavailableError:
+                    cache[lemma] = False  # no dictionary: keep today's behaviour
+            return cache[lemma]
+
+        return WordExtractor(self._settings.extraction, known=known)
+
     def process(self, document_id: int) -> None:
         document = self._documents.get(document_id)
         if document is None:  # deleted before processing started
@@ -85,7 +98,7 @@ class DocumentService:
             parsed = self._parse(document)
             if not parsed.chapters:
                 raise ParseError("no readable text left after removing boilerplate")
-            words = WordExtractor(self._settings.extraction).extract(parsed.chapters)
+            words = self._extractor().extract(parsed.chapters)
 
             document.title = (parsed.title or document.title)[:500]
             document.author = parsed.author[:300] if parsed.author else None
@@ -138,7 +151,7 @@ class DocumentService:
         if len(parsed.chapters) != len(document.chapters):  # the parser changed since; skip it
             logger.warning("document %s now parses into different chapters", document_id)
             return False
-        words = WordExtractor(self._settings.extraction).extract(parsed.chapters)
+        words = self._extractor().extract(parsed.chapters)
         WordService(self._session).reindex_chapters(document, words)
         self._session.commit()
         return True

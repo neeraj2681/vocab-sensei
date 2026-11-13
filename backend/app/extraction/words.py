@@ -6,7 +6,7 @@ adverbs) whose lemma is rare enough by wordfreq's Zipf score, skipping names and
 """
 
 from collections import Counter
-from collections.abc import Iterable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass, replace
 from functools import cache
 
@@ -66,8 +66,15 @@ def _zipf(lemma: str) -> float:
 
 
 class WordExtractor:
-    def __init__(self, settings: ExtractionSettings, nlp: Language | None = None) -> None:
+    def __init__(
+        self,
+        settings: ExtractionSettings,
+        nlp: Language | None = None,
+        known: Callable[[str], bool] | None = None,
+    ) -> None:
+        """`known(lemma)`: does the dictionary have it? Rescues words rarer than wordfreq's list."""
         self._settings = settings
+        self._known = known
         self._nlp = nlp or load_nlp()
 
     def extract(self, chapters: Sequence[ParsedChapter]) -> list[ExtractedWord]:
@@ -90,7 +97,7 @@ class WordExtractor:
                 if lemma not in first_seen:
                     first_seen[lemma] = ExtractedWord(
                         lemma=lemma,
-                        zipf=_zipf(lemma),
+                        zipf=self._zipf(lemma),
                         chapter_index=chapter_index,
                         first_position=position,
                         occurrences=0,
@@ -125,9 +132,16 @@ class WordExtractor:
         lemma = token.lemma_.lower()
         if len(lemma) < self._settings.min_length or not lemma.isalpha():
             return None
-        if not self._settings.min_zipf <= _zipf(lemma) < self._settings.max_zipf:
-            return None
-        return lemma
+        zipf = _zipf(lemma)
+        if self._settings.min_zipf <= zipf < self._settings.max_zipf:
+            return lemma
+        if zipf == 0.0 and self._known is not None and self._known(lemma):
+            return lemma  # too rare for wordfreq, but the dictionary has it
+        return None
+
+    def _zipf(self, lemma: str) -> float:
+        """The zipf to record; a word wordfreq has never seen counts as the rarest allowed."""
+        return _zipf(lemma) or self._settings.min_zipf
 
     def _context(self, token: Token) -> str:
         sentence = " ".join(token.sent.text.split())
