@@ -640,6 +640,7 @@ class QuizService:
         known = mark_known(_progress(word))
         word.status = known.status
         word.last_reviewed_at = now
+        self._user(user_id).combo = 0  # like a wrong answer: it ends a Ninja run
         self._repo.add(
             QuizAnswer(
                 user_id=user_id,

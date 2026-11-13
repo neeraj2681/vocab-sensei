@@ -92,16 +92,17 @@ def test_a_streak_freeze_saves_a_missed_day(
     time.now = SUNDAY
     give_coins(session, 1_500)
     user_client.post("/api/shop/buy/streak_freeze?tz=UTC")
-    for _ in range(10):  # Sunday's goal (10) met
-        answer(user_client, session)
-    assert user_client.get("/api/quiz/stats?tz=UTC").json()["streak"] == 1
+    for days in (0, 1, 2):  # Sunday to Tuesday: the goal (10) met each day
+        time.now = SUNDAY + timedelta(days=days)
+        for _ in range(10):
+            answer(user_client, session)
 
-    time.now = SUNDAY + timedelta(days=2)  # Monday missed
+    time.now = SUNDAY + timedelta(days=4)  # Wednesday missed; a streak of 3 is saved
     stats = user_client.get("/api/quiz/stats?tz=UTC").json()
 
-    assert stats["streak"] == 2  # Sunday + the frozen Monday
-    monday = stats["week"][-2]
-    assert (monday["met"], monday["frozen"]) == (True, True)
+    assert stats["streak"] == 4  # Sunday to Tuesday + the frozen Wednesday
+    wednesday = stats["week"][-2]
+    assert (wednesday["met"], wednesday["frozen"]) == (True, True)
     assert stock(shop(user_client), "streak_freeze")["owned"] == 0  # used up
 
 

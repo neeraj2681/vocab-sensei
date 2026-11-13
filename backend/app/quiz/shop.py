@@ -1,7 +1,8 @@
 """The Shop: open on Sundays, selling streak freezes, double coins and name changes. Pure rules.
 
-- A streak freeze covers one missed day, used automatically, but only when there is a streak to
-  protect and only by a freeze bought before that day ended. Days whose goal was met use nothing.
+- A streak freeze covers one missed day, used automatically, but only to save a streak of at least
+  MIN_STREAK_TO_FREEZE days, and only by a freeze bought before that day ended: a run of missed
+  days is covered whole or not at all. Days whose goal was met use nothing.
 - Double coins, once used, double the coins of right answers for half an hour (with Ninja Mode:
   four times).
 """
@@ -27,6 +28,7 @@ MAX_OWNED = {Item.STREAK_FREEZE: 3, Item.DOUBLE_COINS: 1, Item.NAME_CHANGE: 1}  
 DOUBLE_COINS_FOR = timedelta(minutes=30)
 DOUBLE_COINS_MULTIPLIER = 2
 OPEN_WEEKDAY = 6  # Sunday (Monday is 0)
+MIN_STREAK_TO_FREEZE = 3  # a freeze only saves a streak of at least this many days
 
 
 @dataclass(frozen=True)
@@ -60,20 +62,47 @@ def freezes_to_use(
     last: date,
 ) -> list[tuple[date, int]]:
     """Which freezes cover which missed days from `first` to `last` (oldest first), as (day,
-    freeze id). A day is covered only if the streak up to it was alive and a freeze bought on or
-    before that day is left."""
+    freeze id). Missed days come in runs of consecutive days. A run is covered only if the streak
+    just before it is at least MIN_STREAK_TO_FREEZE days, every day of it can get its own freeze
+    bought on or before that day, and the run is not longer than the freezes left. A run that is
+    not covered breaks the streak, so later runs are not covered either."""
+
+    def met(day: date) -> bool:
+        return answers_per_day.get(day, 0) >= goal.on(day)
+
+    def missed(day: date) -> bool:
+        return not met(day) and day not in covered
+
     covered = set(frozen)
     left = sorted(unused, key=lambda f: (f.bought_on, f.id))
     used: list[tuple[date, int]] = []
     day = first
     while day <= last:
-        met = answers_per_day.get(day, 0) >= goal.on(day)
-        if not met and day not in covered:
-            alive = streak(answers_per_day, day - timedelta(days=1), goal, covered) > 0
-            freeze = next((f for f in left if f.bought_on <= day), None)
-            if alive and freeze:
-                left.remove(freeze)
-                covered.add(day)
-                used.append((day, freeze.id))
-        day += timedelta(days=1)
+        if not missed(day):
+            day += timedelta(days=1)
+            continue
+        run: list[date] = []
+        while day <= last and missed(day):
+            run.append(day)
+            day += timedelta(days=1)
+        before = run[0] - timedelta(days=1)
+        # the streak just before the run: 0 if the day right before it was itself missed
+        alive = met(before) or before in covered
+        length = streak(answers_per_day, before, goal, covered) if alive else 0
+        if length < MIN_STREAK_TO_FREEZE:
+            break
+        pool = list(left)
+        plan: list[tuple[date, Freeze]] = []
+        for missed_day in run:
+            freeze = next((f for f in pool if f.bought_on <= missed_day), None)
+            if freeze is None:
+                break
+            pool.remove(freeze)
+            plan.append((missed_day, freeze))
+        if len(plan) < len(run):
+            break
+        for missed_day, freeze in plan:
+            left.remove(freeze)
+            covered.add(missed_day)
+            used.append((missed_day, freeze.id))
     return used
