@@ -4006,3 +4006,19 @@ a.book-card__cover:hover {
   padding: 0;
   margin: 0;
 }
+
+.options--reveal {
+  animation: options-reveal 0.25s ease-out;
+}
+
+@keyframes options-reveal {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .options--reveal {
+    animation: none;
+  }
+}

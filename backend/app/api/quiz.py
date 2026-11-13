@@ -97,6 +97,7 @@ class QuestionResponse(BaseModel):
     meaning: str | None
     context_sentence: str | None
     counted: bool  # False when the word came back too soon to score
+    recall_first: bool  # a well-known word: the screen holds the options back for a moment
     if_right: OutcomeResponse
     if_wrong: OutcomeResponse
     next: "QuestionResponse | None" = None  # with include_next: the one kept ready after it
@@ -113,6 +114,7 @@ class QuestionResponse(BaseModel):
             meaning=preview.meaning,
             context_sentence=preview.sentence,
             counted=preview.counted,
+            recall_first=preview.recall_first,
             if_right=OutcomeResponse(
                 points=preview.points_if_right, learned=preview.learned_if_right
             ),

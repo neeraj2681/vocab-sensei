@@ -35,6 +35,7 @@ interface Missed {
 }
 
 const MAX_MISSED = 5
+const RECALL_MS = 2000 // how long a well-known word's options stay hidden
 
 const newSession = (todayAtStart: number | null): Session => ({
   answered: 0,
@@ -127,6 +128,7 @@ export function QuizPage() {
   const [questionVersion, setQuestionVersion] = useState(0) // bump to fetch the next question
   const [combo, setCombo] = useState<Combo>({ run: 0, after: 5, multiplier: 2 })
   const [leaving, setLeaving] = useState(false) // "stop now?" warning while in Ninja Mode
+  const [shownFor, setShownFor] = useState<number | null>(null) // question whose options show
   const navigate = useNavigate()
   // "Study this chapter": /quiz?book=1&chapter=4 asks only that chapter's words.
   const [params] = useSearchParams()
@@ -372,6 +374,19 @@ export function QuizPage() {
     }
   }
 
+  // Recall first: a well-known word's options appear after a moment (or on "Show options").
+  const recallId = phase.kind === 'asking' && phase.question.recall_first ? phase.question.id : null
+  useEffect(() => {
+    if (recallId === null) return
+    const timer = setTimeout(() => {
+      setShownFor(recallId)
+    }, RECALL_MS)
+    return () => {
+      clearTimeout(timer)
+    }
+  }, [recallId])
+  const optionsHidden = recallId !== null && shownFor !== recallId
+
   // Keyboard: 1-4 pick an option; ↓ / ↑ move between options and Enter picks the one selected;
   // after answering, Enter (or →) goes to the next question.
   useEffect(() => {
@@ -393,7 +408,7 @@ export function QuizPage() {
           return
         }
       }
-      if (phase.kind === 'asking') {
+      if (phase.kind === 'asking' && !optionsHidden) {
         const index = Number(event.key) - 1
         if (index >= 0 && index < phase.question.options.length) {
           choose(phase.question, index)
@@ -488,6 +503,10 @@ export function QuizPage() {
           busy={busy}
           continueQueued={continueQueued}
           stats={stats}
+          optionsHidden={optionsHidden}
+          onShowOptions={() => {
+            setShownFor(phase.question.id)
+          }}
           onChoose={(index) => {
             choose(phase.question, index)
           }}
@@ -512,6 +531,8 @@ interface CardProps {
   busy: boolean // a save is running ("I know this" waits for it)
   continueQueued: boolean
   stats: QuizStats | null
+  optionsHidden: boolean // recall first: options wait for a moment or "Show options"
+  onShowOptions: () => void
   onChoose: (index: number) => void
   onKnow: () => void
   onSpeak: (heard: string) => void
@@ -524,6 +545,8 @@ function QuestionCard({
   busy,
   continueQueued,
   stats,
+  optionsHidden,
+  onShowOptions,
   onChoose,
   onKnow,
   onSpeak,
@@ -551,13 +574,17 @@ function QuestionCard({
             </button>
           </VoiceInput>
         )
+      ) : optionsHidden ? (
+        <button type="button" className="raised" onClick={onShowOptions}>
+          Show options
+        </button>
       ) : (
         <ol
-          className={
+          className={`${
             question.options.every((o) => o.length <= SHORT_OPTION)
               ? 'options options--short'
               : 'options'
-          }
+          }${question.recall_first ? ' options--reveal' : ''}`}
         >
           {question.options.map((option, index) => (
             <li key={option}>

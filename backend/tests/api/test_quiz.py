@@ -191,6 +191,38 @@ def test_without_current_reads_there_is_nothing_to_ask(
 
 
 @pytest.mark.usefixtures("book", "clock")
+class TestRecallFirst:
+    def asked_at(self, client: TestClient, session: Session, score: int) -> dict[str, Any]:
+        word = session.scalars(select(Word).where(Word.lemma == "word00")).one()
+        session.add(
+            UserWord(user_id=reader(session).id, word_id=word.id, score=score, status="learning")
+        )
+        session.commit()
+        return question(client)
+
+    def test_a_well_known_word_holds_its_options_back(
+        self, user_client: TestClient, session: Session
+    ) -> None:
+        assert self.asked_at(user_client, session, 60)["recall_first"] is True
+
+    def test_a_word_still_being_learned_shows_its_options(
+        self, user_client: TestClient, session: Session
+    ) -> None:
+        assert self.asked_at(user_client, session, 40)["recall_first"] is False
+
+    def test_a_say_word_question_is_never_held_back(
+        self, user_client: TestClient, session: Session
+    ) -> None:
+        asked = self.asked_at(user_client, session, 60)
+        stored = session.get(Question, asked["id"])
+        assert stored is not None
+        stored.type = QuestionType.SAY_WORD
+        session.commit()
+
+        assert question(user_client)["recall_first"] is False
+
+
+@pytest.mark.usefixtures("book", "clock")
 class TestAnswering:
     def test_a_right_answer_adds_five(self, user_client: TestClient, session: Session) -> None:
         result = answer(user_client, session)

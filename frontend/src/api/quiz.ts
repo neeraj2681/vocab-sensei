@@ -17,6 +17,7 @@ export interface QuizQuestion {
   meaning: string | null
   context_sentence: string | null
   counted: boolean // false when the word came back too soon to score
+  recall_first: boolean // a well-known word: hold the options back for a moment
   if_right: Outcome
   if_wrong: Outcome
   next?: QuizQuestion | null // the question kept ready after this one

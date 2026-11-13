@@ -142,6 +142,9 @@ class AnswerOutcome:
     picked_word: str | None = None  # a wrong meaning pick: the word that meaning belongs to
 
 
+RECALL_FIRST_ABOVE = 50  # words scoring above this hide their options for a moment
+
+
 @dataclass(frozen=True)
 class Preview:
     """Everything the screen shows after an answer, for both outcomes, sent with the question so
@@ -154,6 +157,7 @@ class Preview:
     points_if_right: int  # before Ninja Mode: the screen doubles it while its run is long enough
     points_if_wrong: int
     learned_if_right: bool
+    recall_first: bool = False  # the word is well known: try to remember before seeing options
 
 
 @dataclass(frozen=True)
@@ -630,6 +634,8 @@ class QuizService:
                 miss=miss_penalty(progress, now, rules),
             ),
             learned_if_right=status_if_right is WordStatus.LEARNED,
+            recall_first=question.type is not QuestionType.SAY_WORD
+            and effective_score(progress, now, rules) > RECALL_FIRST_ABOVE,
         )
 
     def _word_and_meaning(self, user_id: int, word_id: int) -> tuple[str, str | None]:
